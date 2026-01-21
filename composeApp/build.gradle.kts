@@ -22,6 +22,7 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
+            binaryOptions["bundleId"] = "com.example.sitacardmaster"
         }
     }
     

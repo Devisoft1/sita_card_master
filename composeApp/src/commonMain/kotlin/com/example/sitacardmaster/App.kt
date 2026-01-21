@@ -22,6 +22,20 @@ fun App(nfcManager: NfcManager = rememberNfcManager()) {
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
+            when (currentScreen) {
+                Screen.Login -> LoginScreen(onLoginSuccess = { currentScreen = Screen.Dashboard })
+                Screen.Dashboard -> DashboardScreen(
+                    nfcManager = nfcManager,
+                    onIssueCardClick = { currentScreen = Screen.IssueCard },
+                    onLogsClick = { /* Handle logs */ },
+                    onLogout = { currentScreen = Screen.Login }
+                )
+                Screen.IssueCard -> IssueCardScreen(
+                    onBack = { currentScreen = Screen.Dashboard },
+                    nfcManager = nfcManager
+                )
+                Screen.Logs -> { /* Fallback for logs */ }
+            }
         }
     }
 }

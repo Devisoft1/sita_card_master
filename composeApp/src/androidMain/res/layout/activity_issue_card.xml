@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/surface_gray"
@@ -10,15 +11,16 @@
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/topBar"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/_45sdp"
-        app:cardElevation="@dimen/_2sdp"
+        android:layout_height="@dimen/_50sdp"
+        app:cardElevation="@dimen/_4sdp"
         app:cardCornerRadius="0dp"
+        app:cardBackgroundColor="@color/brand_blue"
         app:layout_constraintTop_toTopOf="parent">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:paddingHorizontal="@dimen/_8sdp">
+            android:paddingHorizontal="@dimen/_12sdp">
 
             <ImageButton
                 android:id="@+id/backButton"
@@ -29,7 +31,7 @@
                 android:contentDescription="Back"
                 android:padding="@dimen/_8sdp"
                 android:scaleType="centerInside"
-                app:tint="@color/brand_blue"
+                app:tint="@color/white"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent" />
@@ -38,13 +40,13 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Issue New Card"
-                android:textSize="@dimen/_14ssp"
+                android:textSize="@dimen/_16ssp"
                 android:textStyle="bold"
-                android:textColor="@color/brand_blue"
+                android:textColor="@color/white"
                 app:layout_constraintStart_toEndOf="@id/backButton"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"
-                android:layout_marginStart="@dimen/_4sdp" />
+                android:layout_marginStart="@dimen/_8sdp" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </com.google.android.material.card.MaterialCardView>
@@ -64,7 +66,7 @@
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="@dimen/_20sdp"
+                app:cardCornerRadius="@dimen/_8sdp"
                 app:cardElevation="@dimen/_2sdp"
                 app:layout_constraintTop_toTopOf="parent">
 
@@ -72,44 +74,61 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="@dimen/_16sdp">
+                    android:padding="@dimen/_20sdp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Card Details"
+                        android:textSize="@dimen/_14ssp"
+                        android:textStyle="bold"
+                        android:textColor="@color/brand_blue"
+                        android:layout_marginBottom="@dimen/_16sdp" />
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="@dimen/_12sdp"
+                        android:hint="Member ID"
+                        app:startIconDrawable="@drawable/ic_person"
+                        app:startIconTint="@color/brand_blue"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/memberId"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Member ID"
-                            android:textSize="@dimen/_13ssp" />
+                            android:textSize="@dimen/_13ssp"
+                            android:inputType="textCapCharacters" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="@dimen/_12sdp"
+                        android:hint="Company Name"
+                        app:startIconDrawable="@drawable/ic_business"
+                        app:startIconTint="@color/brand_blue"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/companyName"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Company Name"
-                            android:textSize="@dimen/_13ssp" />
+                            android:textSize="@dimen/_13ssp"
+                            android:inputType="textCapWords" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="@dimen/_12sdp"
+                        android:hint="Valid Upto"
+                        app:startIconDrawable="@drawable/ic_event"
+                        app:startIconTint="@color/brand_blue"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/validUpto"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Valid Upto"
                             android:focusable="false"
                             android:clickable="true"
                             android:textSize="@dimen/_13ssp" />
@@ -118,68 +137,88 @@
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="@dimen/_16sdp"
+                        android:layout_marginBottom="@dimen/_20sdp"
+                        android:hint="Total Buy"
+                        app:startIconDrawable="@drawable/ic_payments"
+                        app:startIconTint="@color/brand_blue"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/totalBuy"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Total Buy"
                             android:inputType="number"
                             android:textSize="@dimen/_13ssp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <TextView
-                        android:id="@+id/statusMessage"
+                    <View
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Ready to write"
-                        android:textColor="@color/gray_text"
-                        android:textSize="@dimen/_12ssp"
-                        android:gravity="center"
-                        android:layout_marginBottom="@dimen/_12sdp" />
-
-                    <ProgressBar
-                        android:id="@+id/scanProgress"
-                        android:layout_width="@dimen/_32sdp"
-                        android:layout_height="@dimen/_32sdp"
-                        android:layout_gravity="center_horizontal"
-                        android:layout_marginBottom="@dimen/_12sdp"
-                        android:visibility="gone"
-                        android:indeterminateTint="@color/brand_blue" />
-
-                    <TextView
-                        android:id="@+id/tapCardHint"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center_horizontal"
-                        android:text="TAP CARD NOW..."
-                        android:textStyle="bold"
-                        android:textSize="@dimen/_14ssp"
-                        android:textColor="@color/brand_blue"
-                        android:visibility="gone"
+                        android:layout_height="1dp"
+                        android:background="#E0E0E0"
                         android:layout_marginBottom="@dimen/_16sdp" />
 
-                    <Button
-                        android:id="@+id/startScanButton"
+                    <LinearLayout
+                        android:id="@+id/scanningContainer"
                         android:layout_width="match_parent"
-                        android:layout_height="@dimen/_48sdp"
-                        android:text="Start Scan &amp; Write"
-                        android:textSize="@dimen/_13ssp"
-                        android:textStyle="bold"
-                        app:cornerRadius="@dimen/_12sdp"
-                        app:backgroundTint="@color/brand_blue" />
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:visibility="visible">
 
-                    <Button
-                        android:id="@+id/cancelScanButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="@dimen/_48sdp"
-                        android:text="Cancel Scan"
-                        android:textSize="@dimen/_13ssp"
-                        android:textStyle="bold"
-                        android:visibility="gone"
-                        app:cornerRadius="@dimen/_12sdp"
-                        app:backgroundTint="@color/gray_text" />
+                        <TextView
+                            android:id="@+id/statusMessage"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Ready to write"
+                            android:textColor="@color/gray_text"
+                            android:textSize="@dimen/_12ssp"
+                            android:gravity="center"
+                            android:layout_marginBottom="@dimen/_12sdp" />
+
+                        <ProgressBar
+                            android:id="@+id/scanProgress"
+                            android:layout_width="@dimen/_40sdp"
+                            android:layout_height="@dimen/_40sdp"
+                            android:layout_gravity="center_horizontal"
+                            android:layout_marginBottom="@dimen/_12sdp"
+                            android:visibility="gone"
+                            android:indeterminateTint="@color/brand_blue" />
+
+                        <TextView
+                            android:id="@+id/tapCardHint"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center_horizontal"
+                            android:text="TAP CARD NOW..."
+                            android:textStyle="bold"
+                            android:textSize="@dimen/_15ssp"
+                            android:textColor="@color/brand_blue"
+                            android:visibility="gone"
+                            android:layout_marginBottom="@dimen/_16sdp" />
+
+                        <Button
+                            android:id="@+id/startScanButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="@dimen/_48sdp"
+                            android:text="Start Scan &amp; Write"
+                            android:textSize="@dimen/_14ssp"
+                            android:textStyle="bold"
+                            android:textAllCaps="false"
+                            app:cornerRadius="@dimen/_8sdp"
+                            app:backgroundTint="@color/brand_blue" />
+
+                        <Button
+                            android:id="@+id/cancelScanButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="@dimen/_48sdp"
+                            android:text="Cancel Scan"
+                            android:textSize="@dimen/_14ssp"
+                            android:textStyle="bold"
+                            android:textAllCaps="false"
+                            android:visibility="gone"
+                            app:cornerRadius="@dimen/_8sdp"
+                            app:backgroundTint="@color/error_red" />
+
+                    </LinearLayout>
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -188,3 +227,4 @@
     </ScrollView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
+

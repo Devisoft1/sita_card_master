@@ -1,7 +1,10 @@
 package com.example.sitacardmaster.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -11,7 +14,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.sitacardmaster.NfcManager
+import com.example.sitacardmaster.PlatformDatePicker
+import com.example.sitacardmaster.platformLog
 import kotlinx.coroutines.launch
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 @Composable
 fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
@@ -23,6 +30,7 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
 
     var statusMessage by remember { mutableStateOf("Ready to write") }
     var isScanning by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -51,6 +59,7 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
     }
 
     Scaffold(
+        modifier = Modifier.windowInsetsPadding(WindowInsets.safeContent),
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
@@ -91,13 +100,46 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
             )
 
+            // Date Picker Field
             OutlinedTextField(
                 value = validUpto,
-                onValueChange = { validUpto = it },
-                label = { Text("Valid Upto (YYYY-MM-DD)") },
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                placeholder = { Text("YYYY-MM-DD") }
+                onValueChange = { },
+                label = { Text("Valid Upto (DD/MM/YYYY)") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+                    .clickable { 
+                        platformLog("IssueCard", "Date field clicked!")
+                        showDatePicker = true 
+                    },
+                placeholder = { Text("DD/MM/YYYY") },
+                readOnly = true,
+                enabled = false,
+                colors = OutlinedTextFieldDefaults.colors(
+                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                    disabledBorderColor = MaterialTheme.colorScheme.outline,
+                    disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.CalendarToday,
+                        contentDescription = "Select Date"
+                    )
+                }
             )
+
+            if (showDatePicker) {
+                platformLog("IssueCard", "Showing date picker dialog")
+                CustomDatePickerDialog(
+                    onDismiss = { showDatePicker = false },
+                    onDateSelected = { day, month, year ->
+                        validUpto = "${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/$year"
+                        showDatePicker = false
+                    }
+                )
+            }
 
             OutlinedTextField(
                 value = totalBuy,
@@ -137,4 +179,118 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
             }
         }
     }
+}
+
+@Suppress("DEPRECATION")
+fun formatDateToDDMMYYYY(millis: Long): String {
+    val instant = kotlinx.datetime.Instant.fromEpochMilliseconds(millis)
+    val localDate = instant.toLocalDateTime(TimeZone.currentSystemDefault()).date
+    val day = localDate.dayOfMonth.toString().padStart(2, '0')
+    val month = localDate.monthNumber.toString().padStart(2, '0')
+    val year = localDate.year
+    return "$day/$month/$year"
+}
+
+@Composable
+fun CustomDatePickerDialog(
+    onDismiss: () -> Unit,
+    onDateSelected: (day: Int, month: Int, year: Int) -> Unit
+) {
+    var selectedDay by remember { mutableStateOf(1) }
+    var selectedMonth by remember { mutableStateOf(1) }
+    var selectedYear by remember { mutableStateOf(2026) }
+    
+    val currentYear = 2026
+    val years = (currentYear..currentYear + 10).toList()
+    val months = listOf(
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    )
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Select Date") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Day Selector
+                Text("Day", style = MaterialTheme.typography.labelMedium)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = { if (selectedDay > 1) selectedDay-- }) {
+                        Text("-")
+                    }
+                    Text(
+                        selectedDay.toString().padStart(2, '0'),
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                    TextButton(onClick = { if (selectedDay < 31) selectedDay++ }) {
+                        Text("+")
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Month Selector
+                Text("Month", style = MaterialTheme.typography.labelMedium)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = { if (selectedMonth > 1) selectedMonth-- }) {
+                        Text("-")
+                    }
+                    Text(
+                        selectedMonth.toString().padStart(2, '0'),
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                    TextButton(onClick = { if (selectedMonth < 12) selectedMonth++ }) {
+                        Text("+")
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Year Selector
+                Text("Year", style = MaterialTheme.typography.labelMedium)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = { if (selectedYear > currentYear) selectedYear-- }) {
+                        Text("-")
+                    }
+                    Text(
+                        selectedYear.toString(),
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                    TextButton(onClick = { if (selectedYear < currentYear + 10) selectedYear++ }) {
+                        Text("+")
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onDateSelected(selectedDay, selectedMonth, selectedYear)
+            }) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
