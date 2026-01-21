@@ -1,0 +1,27 @@
+# Android/Kotlin Multiplatform ignore
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/composeApp/build
+/.kotlin
+/iosApp/DerivedData
+/iosApp/Build
+/iosApp/*.xcworkspace
+/iosApp/xcuserdata
+/iosApp/.idea
+/iosApp/*.vspicture
+/iosApp/*.vspicture*
+/iosApp/Pods
+/iosApp/.xcworkspace
+/iosApp/*.xcodeproj/project.xcworkspace
+/iosApp/*.xcodeproj/xcuserdata
+/iosApp/*.xcodeproj/project.xcworkspace
+/iosApp/*.xcodeproj/xcuserdata

@@ -1,0 +1,21 @@
+package com.example.sitacardmaster
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
+
+interface NfcManager {
+    fun startScanning()
+    fun stopScanning()
+    val detectedTag: State<Any?>
+    fun writeCard(
+        memberId: String,
+        companyName: String,
+        validUpto: String,
+        totalBuy: String,
+        onResult: (Boolean, String) -> Unit
+    )
+    fun readCard(onResult: (Boolean, Map<String, String>?, String) -> Unit)
+}
+
+@Composable
+expect fun rememberNfcManager(): NfcManager
