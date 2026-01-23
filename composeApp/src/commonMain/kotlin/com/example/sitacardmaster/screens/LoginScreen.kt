@@ -2,7 +2,10 @@ package com.example.sitacardmaster.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -16,87 +19,164 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
+import sitacardmaster.composeapp.generated.resources.*
 import sitacardmaster.composeapp.generated.resources.Res
 import sitacardmaster.composeapp.generated.resources.logo
-import com.example.sitacardmaster.currentTime
 import com.example.sitacardmaster.logAction
 
 @Composable
 fun LoginScreen(onLoginSuccess: () -> Unit) {
+
     var adminId by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var passwordVisibility by remember { mutableStateOf(false) }
+    var passwordVisible by remember { mutableStateOf(false) }
+    var rememberMe by remember { mutableStateOf(false) }
     var errorText by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
 
-    Column(
+    val brandBlue = Color(0xFF2D2F91)
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .windowInsetsPadding(WindowInsets.safeContent)
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .windowInsetsPadding(WindowInsets.safeDrawing),
+        contentAlignment = Alignment.Center
     ) {
-        Image(
-            painter = painterResource(Res.drawable.logo),
-            contentDescription = "Logo",
-            modifier = Modifier.size(150.dp).padding(bottom = 32.dp)
-        )
 
-        Text(
-            text = "Admin Login",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.verticalScroll(rememberScrollState())
+        ) {
 
-        OutlinedTextField(
-            value = adminId,
-            onValueChange = { adminId = it },
-            label = { Text("Admin ID") },
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-            singleLine = true
-        )
+            // Logo
+            Image(
+                painter = painterResource(Res.drawable.logo),
+                contentDescription = "Logo",
+                modifier = Modifier.size(90.dp)
+            )
 
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Password") },
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-            singleLine = true,
-            visualTransformation = if (passwordVisibility) VisualTransformation.None else PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            trailingIcon = {
-                IconButton(onClick = { passwordVisibility = !passwordVisibility }) {
-                    Icon(
-                        imageVector = if (passwordVisibility) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription = "Toggle Password Visibility"
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+
+                Column(
+                    modifier = Modifier.padding(20.dp)
+                ) {
+
+                    // Admin ID
+                    OutlinedTextField(
+                        value = adminId,
+                        onValueChange = { adminId = it },
+                        label = { Text("Admin ID") },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(Res.drawable.ic_person),
+                                contentDescription = null
+                            )
+                        },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
                     )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Password
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text("Password") },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(Res.drawable.ic_lock),
+                                contentDescription = null
+                            )
+                        },
+                        trailingIcon = {
+                            IconButton(
+                                onClick = { passwordVisible = !passwordVisible }
+                            ) {
+                                Icon(
+                                    imageVector =
+                                        if (passwordVisible)
+                                            Icons.Default.VisibilityOff
+                                        else
+                                            Icons.Default.Visibility,
+                                    contentDescription = "Toggle Password"
+                                )
+                            }
+                        },
+                        visualTransformation =
+                            if (passwordVisible)
+                                VisualTransformation.None
+                            else
+                                PasswordVisualTransformation(),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    if (errorText.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = errorText,
+                            color = Color.Red,
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Remember me
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = rememberMe,
+                            onCheckedChange = { rememberMe = it }
+                        )
+                        Text(
+                            text = "Keep me logged in",
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Login Button
+                    Button(
+                        onClick = {
+                            if (adminId == "admin" && password == "admin") {
+                                logAction("Admin logged in")
+                                onLoginSuccess()
+                            } else {
+                                errorText = "Invalid ID or Password"
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp),
+                        shape = RoundedCornerShape(6.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = brandBlue
+                        )
+                    ) {
+                        Text(
+                            text = "LOGIN",
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
-        )
-
-        if (errorText.isNotEmpty()) {
-            Text(
-                text = errorText,
-                color = Color.Red,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-        }
-
-        Button(
-            onClick = {
-                if (adminId == "admin" && password == "admin") {
-                    logAction("Admin logged in")
-                    onLoginSuccess()
-                } else {
-                    errorText = "Invalid ID or Password"
-                }
-            },
-            modifier = Modifier.fillMaxWidth().height(50.dp)
-        ) {
-            Text("Login")
         }
     }
 }
+
+
+

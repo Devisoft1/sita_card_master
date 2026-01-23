@@ -1,7 +1,10 @@
 package com.example.sitacardmaster.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
@@ -132,13 +135,15 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
 
             if (showDatePicker) {
                 platformLog("IssueCard", "Showing date picker dialog")
-                CustomDatePickerDialog(
+                CalendarDatePickerDialog(
                     onDismiss = { showDatePicker = false },
                     onDateSelected = { day, month, year ->
-                        validUpto = "${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/$year"
+                        validUpto =
+                            "${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/$year"
                         showDatePicker = false
                     }
                 )
+
             }
 
             OutlinedTextField(
@@ -192,98 +197,127 @@ fun formatDateToDDMMYYYY(millis: Long): String {
 }
 
 @Composable
-fun CustomDatePickerDialog(
+fun CalendarDatePickerDialog(
     onDismiss: () -> Unit,
     onDateSelected: (day: Int, month: Int, year: Int) -> Unit
 ) {
-    var selectedDay by remember { mutableStateOf(1) }
-    var selectedMonth by remember { mutableStateOf(1) }
     var selectedYear by remember { mutableStateOf(2026) }
-    
-    val currentYear = 2026
-    val years = (currentYear..currentYear + 10).toList()
-    val months = listOf(
+    var selectedMonth by remember { mutableStateOf(1) } // 1–12
+    var selectedDay by remember { mutableStateOf<Int?>(null) }
+
+    val monthNames = listOf(
         "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
     )
-    
+
+    fun daysInMonth(month: Int, year: Int): Int =
+        when (month) {
+            1, 3, 5, 7, 8, 10, 12 -> 31
+            4, 6, 9, 11 -> 30
+            2 -> if (year % 4 == 0) 29 else 28
+            else -> 30
+        }
+
+    val days = daysInMonth(selectedMonth, selectedYear)
+    val weekDays = listOf("Su", "Mo", "Tu", "We", "Th", "Fr", "Sa")
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Select Date") },
+        title = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+
+                // Month & Year selector
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    IconButton(onClick = {
+                        if (selectedMonth == 1) {
+                            selectedMonth = 12
+                            selectedYear--
+                        } else selectedMonth--
+                        selectedDay = null
+                    }) { Text("‹") }
+
+                    Text(
+                        "${monthNames[selectedMonth - 1]} $selectedYear",
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+
+                    IconButton(onClick = {
+                        if (selectedMonth == 12) {
+                            selectedMonth = 1
+                            selectedYear++
+                        } else selectedMonth++
+                        selectedDay = null
+                    }) { Text("›") }
+                }
+            }
+        },
         text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Day Selector
-                Text("Day", style = MaterialTheme.typography.labelMedium)
+            Column {
+
+                // Weekday headers
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    TextButton(onClick = { if (selectedDay > 1) selectedDay-- }) {
-                        Text("-")
-                    }
-                    Text(
-                        selectedDay.toString().padStart(2, '0'),
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                    TextButton(onClick = { if (selectedDay < 31) selectedDay++ }) {
-                        Text("+")
+                    weekDays.forEach {
+                        Text(
+                            text = it,
+                            modifier = Modifier.weight(1f),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
-                // Month Selector
-                Text("Month", style = MaterialTheme.typography.labelMedium)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
+
+                // Calendar Grid
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(7),
+                    modifier = Modifier.height(300.dp),
+                    contentPadding = PaddingValues(4.dp)
                 ) {
-                    TextButton(onClick = { if (selectedMonth > 1) selectedMonth-- }) {
-                        Text("-")
-                    }
-                    Text(
-                        selectedMonth.toString().padStart(2, '0'),
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                    TextButton(onClick = { if (selectedMonth < 12) selectedMonth++ }) {
-                        Text("+")
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                // Year Selector
-                Text("Year", style = MaterialTheme.typography.labelMedium)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(onClick = { if (selectedYear > currentYear) selectedYear-- }) {
-                        Text("-")
-                    }
-                    Text(
-                        selectedYear.toString(),
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                    TextButton(onClick = { if (selectedYear < currentYear + 10) selectedYear++ }) {
-                        Text("+")
+                    items(days) { index ->
+                        val day = index + 1
+                        val isSelected = selectedDay == day
+
+                        Box(
+                            modifier = Modifier
+                                .padding(4.dp)
+                                .aspectRatio(1f)
+                                .clickable { selectedDay = day }
+                                .background(
+                                    if (isSelected)
+                                        MaterialTheme.colorScheme.primary
+                                    else Color.Transparent,
+                                    shape = MaterialTheme.shapes.small
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = day.toString(),
+                                color = if (isSelected)
+                                    MaterialTheme.colorScheme.onPrimary
+                                else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                onDateSelected(selectedDay, selectedMonth, selectedYear)
-            }) {
+            TextButton(
+                enabled = selectedDay != null,
+                onClick = {
+                    selectedDay?.let {
+                        onDateSelected(it, selectedMonth, selectedYear)
+                    }
+                }
+            ) {
                 Text("OK")
             }
         },
