@@ -24,15 +24,18 @@ import org.jetbrains.compose.resources.painterResource
 import sitacardmaster.composeapp.generated.resources.*
 import sitacardmaster.composeapp.generated.resources.Res
 import sitacardmaster.composeapp.generated.resources.logo
+import com.example.sitacardmaster.SettingsStorage
 import com.example.sitacardmaster.logAction
 
 @Composable
 fun LoginScreen(onLoginSuccess: () -> Unit) {
 
-    var adminId by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    val settings = remember { SettingsStorage() }
+    
+    var adminId by remember { mutableStateOf(settings.getString("adminId", "")) }
+    var password by remember { mutableStateOf(settings.getString("password", "")) }
     var passwordVisible by remember { mutableStateOf(false) }
-    var rememberMe by remember { mutableStateOf(false) }
+    var rememberMe by remember { mutableStateOf(settings.getBoolean("rememberMe", false)) }
     var errorText by remember { mutableStateOf("") }
 
     val brandBlue = Color(0xFF2D2F91)
@@ -53,7 +56,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             Image(
                 painter = painterResource(Res.drawable.logo),
                 contentDescription = "Logo",
-                modifier = Modifier.size(90.dp)
+                modifier = Modifier.size(150.dp)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -61,7 +64,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
+                    .padding(horizontal = 12.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White)
@@ -154,6 +157,17 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                         onClick = {
                             if (adminId == "admin" && password == "admin") {
                                 logAction("Admin logged in")
+                                
+                                if (rememberMe) {
+                                    settings.putString("adminId", adminId)
+                                    settings.putString("password", password)
+                                    settings.putBoolean("rememberMe", true)
+                                } else {
+                                    settings.remove("adminId")
+                                    settings.remove("password")
+                                    settings.putBoolean("rememberMe", false)
+                                }
+                                
                                 onLoginSuccess()
                             } else {
                                 errorText = "Invalid ID or Password"

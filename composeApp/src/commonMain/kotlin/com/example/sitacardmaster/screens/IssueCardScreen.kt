@@ -22,6 +22,8 @@ import com.example.sitacardmaster.platformLog
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.painterResource
+import sitacardmaster.composeapp.generated.resources.*
 
 @Composable
 fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
@@ -34,6 +36,9 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
     var statusMessage by remember { mutableStateOf("Ready to write") }
     var isScanning by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
+
+    val brandBlue = Color(0xFF2D2F91)
+    val surfaceGray = Color(0xFFF5F7FA)
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -62,30 +67,51 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
     }
 
     Scaffold(
-        modifier = Modifier.windowInsetsPadding(WindowInsets.safeContent),
+        topBar = {
+            Surface(
+                shadowElevation = 4.dp,
+                color = Color.White
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets.statusBars)
+                        .height(40.dp)
+                        .padding(horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = {
+                        isScanning = false
+                        onBack()
+                    }) {
+                        Icon(
+                            painter = painterResource(Res.drawable.ic_back),
+                            contentDescription = "Back",
+                            tint = brandBlue,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    
+                    Text(
+                        text = "Issue New Card",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = brandBlue,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
+            }
+        },
+        containerColor = surfaceGray,
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp).padding(padding),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(onClick = {
-                    isScanning = false
-                    onBack()
-                }) {
-                    Text("Back")
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Text(
-                    text = "Issue New Card",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            }
 
             Spacer(modifier = Modifier.height(24.dp))
 

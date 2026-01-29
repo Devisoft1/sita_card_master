@@ -11,7 +11,7 @@
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/topBar"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/_45sdp"
+        android:layout_height="@dimen/_35sdp"
         app:cardElevation="@dimen/_2sdp"
         app:cardCornerRadius="0dp"
         app:layout_constraintTop_toTopOf="parent">
@@ -40,13 +40,13 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Admin"
-                android:textSize="@dimen/_14ssp"
+                android:textSize="@dimen/_16ssp"
                 android:textStyle="bold"
                 android:textColor="@color/brand_blue"
                 app:layout_constraintStart_toEndOf="@id/backButton"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"
-                android:layout_marginStart="@dimen/_4sdp" />
+                android:layout_marginStart="@dimen/_8sdp" />
 
             <Button
                 android:id="@+id/logoutButton"

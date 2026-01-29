@@ -27,11 +27,19 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
 
     override fun startScanning() {
         (detectedTag as MutableState<Tag?>).value = null
-        nfcAdapter?.enableForegroundDispatch(activity, pendingIntent, intentFilters, null)
+        try {
+            nfcAdapter?.enableForegroundDispatch(activity, pendingIntent, intentFilters, null)
+        } catch (e: IllegalStateException) {
+            platformLog("SITACardMaster", "Failed to enable foreground dispatch: ${e.message}")
+        }
     }
 
     override fun stopScanning() {
-        nfcAdapter?.disableForegroundDispatch(activity)
+        try {
+            nfcAdapter?.disableForegroundDispatch(activity)
+        } catch (e: IllegalStateException) {
+            platformLog("SITACardMaster", "Failed to disable foreground dispatch: ${e.message}")
+        }
     }
 
     fun onNewIntent(intent: Intent) {

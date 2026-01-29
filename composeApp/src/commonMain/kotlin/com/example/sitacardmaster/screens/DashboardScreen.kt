@@ -16,8 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.sitacardmaster.NfcManager
 import org.jetbrains.compose.resources.painterResource
-import sitacardmaster.composeapp.generated.resources.Res
-import sitacardmaster.composeapp.generated.resources.logo
+import sitacardmaster.composeapp.generated.resources.*
 
 @Composable
 fun DashboardScreen(
@@ -60,17 +59,26 @@ fun DashboardScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .windowInsetsPadding(WindowInsets.safeContent)
-                        .height(56.dp)
-                        .padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .windowInsetsPadding(WindowInsets.statusBars)
+                        .height(40.dp)
+                        .padding(start = 4.dp, end = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    IconButton(onClick = onLogout) {
+                        Icon(
+                            painter = painterResource(Res.drawable.ic_back),
+                            contentDescription = "Back",
+                            tint = brandBlue,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
                     Text(
                         text = "Admin",
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = brandBlue
+                        color = brandBlue,
+                        modifier = Modifier.padding(start = 8.dp).weight(1f)
                     )
                     
                     TextButton(onClick = onLogout) {
@@ -176,16 +184,6 @@ fun DashboardScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = brandBlue)
             ) {
                 Text("Issue New Card", fontWeight = FontWeight.Bold)
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            OutlinedButton(
-                onClick = onLogsClick,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("View Action Logs")
             }
         }
     }
