@@ -3,6 +3,9 @@ package com.example.sitacardmaster.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.text.KeyboardOptions
@@ -12,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -25,6 +29,7 @@ import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.painterResource
 import sitacardmaster.composeapp.generated.resources.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
     var memberId by remember { mutableStateOf("") }
@@ -39,9 +44,14 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
 
     val brandBlue = Color(0xFF2D2F91)
     val surfaceGray = Color(0xFFF5F7FA)
+    val white = Color.White
+    val errorRed = Color(0xFFD32F2F)
+    val grayText = Color(0xFF757575)
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    
+    val datePickerState = rememberDatePickerState()
 
     val tag by nfcManager.detectedTag
 
@@ -70,14 +80,14 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
         topBar = {
             Surface(
                 shadowElevation = 4.dp,
-                color = Color.White
+                color = white
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .windowInsetsPadding(WindowInsets.statusBars)
-                        .height(40.dp)
-                        .padding(horizontal = 4.dp),
+                        .height(56.dp) // Updated to match standard Material TopBar height (~@dimen/_35sdp)
+                        .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = {
@@ -91,11 +101,10 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                             modifier = Modifier.size(24.dp)
                         )
                     }
-                    
+
                     Text(
                         text = "Issue New Card",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                         color = brandBlue,
                         modifier = Modifier.padding(start = 8.dp)
                     )
@@ -109,103 +118,209 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(24.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 8.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            OutlinedTextField(
-                value = memberId,
-                onValueChange = { memberId = it },
-                label = { Text("Member ID") },
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
-            )
-
-            OutlinedTextField(
-                value = companyName,
-                onValueChange = { companyName = it },
-                label = { Text("Company Name") },
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
-            )
-
-            // Date Picker Field
-            OutlinedTextField(
-                value = validUpto,
-                onValueChange = { },
-                label = { Text("Valid Upto (DD/MM/YYYY)") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp)
-                    .clickable { 
-                        platformLog("IssueCard", "Date field clicked!")
-                        showDatePicker = true 
-                    },
-                placeholder = { Text("DD/MM/YYYY") },
-                readOnly = true,
-                enabled = false,
-                colors = OutlinedTextFieldDefaults.colors(
-                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                    disabledBorderColor = MaterialTheme.colorScheme.outline,
-                    disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                ),
-                trailingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.CalendarToday,
-                        contentDescription = "Select Date"
-                    )
-                }
-            )
-
-            if (showDatePicker) {
-                platformLog("IssueCard", "Showing date picker dialog")
-                CalendarDatePickerDialog(
-                    onDismiss = { showDatePicker = false },
-                    onDateSelected = { day, month, year ->
-                        validUpto =
-                            "${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/$year"
-                        showDatePicker = false
-                    }
-                )
-
-            }
-
-            OutlinedTextField(
-                value = totalBuy,
-                onValueChange = { totalBuy = it },
-                label = { Text("Total Buy") },
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-            )
-
-            Text(
-                text = statusMessage,
-                color = if (statusMessage.contains("Error") || statusMessage.contains("failed")) Color.Red else Color.Gray,
-                modifier = Modifier.padding(vertical = 16.dp)
-            )
-
-            if (isScanning) {
-                CircularProgressIndicator(modifier = Modifier.padding(bottom = 16.dp))
-                Text("TAP CARD NOW...", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = { isScanning = false }) {
-                    Text("Cancel Scan")
-                }
-            } else {
-                Button(
-                    onClick = {
-                        if (memberId.isEmpty() || companyName.isEmpty()) {
-                            statusMessage = "Error: Please fill all fields"
-                            return@Button
-                        }
-                        isScanning = true
-                        statusMessage = "Scanning... Tap Card"
-                    },
-                    modifier = Modifier.fillMaxWidth().height(50.dp)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                colors = CardDefaults.cardColors(containerColor = white),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 20.dp)
                 ) {
-                    Text("Start Scan & Write")
+                    Text(
+                        text = "Card Details",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = brandBlue,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = memberId,
+                        onValueChange = { memberId = it },
+                        label = { Text("Member ID") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(Res.drawable.ic_person),
+                                contentDescription = null,
+                                tint = brandBlue
+                            )
+                        },
+                        shape = RoundedCornerShape(8.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = companyName,
+                        onValueChange = { companyName = it },
+                        label = { Text("Company Name") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(Res.drawable.ic_business),
+                                contentDescription = null,
+                                tint = brandBlue
+                            )
+                        },
+                        shape = RoundedCornerShape(8.dp)
+                    )
+
+                    // Date Picker Field
+                    OutlinedTextField(
+                        value = validUpto,
+                        onValueChange = { },
+                        label = { Text("Valid Upto") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp)
+                            .clickable {
+                                platformLog("IssueCard", "Date field clicked!")
+                                showDatePicker = true
+                            },
+                        placeholder = { Text("DD/MM/YYYY") },
+                        readOnly = true,
+                        enabled = false,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                            disabledBorderColor = MaterialTheme.colorScheme.outline,
+                            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            disabledPlaceholderColor = grayText,
+                            disabledLeadingIconColor = brandBlue,
+                            disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(Res.drawable.ic_event),
+                                contentDescription = null,
+                                tint = brandBlue
+                            )
+                        },
+                        trailingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.CalendarToday,
+                                contentDescription = "Select Date"
+                            )
+                        },
+                        shape = RoundedCornerShape(8.dp)
+                    )
+
+                    if (showDatePicker) {
+                        DatePickerDialog(
+                            onDismissRequest = { showDatePicker = false },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    datePickerState.selectedDateMillis?.let { millis ->
+                                        validUpto = formatDateToDDMMYYYY(millis)
+                                    }
+                                    showDatePicker = false
+                                }) {
+                                    Text("OK")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showDatePicker = false }) {
+                                    Text("Cancel")
+                                }
+                            }
+                        ) {
+                        DatePicker(
+                            state = datePickerState,
+                            title = null
+                        )
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = totalBuy,
+                        onValueChange = { totalBuy = it },
+                        label = { Text("Total Buy") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 20.dp),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(Res.drawable.ic_payments),
+                                contentDescription = null,
+                                tint = brandBlue
+                            )
+                        },
+                        shape = RoundedCornerShape(8.dp)
+                    )
+
+                    HorizontalDivider(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        color = Color(0xFFE0E0E0),
+                        thickness = 1.dp
+                    )
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = statusMessage,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (statusMessage.contains("Error") || statusMessage.contains("failed")) errorRed else grayText,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+
+                        if (isScanning) {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .padding(bottom = 12.dp),
+                                color = brandBlue
+                            )
+                            Text(
+                                text = "TAP CARD NOW...",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = brandBlue,
+                                modifier = Modifier.padding(bottom = 16.dp)
+                            )
+                            Button(
+                                onClick = { isScanning = false },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = errorRed),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Cancel Scan", fontWeight = FontWeight.Bold)
+                            }
+                        } else {
+                            Button(
+                                onClick = {
+                                    if (memberId.isEmpty() || companyName.isEmpty()) {
+                                        statusMessage = "Error: Please fill all fields"
+                                        return@Button
+                                    }
+                                    isScanning = true
+                                    statusMessage = "Scanning... Tap Card"
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = brandBlue),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Start Scan & Write", fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -220,137 +335,4 @@ fun formatDateToDDMMYYYY(millis: Long): String {
     val month = localDate.monthNumber.toString().padStart(2, '0')
     val year = localDate.year
     return "$day/$month/$year"
-}
-
-@Composable
-fun CalendarDatePickerDialog(
-    onDismiss: () -> Unit,
-    onDateSelected: (day: Int, month: Int, year: Int) -> Unit
-) {
-    var selectedYear by remember { mutableStateOf(2026) }
-    var selectedMonth by remember { mutableStateOf(1) } // 1–12
-    var selectedDay by remember { mutableStateOf<Int?>(null) }
-
-    val monthNames = listOf(
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
-    )
-
-    fun daysInMonth(month: Int, year: Int): Int =
-        when (month) {
-            1, 3, 5, 7, 8, 10, 12 -> 31
-            4, 6, 9, 11 -> 30
-            2 -> if (year % 4 == 0) 29 else 28
-            else -> 30
-        }
-
-    val days = daysInMonth(selectedMonth, selectedYear)
-    val weekDays = listOf("Su", "Mo", "Tu", "We", "Th", "Fr", "Sa")
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-
-                // Month & Year selector
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    IconButton(onClick = {
-                        if (selectedMonth == 1) {
-                            selectedMonth = 12
-                            selectedYear--
-                        } else selectedMonth--
-                        selectedDay = null
-                    }) { Text("‹") }
-
-                    Text(
-                        "${monthNames[selectedMonth - 1]} $selectedYear",
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 12.dp)
-                    )
-
-                    IconButton(onClick = {
-                        if (selectedMonth == 12) {
-                            selectedMonth = 1
-                            selectedYear++
-                        } else selectedMonth++
-                        selectedDay = null
-                    }) { Text("›") }
-                }
-            }
-        },
-        text = {
-            Column {
-
-                // Weekday headers
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    weekDays.forEach {
-                        Text(
-                            text = it,
-                            modifier = Modifier.weight(1f),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Calendar Grid
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(7),
-                    modifier = Modifier.height(300.dp),
-                    contentPadding = PaddingValues(4.dp)
-                ) {
-                    items(days) { index ->
-                        val day = index + 1
-                        val isSelected = selectedDay == day
-
-                        Box(
-                            modifier = Modifier
-                                .padding(4.dp)
-                                .aspectRatio(1f)
-                                .clickable { selectedDay = day }
-                                .background(
-                                    if (isSelected)
-                                        MaterialTheme.colorScheme.primary
-                                    else Color.Transparent,
-                                    shape = MaterialTheme.shapes.small
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = day.toString(),
-                                color = if (isSelected)
-                                    MaterialTheme.colorScheme.onPrimary
-                                else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                enabled = selectedDay != null,
-                onClick = {
-                    selectedDay?.let {
-                        onDateSelected(it, selectedMonth, selectedYear)
-                    }
-                }
-            ) {
-                Text("OK")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
 }
