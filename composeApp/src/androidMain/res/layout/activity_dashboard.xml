@@ -85,7 +85,8 @@
                 android:orientation="vertical"
                 app:layout_constraintBottom_toTopOf="@+id/detailsContainer"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0.45">
+                app:layout_constraintVertical_bias="0.5"
+                app:layout_constraintVertical_chainStyle="packed">
 
                 <ImageView
                     android:id="@+id/logoCard"
@@ -125,45 +126,173 @@
                 android:layout_marginTop="@dimen/_24sdp"
                 android:visibility="gone"
                 app:cardCornerRadius="@dimen/_20sdp"
-                app:cardElevation="@dimen/_2sdp"
+                app:cardElevation="@dimen/_8sdp"
+                app:strokeWidth="0dp"
+                app:layout_constraintBottom_toTopOf="@+id/newCardButton"
                 app:layout_constraintTop_toBottomOf="@id/scanContainer">
 
-                <LinearLayout
+                <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="@dimen/_16sdp">
+                    android:background="@drawable/card_gradient_bg"
+                    android:padding="@dimen/_20sdp">
 
                     <TextView
+                        android:id="@+id/premiumMemberLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="MEMBER DETAILS"
-                        android:textColor="@color/brand_blue"
-                        android:textSize="@dimen/_12ssp"
+                        android:text="PREMIUM MEMBER"
+                        android:textColor="#FFD700"
+                        android:textSize="@dimen/_10ssp"
                         android:textStyle="bold"
-                        android:layout_marginBottom="@dimen/_12sdp"/>
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
 
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
-                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Member ID" android:textColor="@color/gray_text" android:textSize="@dimen/_11ssp"/>
-                         <TextView android:id="@+id/displayMemberId" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="N/A" android:textColor="@color/black" android:textSize="@dimen/_14ssp" android:textStyle="bold"/>
-                         
-                         <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#EEEEEE" android:layout_marginVertical="@dimen/_8sdp"/>
-                         
-                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Company" android:textColor="@color/gray_text" android:textSize="@dimen/_11ssp"/>
-                         <TextView android:id="@+id/displayCompany" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="N/A" android:textColor="@color/black" android:textSize="@dimen/_14ssp" android:textStyle="bold"/>
+                    <ImageView
+                        android:layout_width="@dimen/_32sdp"
+                        android:layout_height="@dimen/_32sdp"
+                        android:src="@drawable/logo"
+                        android:alpha="0.2"
+                        app:tint="@color/white"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
 
-                         <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#EEEEEE" android:layout_marginVertical="@dimen/_8sdp"/>
+                    <LinearLayout
+                        android:id="@+id/mainInfoRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/_20sdp"
+                        android:orientation="horizontal"
+                        app:layout_constraintTop_toBottomOf="@id/premiumMemberLabel">
 
-                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Valid Upto" android:textColor="@color/gray_text" android:textSize="@dimen/_11ssp"/>
-                         <TextView android:id="@+id/displayValidUpto" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="N/A" android:textColor="@color/black" android:textSize="@dimen/_14ssp" android:textStyle="bold"/>
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Member ID"
+                                android:textColor="#B3FFFFFF"
+                                android:textSize="@dimen/_9ssp" />
+                            <TextView
+                                android:id="@+id/displayMemberId"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="N/A"
+                                android:textColor="@color/white"
+                                android:textSize="@dimen/_15ssp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
 
-                         <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#EEEEEE" android:layout_marginVertical="@dimen/_8sdp"/>
-
-                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Total Buy" android:textColor="@color/gray_text" android:textSize="@dimen/_11ssp"/>
-                         <TextView android:id="@+id/displayTotalBuy" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.00" android:textColor="@color/brand_blue" android:textSize="@dimen/_16ssp" android:textStyle="bold"/>
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Company"
+                                android:textColor="#B3FFFFFF"
+                                android:textSize="@dimen/_9ssp" />
+                            <TextView
+                                android:id="@+id/displayCompany"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="N/A"
+                                android:textColor="@color/white"
+                                android:textSize="@dimen/_13ssp"
+                                android:textStyle="bold"
+                                android:maxLines="1"
+                                android:ellipsize="end" />
+                        </LinearLayout>
                     </LinearLayout>
 
-                </LinearLayout>
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/_20sdp"
+                        app:cardBackgroundColor="#1AFFFFFF"
+                        app:cardCornerRadius="@dimen/_12sdp"
+                        app:cardElevation="0dp"
+                        app:strokeWidth="0dp"
+                        app:layout_constraintTop_toBottomOf="@id/mainInfoRow">
+
+                        <androidx.constraintlayout.widget.ConstraintLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:padding="@dimen/_12sdp">
+
+                            <TextView
+                                android:id="@+id/totalBuyLabel"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Total Buy"
+                                android:textColor="#B3FFFFFF"
+                                android:textSize="@dimen/_9ssp"
+                                app:layout_constraintStart_toStartOf="parent"
+                                app:layout_constraintTop_toTopOf="parent" />
+
+                            <TextView
+                                android:id="@+id/displayTotalBuy"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="₹0.00"
+                                android:textColor="#FFD700"
+                                android:textSize="@dimen/_18ssp"
+                                android:textStyle="bold"
+                                app:layout_constraintStart_toStartOf="parent"
+                                app:layout_constraintTop_toBottomOf="@id/totalBuyLabel" />
+
+                            <TextView
+                                android:id="@+id/amountLabel"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/_12sdp"
+                                android:text="Amount (Current Total)"
+                                android:textColor="#B3FFFFFF"
+                                android:textSize="@dimen/_9ssp"
+                                app:layout_constraintStart_toStartOf="parent"
+                                app:layout_constraintTop_toBottomOf="@id/displayTotalBuy" />
+
+                            <TextView
+                                android:id="@+id/displayAmount"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Loading..."
+                                android:textColor="#4CAF50"
+                                android:textSize="@dimen/_18ssp"
+                                android:textStyle="bold"
+                                app:layout_constraintStart_toStartOf="parent"
+                                app:layout_constraintTop_toBottomOf="@id/amountLabel" />
+
+                            <TextView
+                                android:id="@+id/validUptoLabel"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Valid Upto"
+                                android:textColor="#B3FFFFFF"
+                                android:textSize="@dimen/_9ssp"
+                                app:layout_constraintEnd_toEndOf="parent"
+                                app:layout_constraintTop_toTopOf="parent" />
+
+                            <TextView
+                                android:id="@+id/displayValidUpto"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="N/A"
+                                android:textColor="@color/white"
+                                android:textSize="@dimen/_11ssp"
+                                android:textStyle="bold"
+                                app:layout_constraintEnd_toEndOf="parent"
+                                app:layout_constraintTop_toBottomOf="@id/validUptoLabel" />
+
+                        </androidx.constraintlayout.widget.ConstraintLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <!-- Actions -->
@@ -177,7 +306,21 @@
                 android:textStyle="bold"
                 app:cornerRadius="@dimen/_12sdp"
                 app:backgroundTint="@color/brand_blue"
+                app:layout_constraintBottom_toTopOf="@+id/deleteCardButton"
                 app:layout_constraintTop_toBottomOf="@id/detailsContainer" />
+
+            <Button
+                android:id="@+id/deleteCardButton"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/_48sdp"
+                android:layout_marginTop="@dimen/_12sdp"
+                android:text="Delete Card Data"
+                android:textSize="@dimen/_13ssp"
+                android:textStyle="bold"
+                app:cornerRadius="@dimen/_12sdp"
+                app:backgroundTint="@color/error_red"
+                app:layout_constraintBottom_toTopOf="@+id/stopScanButton"
+                app:layout_constraintTop_toBottomOf="@id/newCardButton" />
 
             <Button
                 android:id="@+id/stopScanButton"
@@ -190,6 +333,7 @@
                 android:visibility="gone"
                 app:cornerRadius="@dimen/_12sdp"
                 app:backgroundTint="@color/gray_text"
+                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/newCardButton" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>

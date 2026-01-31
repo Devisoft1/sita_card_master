@@ -15,6 +15,7 @@ class IssueCardActivity : AppCompatActivity() {
 
     private lateinit var nfcManager: AndroidNfcManager
     private var isScanning = false
+    private var isClearing = false
 
     private lateinit var memberIdInput: EditText
     private lateinit var companyNameInput: EditText
@@ -60,6 +61,28 @@ class IssueCardActivity : AppCompatActivity() {
         cancelScanButton.setOnClickListener {
             stopScanning()
         }
+        
+        findViewById<Button>(R.id.clearCardButton).setOnClickListener {
+             startClearCard()
+        }
+    }
+
+    private fun startClearCard() {
+        isScanning = true
+        statusMessage.text = "Tap Card to Clear Data..."
+        scanProgress.visibility = View.VISIBLE
+        tapCardHint.visibility = View.VISIBLE
+        startScanButton.visibility = View.GONE
+        cancelScanButton.visibility = View.VISIBLE
+        findViewById<Button>(R.id.clearCardButton).visibility = View.GONE
+        
+        logAction("Clear Card Scanning started")
+        nfcManager.startScanning()
+        
+        // We need a flag to differentiate read/write vs clear, or just handle in onNewIntent/checkAndWriteCard
+        // Since onNewIntent triggers checkAndWriteCard, we should modify that flow or use a flag.
+        // Let's use a flag.
+        isClearing = true
     }
 
     private fun showDatePickerDialog() {
@@ -92,11 +115,13 @@ class IssueCardActivity : AppCompatActivity() {
 
     private fun stopScanning() {
         isScanning = false
+        isClearing = false
         statusMessage.text = "Ready to write"
         scanProgress.visibility = View.GONE
         tapCardHint.visibility = View.GONE
         startScanButton.visibility = View.VISIBLE
         cancelScanButton.visibility = View.GONE
+        findViewById<Button>(R.id.clearCardButton).visibility = View.VISIBLE
         nfcManager.stopScanning()
     }
 
@@ -106,7 +131,11 @@ class IssueCardActivity : AppCompatActivity() {
             nfcManager.onNewIntent(intent)
             val tag = intent.getParcelableExtra<Tag>(NfcAdapter.EXTRA_TAG)
             if (tag != null) {
-                checkAndWriteCard()
+                if (isClearing) {
+                    performClearCard()
+                } else {
+                    checkAndWriteCard()
+                }
             }
         }
     }
@@ -167,6 +196,24 @@ class IssueCardActivity : AppCompatActivity() {
                 }
             }
         )
+    }
+
+    private fun performClearCard() {
+        statusMessage.text = "Clearing card data..."
+        nfcManager.clearCard { success, message ->
+            runOnUiThread {
+                statusMessage.text = message
+                logAction("Clear Result: $message")
+                
+                if (success) {
+                    memberIdInput.setText("")
+                    companyNameInput.setText("")
+                    validUptoInput.setText("")
+                    totalBuyInput.setText("")
+                }
+                stopScanning()
+            }
+        }
     }
 
     private fun logAction(action: String) {

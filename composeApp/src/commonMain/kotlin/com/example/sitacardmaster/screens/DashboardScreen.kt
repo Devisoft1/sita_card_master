@@ -1,6 +1,7 @@
 package com.example.sitacardmaster.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -22,6 +23,7 @@ import sitacardmaster.composeapp.generated.resources.*
 fun DashboardScreen(
     nfcManager: NfcManager,
     onIssueCardClick: () -> Unit,
+    onVerifyMemberClick: () -> Unit,
     onLogsClick: () -> Unit,
     onLogout: () -> Unit
 ) {
@@ -95,7 +97,8 @@ fun DashboardScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
             // Scan Section
             Column(
@@ -145,27 +148,120 @@ fun DashboardScreen(
 
             // Member Details Card
             if (cardData != null) {
-                ElevatedCard(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 24.dp),
                     shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.elevatedCardColors(containerColor = Color.White)
+                    shadowElevation = 8.dp,
+                    color = brandBlue
                 ) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        Text(
-                            "MEMBER DETAILS",
-                            color = brandBlue,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        DetailRow("Member ID", cardData!!["memberId"] ?: "N/A", Color.Black)
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFEEEEEE))
-                        DetailRow("Company", cardData!!["companyName"] ?: "N/A", Color.Black)
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFEEEEEE))
-                        DetailRow("Valid Upto", cardData!!["validUpto"] ?: "N/A", Color.Black)
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFEEEEEE))
-                        DetailRow("Total Buy", cardData!!["totalBuy"] ?: "0.00", brandBlue)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                    colors = listOf(brandBlue, Color(0xFF1A1C63))
+                                )
+                            )
+                            .padding(20.dp)
+                    ) {
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "PREMIUM MEMBER",
+                                    color = Color(0xFFFFD700),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified
+                                )
+                                Icon(
+                                    painter = painterResource(Res.drawable.logo),
+                                    contentDescription = null,
+                                    tint = Color.White.copy(alpha = 0.2f),
+                                    modifier = Modifier.size(40.dp)
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(24.dp))
+                            
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        "Member ID",
+                                        color = Color.White.copy(alpha = 0.7f),
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    Text(
+                                        cardData!!["memberId"] ?: "N/A",
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        "Company",
+                                        color = Color.White.copy(alpha = 0.7f),
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    Text(
+                                        cardData!!["companyName"] ?: "N/A",
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                            
+                            Spacer(modifier = Modifier.height(24.dp))
+                            
+                            Surface(
+                                color = Color.White.copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
+                                            Text(
+                                                "Total Buy",
+                                                color = Color.White.copy(alpha = 0.7f),
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                            Text(
+                                                "₹${cardData!!["totalBuy"] ?: "0.00"}",
+                                                color = Color(0xFFFFD700),
+                                                style = MaterialTheme.typography.headlineSmall,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Text(
+                                                "Valid Upto",
+                                                color = Color.White.copy(alpha = 0.7f),
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                            Text(
+                                                cardData!!["validUpto"] ?: "N/A",
+                                                color = Color.White,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             } else if (scanStatus.isNotEmpty() && !isScanning) {
@@ -184,6 +280,17 @@ fun DashboardScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = brandBlue)
             ) {
                 Text("Issue New Card", fontWeight = FontWeight.Bold)
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = onVerifyMemberClick,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853))
+            ) {
+                Text("Verify Member Online", fontWeight = FontWeight.Bold)
             }
         }
     }

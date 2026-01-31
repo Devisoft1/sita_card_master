@@ -98,8 +98,11 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
         }
 
         Thread {
+            var success = false
+            var resultMessage = ""
+            
             try {
-                platformLog("SITACardMaster", "Connecting to Mifare card...")
+                platformLog("SITACardMaster", "Connecting to Mifare card for Write...")
                 mifare.connect()
                 platformLog("SITACardMaster", "Connected. Checking Sector 3...")
 
@@ -111,36 +114,45 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                     writeBlock(mifare, 13, companyName)
                     platformLog("SITACardMaster", "Writing ValidUpto to Block 14...")
                     writeBlock(mifare, 14, validUpto)
+
+                     // Sector 4 (Block 16, 17)
+                    if (authenticateSector(mifare, 4)) {
+                        platformLog("SITACardMaster", "Writing TotalBuy to Block 16...")
+                        writeBlock(mifare, 16, totalBuy)
+                        platformLog("SITACardMaster", "Writing today's date to Block 17...")
+                        val today = java.text.SimpleDateFormat("dd-MM-yyyy", java.util.Locale.getDefault()).format(java.util.Date())
+                        writeBlock(mifare, 17, today)
+                        
+                        platformLog("SITACardMaster", "All blocks written successfully!")
+                        success = true
+                        resultMessage = "Data written successfully!"
+
+                    } else {
+                         success = false
+                         resultMessage = "Authentication failed for Sector 4."
+                    }
                 } else {
-                    onResult(false, "Authentication failed for Sector 3. Please ensure the card is a standard Mifare Classic card.")
-                    return@Thread
+                   success = false
+                   resultMessage = "Authentication failed for Sector 3. Please ensure the card is a standard Mifare Classic card."
                 }
 
-                // Sector 4 (Block 16, 17)
-                if (authenticateSector(mifare, 4)) {
-                    platformLog("SITACardMaster", "Writing TotalBuy to Block 16...")
-                    writeBlock(mifare, 16, totalBuy)
-                    platformLog("SITACardMaster", "Writing today's date to Block 17...")
-                    val today = java.text.SimpleDateFormat("dd-MM-yyyy", java.util.Locale.getDefault()).format(java.util.Date())
-                    writeBlock(mifare, 17, today)
-                } else {
-                    onResult(false, "Authentication failed for Sector 4.")
-                    return@Thread
-                }
-
-                platformLog("SITACardMaster", "All blocks written successfully!")
-                onResult(true, "Data written successfully!")
             } catch (e: Exception) {
                 platformLog("SITACardMaster", "Write Error: ${e.message}")
-                onResult(false, "Error: ${e.message}")
+                success = false
+                resultMessage = "Error: ${e.message}"
             } finally {
                 try {
-                    mifare.close()
-                    platformLog("SITACardMaster", "Mifare connection closed")
+                    if (mifare.isConnected) {
+                        mifare.close()
+                    }
+                    platformLog("SITACardMaster", "Mifare connection closed (writeCard)")
                 } catch (e: Exception) {
                     platformLog("SITACardMaster", "Error closing Mifare: ${e.message}")
                 }
             }
+            
+            // Callback AFTER closing connection
+            onResult(success, resultMessage)
         }.start()
     }
 
@@ -160,6 +172,10 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
         }
 
         Thread {
+            var success = false
+            var resultData: Map<String, String>? = null
+            var resultMessage = ""
+
             try {
                 platformLog("SITACardMaster", "Reading card...")
                 mifare.connect()
@@ -172,45 +188,61 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                     
                     if (memberId.isBlank()) {
                         platformLog("SITACardMaster", "Card is blank (Block 12 is empty)")
-                        onResult(true, null, "Blank card")
-                        return@Thread
+                        success = true
+                        resultData = null
+                        resultMessage = "Blank card"
+                    } else {
+                        data["memberId"] = memberId
+                        
+                        val company = readBlock(mifare, 13)
+                        platformLog("SITACardMaster", "Block 13 (Company): $company")
+                        data["companyName"] = company
+                        
+                        val validUpto = readBlock(mifare, 14)
+                        platformLog("SITACardMaster", "Block 14 (Valid Upto): $validUpto")
+                        data["validUpto"] = validUpto
+
+                         // Sector 4 (Block 16, 17)
+                        if (authenticateSector(mifare, 4)) {
+                            val totalBuy = readBlock(mifare, 16)
+                            platformLog("SITACardMaster", "Block 16 (Total Buy): $totalBuy")
+                            data["totalBuy"] = totalBuy
+                            
+                            val lastBuy = readBlock(mifare, 17)
+                            platformLog("SITACardMaster", "Block 17 (Last Buy): $lastBuy")
+                            data["lastBuyDate"] = lastBuy
+                        } else {
+                            platformLog("SITACardMaster", "Sector 4 Authentication Failed")
+                        }
+
+                        platformLog("SITACardMaster", "Full Card Data: $data")
+                        success = true
+                        resultData = data
+                        resultMessage = "Data read successfully"
                     }
-                    data["memberId"] = memberId
-                    
-                    val company = readBlock(mifare, 13)
-                    platformLog("SITACardMaster", "Block 13 (Company): $company")
-                    data["companyName"] = company
-                    
-                    val validUpto = readBlock(mifare, 14)
-                    platformLog("SITACardMaster", "Block 14 (Valid Upto): $validUpto")
-                    data["validUpto"] = validUpto
                 } else {
                     platformLog("SITACardMaster", "Sector 3 Authentication Failed")
-                    onResult(false, null, "Auth failed for Sector 3")
-                    return@Thread
+                    success = false
+                    resultMessage = "Auth failed for Sector 3"
                 }
 
-                // Sector 4 (Block 16, 17)
-                if (authenticateSector(mifare, 4)) {
-                    val totalBuy = readBlock(mifare, 16)
-                    platformLog("SITACardMaster", "Block 16 (Total Buy): $totalBuy")
-                    data["totalBuy"] = totalBuy
-                    
-                    val lastBuy = readBlock(mifare, 17)
-                    platformLog("SITACardMaster", "Block 17 (Last Buy): $lastBuy")
-                    data["lastBuyDate"] = lastBuy
-                } else {
-                    platformLog("SITACardMaster", "Sector 4 Authentication Failed")
-                }
-
-                platformLog("SITACardMaster", "Full Card Data: $data")
-                onResult(true, data, "Data read successfully")
             } catch (e: Exception) {
                 platformLog("SITACardMaster", "Read Exception: ${e.message}")
-                onResult(false, null, "Read error: ${e.message}")
+                success = false
+                resultMessage = "Read error: ${e.message}"
             } finally {
-                try { mifare.close() } catch (e: Exception) {}
+                try {
+                    if (mifare.isConnected) {
+                        mifare.close()
+                    }
+                    platformLog("SITACardMaster", "Mifare connection closed (readCard)")
+                } catch (e: Exception) {
+                    platformLog("SITACardMaster", "Error closing Mifare: ${e.message}")
+                }
             }
+            
+            // Callback AFTER closing connection
+            onResult(success, resultData, resultMessage)
         }.start()
     }
 
@@ -232,6 +264,62 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
         val dataBytes = data.toByteArray(Charset.forName("US-ASCII"))
         System.arraycopy(dataBytes, 0, bytes, 0, minOf(dataBytes.size, 16))
         mifare.writeBlock(blockIndex, bytes)
+    }
+
+    override fun clearCard(onResult: (Boolean, String) -> Unit) {
+        val tag = detectedTag.value
+        if (tag == null) {
+            onResult(false, "No card detected.")
+            return
+        }
+
+        val mifare = MifareClassic.get(tag)
+        if (mifare == null) {
+            onResult(false, "Not a Mifare Classic card.")
+            return
+        }
+
+        Thread {
+            var success = false
+            var resultMessage = ""
+
+            try {
+                platformLog("SITACardMaster", "Connecting to clear card...")
+                mifare.connect()
+
+                if (authenticateSector(mifare, 3)) {
+                    platformLog("SITACardMaster", "Clearing Sector 3...")
+                    writeBlock(mifare, 12, "") // Empty string fills with 0s in writeBlock implementation? 
+                    // Wait, my writeBlock uses ByteArray(16) which is 0-init, then copies data. 
+                    // So passing "" makes it all 0s. Correct.
+                    writeBlock(mifare, 13, "")
+                    writeBlock(mifare, 14, "")
+
+                    if (authenticateSector(mifare, 4)) {
+                        platformLog("SITACardMaster", "Clearing Sector 4...")
+                        writeBlock(mifare, 16, "")
+                        writeBlock(mifare, 17, "")
+                        success = true
+                        resultMessage = "Card cleared successfully."
+                    } else {
+                        success = false
+                        resultMessage = "Failed to auth Sector 4."
+                    }
+                } else {
+                    success = false
+                    resultMessage = "Failed to auth Sector 3."
+                }
+            } catch (e: Exception) {
+                platformLog("SITACardMaster", "Clear Error: ${e.message}")
+                success = false
+                resultMessage = "Error: ${e.message}"
+            } finally {
+                try {
+                    if (mifare.isConnected)  mifare.close()
+                } catch (e: Exception) { }
+            }
+            onResult(success, resultMessage)
+        }.start()
     }
 }
 

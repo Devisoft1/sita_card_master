@@ -15,6 +15,7 @@ interface NfcManager {
         onResult: (Boolean, String) -> Unit
     )
     fun readCard(onResult: (Boolean, Map<String, String>?, String) -> Unit)
+    fun clearCard(onResult: (Boolean, String) -> Unit)
 }
 
 @Composable

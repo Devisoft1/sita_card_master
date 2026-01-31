@@ -18,12 +18,20 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import com.google.android.material.card.MaterialCardView
 import com.example.sitacardmaster.R
 import com.google.android.material.snackbar.Snackbar
+import com.example.sitacardmaster.network.MemberApiClient
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
 class DashboardActivity : AppCompatActivity() {
 
     private lateinit var nfcManager: AndroidNfcManager
     private var isScanning = false
+    private var isDeleteMode = false
+    private val scope = CoroutineScope(Dispatchers.Main)
+    private val memberApiClient = MemberApiClient()
 
     private lateinit var logoCard: ImageView
     private lateinit var scanContainer: LinearLayout
@@ -34,7 +42,9 @@ class DashboardActivity : AppCompatActivity() {
     private lateinit var displayCompany: TextView
     private lateinit var displayValidUpto: TextView
     private lateinit var displayTotalBuy: TextView
+    private lateinit var displayAmount: TextView
     private lateinit var newCardButton: Button
+    private lateinit var deleteCardButton: Button
     private lateinit var stopScanButton: Button
     private lateinit var dashboardScroll: ScrollView
     private val scanTimeoutHandler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -61,7 +71,9 @@ class DashboardActivity : AppCompatActivity() {
         displayCompany = findViewById(R.id.displayCompany)
         displayValidUpto = findViewById(R.id.displayValidUpto)
         displayTotalBuy = findViewById(R.id.displayTotalBuy)
+        displayAmount = findViewById(R.id.displayAmount)
         newCardButton = findViewById(R.id.newCardButton)
+        deleteCardButton = findViewById(R.id.deleteCardButton)
         stopScanButton = findViewById(R.id.stopScanButton)
         dashboardScroll = findViewById(R.id.dashboardScroll)
         val logoutButton = findViewById<Button>(R.id.logoutButton)
@@ -94,6 +106,12 @@ class DashboardActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
+        deleteCardButton.setOnClickListener {
+            isDeleteMode = true
+            startScanMode()
+            scanInstruction.text = "TAP CARD TO DELETE DATA..."
+        }
+
         logoutButton.setOnClickListener {
             val sharedPref = getSharedPreferences("login_prefs", Context.MODE_PRIVATE)
             sharedPref.edit().putBoolean("isLoggedIn", false).apply()
@@ -111,6 +129,7 @@ class DashboardActivity : AppCompatActivity() {
         stopScanButton.visibility = View.VISIBLE
         detailsContainer.visibility = View.GONE
         newCardButton.visibility = View.GONE
+        deleteCardButton.visibility = View.GONE
         
         logAction("Scanning started")
         
@@ -122,6 +141,7 @@ class DashboardActivity : AppCompatActivity() {
 
     private fun stopScanMode() {
         isScanning = false
+        isDeleteMode = false
         scanInstruction.text = "Tap logo to scan card"
         scanProgress.visibility = View.GONE
         stopScanButton.visibility = View.GONE
@@ -131,7 +151,7 @@ class DashboardActivity : AppCompatActivity() {
         // Move logo back to center ONLY if no data is visible
         if (detailsContainer.visibility != View.VISIBLE) {
             val params = scanContainer.layoutParams as ConstraintLayout.LayoutParams
-            params.verticalBias = 0.45f
+            params.verticalBias = 0.5f
             scanContainer.layoutParams = params
         }
         
@@ -153,6 +173,26 @@ class DashboardActivity : AppCompatActivity() {
     }
 
     private fun processCard() {
+        if (isDeleteMode) {
+            scanInstruction.text = "Deleting data..."
+            logAction("Processing delete card")
+            nfcManager.clearCard { success, message ->
+                runOnUiThread {
+                    stopScanMode()
+                    if (success) {
+                        logAction("Card cleared successfully")
+                        statusSnackbar("Card data deleted successfully!")
+                    } else {
+                        logAction("Card clear error: $message")
+                        statusSnackbar("Delete Failed: $message")
+                    }
+                    newCardButton.visibility = View.VISIBLE
+                    deleteCardButton.visibility = View.VISIBLE
+                }
+            }
+            return
+        }
+
         scanInstruction.text = "Checking card..."
         logAction("Processing detected card")
         nfcManager.readCard { success, data, message ->
@@ -163,16 +203,19 @@ class DashboardActivity : AppCompatActivity() {
                     logAction("Card read success: ${data["memberId"]}")
                     showCardDetails(data)
                     newCardButton.visibility = View.VISIBLE
+                    deleteCardButton.visibility = View.VISIBLE
                 } else if (success && data == null) {
                     // Blank card
                     logAction("Card read success: Blank card")
-                    statusSnackbar("Blank card detected.")
+                    statusSnackbar("No data in the card")
                     newCardButton.visibility = View.VISIBLE
+                    deleteCardButton.visibility = View.VISIBLE
                 } else {
                     // Error
                     logAction("Card read error: $message")
                     statusSnackbar(message)
                     newCardButton.visibility = View.VISIBLE
+                    deleteCardButton.visibility = View.VISIBLE
                 }
             }
         }
@@ -188,7 +231,36 @@ class DashboardActivity : AppCompatActivity() {
         displayMemberId.text = data["memberId"] ?: "N/A"
         displayCompany.text = data["companyName"] ?: "N/A"
         displayValidUpto.text = formatDate(data["validUpto"])
-        displayTotalBuy.text = data["totalBuy"] ?: "0.00"
+        displayTotalBuy.text = "₹${data["totalBuy"] ?: "0.00"}"
+        
+        displayAmount.text = "Loading..."
+        scope.launch {
+            val memberId = data["memberId"] ?: ""
+            val companyName = data["companyName"] ?: ""
+            
+            logAction("API Request - Verifying Member: ID='$memberId', Company='$companyName'")
+            
+            if (memberId.isNotBlank()) {
+                val result = withContext(Dispatchers.IO) {
+                    memberApiClient.verifyMember(memberId, companyName)
+                }
+                result.fold(
+                    onSuccess = { response ->
+                        logAction("API Response Success: $response")
+                        logAction("Mapping Data - Current Total: ${response.currentTotal}")
+                        displayAmount.text = "₹${response.currentTotal}"
+                    },
+                    onFailure = { error ->
+                        logAction("API Request Failed: ${error.message}")
+                        displayAmount.text = "N/A"
+                    }
+                )
+            } else {
+                logAction("API Skipped: Member ID is blank")
+                displayAmount.text = "N/A"
+            }
+        }
+
         statusSnackbar("Member Found: ${data["memberId"]}")
 
         // Auto-scroll to details
@@ -198,8 +270,11 @@ class DashboardActivity : AppCompatActivity() {
     }
 
     private fun statusSnackbar(message: String) {
-        // Removed as per request (Snackbar replaced with logging if needed)
-        logAction("Feedback hidden: $message")
+        logAction("Showing Snackbar: $message")
+        Snackbar.make(findViewById(android.R.id.content), message, Snackbar.LENGTH_LONG)
+            .setBackgroundTint(resources.getColor(R.color.brand_blue, theme))
+            .setTextColor(resources.getColor(R.color.white, theme))
+            .show()
     }
 
     private fun formatDate(dateStr: String?): String {
@@ -223,6 +298,7 @@ class DashboardActivity : AppCompatActivity() {
 
     private fun logAction(action: String) {
         platformLog("SITACardMaster", "Dashboard: $action")
+        android.util.Log.i("SITACardMaster_Verbose", "Dashboard: $action") // Duplicate to Info log in case Debug is filtered
     }
 
     override fun onPause() {

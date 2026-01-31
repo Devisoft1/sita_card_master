@@ -34,6 +34,12 @@ sdp-android = { module = "com.intuit.sdp:sdp-android", version = "1.1.1" }
 ssp-android = { module = "com.intuit.ssp:ssp-android", version = "1.1.1" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlin-datetime" }
 
+ktor-client-core = { module = "io.ktor:ktor-client-core", version = "2.3.7" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version = "2.3.7" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version = "2.3.7" }
+ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version = "2.3.7" }
+ktor-client-logging = { module = "io.ktor:ktor-client-logging", version = "2.3.7" }
+
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
@@ -41,3 +47,4 @@ androidLibrary = { id = "com.android.library", version.ref = "agp" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

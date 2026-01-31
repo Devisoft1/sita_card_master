@@ -38,6 +38,10 @@ class IosNfcManager : NfcManager {
     override fun readCard(onResult: (Boolean, Map<String, String>?, String) -> Unit) {
         onResult(false, null, "Please tap the card to read.")
     }
+
+    override fun clearCard(onResult: (Boolean, String) -> Unit) {
+        onResult(false, "Not implemented on iOS yet")
+    }
 }
 
 private class IosNfcDelegate : NSObject(), NFCNDEFReaderSessionDelegateProtocol {
