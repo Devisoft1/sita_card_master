@@ -158,8 +158,11 @@ fun MemberVerificationScreen(
                                Text(data.memberId.toString(), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
                            }
                            Column(horizontalAlignment = Alignment.End) {
-                               Text("Valid Until", style = MaterialTheme.typography.labelSmall)
-                               Text(data.validity.take(10), style = MaterialTheme.typography.bodyLarge)
+                               Text("Membership Validity", style = MaterialTheme.typography.labelSmall)
+                               Text(data.validity?.take(10) ?: "N/A", style = MaterialTheme.typography.bodyLarge)
+                               Spacer(modifier = Modifier.height(4.dp))
+                               Text("Card Validity", style = MaterialTheme.typography.labelSmall)
+                               Text(data.cardValidity?.take(10) ?: "N/A", style = MaterialTheme.typography.bodyLarge)
                            }
                         }
                         Spacer(modifier = Modifier.height(16.dp))
@@ -171,14 +174,25 @@ fun MemberVerificationScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                           Text("Total Balance:", style = MaterialTheme.typography.titleMedium)
-                           Spacer(modifier = Modifier.width(8.dp))
-                           Text(
-                               "₹${data.currentTotal}",
-                               style = MaterialTheme.typography.headlineSmall,
-                               color = Color(0xFF2D2F91),
-                               fontWeight = FontWeight.Bold
-                           )
+                           Column {
+                               Text("Current Balance:", style = MaterialTheme.typography.labelMedium)
+                               Text(
+                                   "₹${data.currentTotal}",
+                                   style = MaterialTheme.typography.headlineSmall,
+                                   color = Color(0xFF2D2F91),
+                                   fontWeight = FontWeight.Bold
+                               )
+                           }
+                           Spacer(modifier = Modifier.width(16.dp))
+                           Column {
+                               Text("Global Balance:", style = MaterialTheme.typography.labelMedium)
+                               Text(
+                                   "₹${data.globalTotal}",
+                                   style = MaterialTheme.typography.headlineSmall,
+                                   color = Color(0xFF006400), // Dark Green
+                                   fontWeight = FontWeight.Bold
+                               )
+                           }
                         }
                     }
                 }

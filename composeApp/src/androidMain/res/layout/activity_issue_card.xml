@@ -136,21 +136,7 @@
                             android:textSize="@dimen/_13ssp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="@dimen/_20sdp"
-                        android:hint="Total Buy"
-                        app:startIconDrawable="@drawable/ic_payments"
-                        app:startIconTint="@color/brand_blue"
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/totalBuy"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="number"
-                            android:textSize="@dimen/_13ssp" />
-                    </com.google.android.material.textfield.TextInputLayout>
+
 
                     <View
                         android:layout_width="match_parent"

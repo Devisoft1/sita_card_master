@@ -16,6 +16,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.sitacardmaster.NfcManager
+import com.example.sitacardmaster.network.MemberApiClient
+import com.example.sitacardmaster.platformLog
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import sitacardmaster.composeapp.generated.resources.*
 
@@ -33,19 +36,68 @@ fun DashboardScreen(
     val errorRed = Color(0xFFE53935)
 
     var isScanning by remember { mutableStateOf(false) }
+    var isDeleteMode by remember { mutableStateOf(false) }
     var cardData by remember { mutableStateOf<Map<String, String>?>(null) }
     var scanStatus by remember { mutableStateOf("") }
+    
+    // API Integration
+    val apiClient = remember { MemberApiClient() }
+    val scope = rememberCoroutineScope()
+    var currentAmount by remember { mutableStateOf<String?>("Loading...") }
 
     // Logic to handle scan results
     val detectedTag by nfcManager.detectedTag
     LaunchedEffect(detectedTag) {
         if (isScanning && detectedTag != null) {
+            
+            if (isDeleteMode) {
+                platformLog("Dashboard", "Processing card deletion...")
+                scanStatus = "Deleting data..."
+                nfcManager.clearCard { success, message ->
+                    if (success) {
+                        scanStatus = "Card data deleted successfully"
+                        platformLog("Dashboard", "Card deletion success")
+                    } else {
+                        scanStatus = "Delete Failed: $message"
+                        platformLog("Dashboard", "Card deletion failed: $message")
+                    }
+                    isScanning = false
+                    isDeleteMode = false // Reset mode
+                }
+                return@LaunchedEffect
+            }
+
+            platformLog("Dashboard", "Reading card data...")
             nfcManager.readCard { success, data, message ->
                 if (success) {
                     cardData = data
-                    scanStatus = if (data == null) "Blank card detected" else "Card read successfully"
+                    scanStatus = if (data == null) "No data in the card" else "Card read successfully"
+                    platformLog("Dashboard", "Card read success: ${data?.get("memberId")}")
+                    
+                    // Fetch Amount from API
+                    if (data != null) {
+                        val memberId = data["memberId"] ?: ""
+                        val companyName = data["companyName"] ?: ""
+                        platformLog("Dashboard", "Fetching Amount for ID: $memberId, Company: $companyName")
+                        
+                        currentAmount = "Loading..."
+                        scope.launch {
+                             val result = apiClient.verifyMember(memberId, companyName)
+                             result.fold(
+                                 onSuccess = { response ->
+                                     currentAmount = "₹${response.currentTotal}"
+                                     platformLog("Dashboard", "Amount fetched: ${response.currentTotal}")
+                                 },
+                                 onFailure = { error ->
+                                     currentAmount = "N/A"
+                                     platformLog("Dashboard", "Amount fetch error: ${error.message}")
+                                 }
+                             )
+                        }
+                    }
                 } else {
                     scanStatus = "Read error: $message"
+                    platformLog("Dashboard", "Card read error: $message")
                 }
                 isScanning = false
             }
@@ -114,6 +166,8 @@ fun DashboardScreen(
                         .size(150.dp)
                         .clickable {
                             isScanning = true
+                            // If user just clicks logo, default to read mode
+                            isDeleteMode = false
                             scanStatus = "Scanning... Tap card"
                             nfcManager.startScanning()
                         },
@@ -123,7 +177,9 @@ fun DashboardScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Text(
-                    text = if (isScanning) "Scanning... Tap card" else "Tap logo to scan card",
+                    text = if (isScanning) {
+                        if (isDeleteMode) "TAP CARD TO DELETE DATA..." else "Scanning... Tap card"
+                    } else "Tap logo to scan card",
                     color = brandBlue,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
@@ -260,6 +316,28 @@ fun DashboardScreen(
                                         }
                                     }
                                 }
+                                
+                                Spacer(modifier = Modifier.height(16.dp))
+                                
+                                Surface(
+                                    color = Color.White.copy(alpha = 0.1f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                         Text(
+                                            "Amount (Current Total)",
+                                            color = Color.White.copy(alpha = 0.7f),
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                        Text(
+                                            currentAmount ?: "N/A",
+                                            color = Color(0xFF4CAF50),
+                                            style = MaterialTheme.typography.headlineMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -283,15 +361,22 @@ fun DashboardScreen(
             }
             
             Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = onVerifyMemberClick,
+            
+             Button(
+                onClick = {
+                    isScanning = true
+                    isDeleteMode = true
+                    scanStatus = "TAP CARD TO DELETE DATA..."
+                    nfcManager.startScanning()
+                },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853))
+                colors = ButtonDefaults.buttonColors(containerColor = errorRed)
             ) {
-                Text("Verify Member Online", fontWeight = FontWeight.Bold)
+                Text("Delete Card Data", fontWeight = FontWeight.Bold)
             }
+            
+
         }
     }
 }

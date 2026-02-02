@@ -51,6 +51,7 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
             tag?.let {
                 val tagId = it.id.joinToString(":") { byte -> "%02X".format(byte) }
                 platformLog("SITACardMaster", "NFC Tag Detected! ID: $tagId")
+                platformLog("SITACardMaster", "Manufacturing Number: $tagId")
                 platformLog("SITACardMaster", "Technologies: ${it.techList.joinToString(", ")}")
             }
             (detectedTag as MutableState<Tag?>).value = tag
@@ -180,6 +181,11 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                 platformLog("SITACardMaster", "Reading card...")
                 mifare.connect()
                 val data = mutableMapOf<String, String>()
+
+                // Add MFID to data
+                val tagId = tag.id.joinToString("") { byte -> "%02X".format(byte) }
+                data["card_mfid"] = tagId
+
 
                 // Sector 3 (Blocks 12, 13, 14)
                 if (authenticateSector(mifare, 3)) {

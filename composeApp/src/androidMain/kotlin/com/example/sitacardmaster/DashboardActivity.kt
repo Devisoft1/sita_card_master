@@ -43,6 +43,8 @@ class DashboardActivity : AppCompatActivity() {
     private lateinit var displayValidUpto: TextView
     private lateinit var displayTotalBuy: TextView
     private lateinit var displayAmount: TextView
+    private lateinit var displayGlobalTotal: TextView
+    private lateinit var displayMembershipValidity: TextView
     private lateinit var newCardButton: Button
     private lateinit var deleteCardButton: Button
     private lateinit var stopScanButton: Button
@@ -72,6 +74,8 @@ class DashboardActivity : AppCompatActivity() {
         displayValidUpto = findViewById(R.id.displayValidUpto)
         displayTotalBuy = findViewById(R.id.displayTotalBuy)
         displayAmount = findViewById(R.id.displayAmount)
+        displayGlobalTotal = findViewById(R.id.displayGlobalTotal)
+        displayMembershipValidity = findViewById(R.id.displayMembershipValidity)
         newCardButton = findViewById(R.id.newCardButton)
         deleteCardButton = findViewById(R.id.deleteCardButton)
         stopScanButton = findViewById(R.id.stopScanButton)
@@ -234,6 +238,9 @@ class DashboardActivity : AppCompatActivity() {
         displayTotalBuy.text = "₹${data["totalBuy"] ?: "0.00"}"
         
         displayAmount.text = "Loading..."
+        displayGlobalTotal.text = "Loading..."
+        displayMembershipValidity.text = "Loading..."
+        
         scope.launch {
             val memberId = data["memberId"] ?: ""
             val companyName = data["companyName"] ?: ""
@@ -241,23 +248,37 @@ class DashboardActivity : AppCompatActivity() {
             logAction("API Request - Verifying Member: ID='$memberId', Company='$companyName'")
             
             if (memberId.isNotBlank()) {
+                val cardMfid = data["card_mfid"] ?: ""
+                val cardValidity = data["validUpto"] ?: ""
+
                 val result = withContext(Dispatchers.IO) {
-                    memberApiClient.verifyMember(memberId, companyName)
+                    memberApiClient.verifyMember(
+                        memberId = memberId, 
+                        companyName = companyName,
+                        cardMfid = cardMfid,
+                        cardValidity = cardValidity
+                    )
                 }
                 result.fold(
                     onSuccess = { response ->
                         logAction("API Response Success: $response")
-                        logAction("Mapping Data - Current Total: ${response.currentTotal}")
+                        logAction("Mapping Data - Current Total: ${response.currentTotal}, Global: ${response.globalTotal}")
                         displayAmount.text = "₹${response.currentTotal}"
+                        displayGlobalTotal.text = "₹${response.globalTotal}"
+                        displayMembershipValidity.text = response.validity?.take(10) ?: "N/A"
                     },
                     onFailure = { error ->
                         logAction("API Request Failed: ${error.message}")
                         displayAmount.text = "N/A"
+                        displayGlobalTotal.text = "N/A"
+                        displayMembershipValidity.text = "N/A"
                     }
                 )
             } else {
                 logAction("API Skipped: Member ID is blank")
                 displayAmount.text = "N/A"
+                displayGlobalTotal.text = "N/A"
+                displayMembershipValidity.text = "N/A"
             }
         }
 

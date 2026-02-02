@@ -40,7 +40,8 @@ class IosNfcManager : NfcManager {
     }
 
     override fun clearCard(onResult: (Boolean, String) -> Unit) {
-        onResult(false, "Not implemented on iOS yet")
+        platformLog("NFC", "clearCard called on iOS - Not fully implemented")
+        onResult(false, "Clear Card not implemented on iOS yet")
     }
 }
 

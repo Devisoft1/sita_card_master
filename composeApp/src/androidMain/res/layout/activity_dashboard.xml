@@ -269,10 +269,32 @@
                                 app:layout_constraintTop_toBottomOf="@id/amountLabel" />
 
                             <TextView
+                                android:id="@+id/globalTotalLabel"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/_12sdp"
+                                android:text="Global Balance"
+                                android:textColor="#B3FFFFFF"
+                                android:textSize="@dimen/_9ssp"
+                                app:layout_constraintStart_toStartOf="parent"
+                                app:layout_constraintTop_toBottomOf="@id/displayAmount" />
+
+                            <TextView
+                                android:id="@+id/displayGlobalTotal"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Loading..."
+                                android:textColor="#81C784"
+                                android:textSize="@dimen/_18ssp"
+                                android:textStyle="bold"
+                                app:layout_constraintStart_toStartOf="parent"
+                                app:layout_constraintTop_toBottomOf="@id/globalTotalLabel" />
+
+                            <TextView
                                 android:id="@+id/validUptoLabel"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Valid Upto"
+                                android:text="Card Validity"
                                 android:textColor="#B3FFFFFF"
                                 android:textSize="@dimen/_9ssp"
                                 app:layout_constraintEnd_toEndOf="parent"
@@ -288,6 +310,28 @@
                                 android:textStyle="bold"
                                 app:layout_constraintEnd_toEndOf="parent"
                                 app:layout_constraintTop_toBottomOf="@id/validUptoLabel" />
+
+                            <TextView
+                                android:id="@+id/membershipValidityLabel"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/_12sdp"
+                                android:text="Membership Validity"
+                                android:textColor="#B3FFFFFF"
+                                android:textSize="@dimen/_9ssp"
+                                app:layout_constraintEnd_toEndOf="parent"
+                                app:layout_constraintTop_toBottomOf="@id/displayValidUpto" />
+
+                            <TextView
+                                android:id="@+id/displayMembershipValidity"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Loading..."
+                                android:textColor="@color/white"
+                                android:textSize="@dimen/_11ssp"
+                                android:textStyle="bold"
+                                app:layout_constraintEnd_toEndOf="parent"
+                                app:layout_constraintTop_toBottomOf="@id/membershipValidityLabel" />
 
                         </androidx.constraintlayout.widget.ConstraintLayout>
                     </com.google.android.material.card.MaterialCardView>

@@ -7,8 +7,11 @@ import android.os.Bundle
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.material.snackbar.Snackbar
 import com.example.sitacardmaster.R
+import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 
 class IssueCardActivity : AppCompatActivity() {
@@ -20,12 +23,14 @@ class IssueCardActivity : AppCompatActivity() {
     private lateinit var memberIdInput: EditText
     private lateinit var companyNameInput: EditText
     private lateinit var validUptoInput: EditText
-    private lateinit var totalBuyInput: EditText
+    // private lateinit var totalBuyInput: EditText // Removed
     private lateinit var statusMessage: TextView
     private lateinit var scanProgress: ProgressBar
     private lateinit var tapCardHint: TextView
     private lateinit var startScanButton: Button
     private lateinit var cancelScanButton: Button
+    private val apiClient = com.example.sitacardmaster.network.MemberApiClient()
+    private val coroutineScope = kotlinx.coroutines.MainScope()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,7 +41,7 @@ class IssueCardActivity : AppCompatActivity() {
         memberIdInput = findViewById(R.id.memberId)
         companyNameInput = findViewById(R.id.companyName)
         validUptoInput = findViewById(R.id.validUpto)
-        totalBuyInput = findViewById(R.id.totalBuy)
+        // totalBuyInput = findViewById(R.id.totalBuy) // Removed
         statusMessage = findViewById(R.id.statusMessage)
         scanProgress = findViewById(R.id.scanProgress)
         tapCardHint = findViewById(R.id.tapCardHint)
@@ -78,10 +83,6 @@ class IssueCardActivity : AppCompatActivity() {
         
         logAction("Clear Card Scanning started")
         nfcManager.startScanning()
-        
-        // We need a flag to differentiate read/write vs clear, or just handle in onNewIntent/checkAndWriteCard
-        // Since onNewIntent triggers checkAndWriteCard, we should modify that flow or use a flag.
-        // Let's use a flag.
         isClearing = true
     }
 
@@ -134,34 +135,42 @@ class IssueCardActivity : AppCompatActivity() {
                 if (isClearing) {
                     performClearCard()
                 } else {
-                    checkAndWriteCard()
+                    // Start Verification Process
+                    verifyAndProcessCard(tag)
                 }
             }
         }
     }
 
-    private fun checkAndWriteCard() {
-        statusMessage.text = "Checking card..."
-        nfcManager.readCard { success, data, message ->
-            runOnUiThread {
-                if (success && data != null) {
-                    // Member exists
-                    val existingMemberId = data["memberId"] ?: ""
-                    statusMessage.text = "Member already exist: $existingMemberId"
-                    
-                    // Show existing data
-                    memberIdInput.setText(existingMemberId)
-                    companyNameInput.setText(data["companyName"] ?: "")
-                    validUptoInput.setText(formatDate(data["validUpto"]))
-                    totalBuyInput.setText(data["totalBuy"] ?: "")
-                    
-                    logAction("Attempted write to existing card: $existingMemberId")
-                    stopScanning()
-                } else {
-                    // Safe to write or error (writeCard will handle error if tag gone)
-                    writeCard()
-                }
-            }
+    private fun verifyAndProcessCard(tag: Tag) {
+        // Tag ID (MFID)
+        val tagId = tag.id.joinToString("") { byte -> "%02X".format(byte) }
+        val memberId = memberIdInput.text.toString()
+        val company = companyNameInput.text.toString()
+        val validUpto = validUptoInput.text.toString()
+
+        statusMessage.text = "Verifying with API..."
+        
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) { // Using GlobalScope for simplicity in Activity for now, ideally LifecycleScope
+             logAction("API Request: Member=$memberId, Company=$company, MFID=$tagId, Validity=$validUpto")
+             val result = apiClient.verifyMember(
+                 memberId = memberId,
+                 companyName = company,
+                 cardMfid = tagId,
+                 cardValidity = validUpto
+             )
+             
+             runOnUiThread {
+                 if (result.isSuccess) {
+                     statusMessage.text = "Verified! Writing Info..."
+                     writeCard()
+                 } else {
+                     val error = result.exceptionOrNull()?.message ?: "Verification Failed"
+                     statusMessage.text = error
+                     Toast.makeText(this@IssueCardActivity, error, Toast.LENGTH_LONG).show()
+                     stopScanning()
+                 }
+             }
         }
     }
 
@@ -169,7 +178,8 @@ class IssueCardActivity : AppCompatActivity() {
         val memberId = memberIdInput.text.toString()
         val company = companyNameInput.text.toString()
         val validUpto = validUptoInput.text.toString()
-        val totalBuy = totalBuyInput.text.toString()
+        // val totalBuy = totalBuyInput.text.toString() // Removed
+        val totalBuy = "0" // Defaulting to 0 since input is removed
 
         statusMessage.text = "Card detected! Writing..."
         nfcManager.writeCard(
@@ -183,14 +193,21 @@ class IssueCardActivity : AppCompatActivity() {
                     logAction("Write Result: $message")
                     if (success) {
                         // Save to local storage
-                        DatabaseHelper(this).saveIssuedCard(
-                            memberId = memberId,
-                            company = company,
-                            validUpto = validUpto,
-                            totalBuy = totalBuy
-                        )
-                        
-                        logAction("Local Storage: Saved Member $memberId")
+                        // Assuming DatabaseHelper.saveIssuedCard signature might still need 'totalBuy', passing "0" or checking if it needs update
+                        // If DatabaseHelper is strictly defined, I might need to update it too if I want to remove it there.
+                        // For now sticking to minimal changes as "make ui also" was the ask.
+                        try {
+                             DatabaseHelper(this).saveIssuedCard(
+                                memberId = memberId,
+                                company = company,
+                                validUpto = validUpto,
+                                totalBuy = totalBuy
+                            )
+                            logAction("Local Storage: Saved Member $memberId")
+                        } catch (e: Exception) {
+                            logAction("Local Storage Error: ${e.message}")
+                        }
+                       
                         stopScanning()
                     }
                 }
@@ -209,7 +226,7 @@ class IssueCardActivity : AppCompatActivity() {
                     memberIdInput.setText("")
                     companyNameInput.setText("")
                     validUptoInput.setText("")
-                    totalBuyInput.setText("")
+                    // totalBuyInput.setText("")
                 }
                 stopScanning()
             }
