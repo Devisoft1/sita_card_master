@@ -97,7 +97,7 @@
                         android:id="@+id/logoCard"
                         android:layout_width="@dimen/_150sdp"
                         android:layout_height="@dimen/_150sdp"
-                        android:src="@drawable/logo"
+                        android:src="@drawable/sita_logo"
                         android:clickable="true"
                         android:focusable="true"
                         android:background="?attr/selectableItemBackgroundBorderless"

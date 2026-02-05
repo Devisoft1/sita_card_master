@@ -8,4 +8,6 @@
     <color name="surface_gray">#F5F7FA</color>
     <color name="error_red">#E53935</color>
     <color name="secondary_blue">#4C4EB4</color>
+    <color name="brand_orange">#F57C00</color>
+    <color name="brand_background">#F8F9FA</color>
 </resources>

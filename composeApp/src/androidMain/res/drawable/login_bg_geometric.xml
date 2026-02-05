@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Base Background -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/brand_background" />
+        </shape>
+    </item>
+
+    <!-- Top Right Orange Circle (Large, Low Opacity) -->
+    <item
+        android:top="-100dp"
+        android:right="-100dp">
+        <shape android:shape="oval">
+            <size
+                android:width="300dp"
+                android:height="300dp" />
+            <solid android:color="#26F57C00" /> <!-- 15% opacity Brand Orange -->
+        </shape>
+    </item>
+
+    <!-- Bottom Left Blue Circle (Large, Low Opacity) -->
+    <item
+        android:bottom="-80dp"
+        android:left="-80dp">
+        <shape android:shape="oval">
+            <size
+                android:width="250dp"
+                android:height="250dp" />
+            <solid android:color="#1A2D2F91" /> <!-- 10% opacity Brand Blue -->
+        </shape>
+    </item>
+
+    <!-- Center Left Accent (Small, Medium Opacity) -->
+    <item
+        android:top="200dp"
+        android:left="-40dp">
+        <shape android:shape="oval">
+            <size
+                android:width="120dp"
+                android:height="120dp" />
+            <solid android:color="#1A4C4EB4" /> <!-- 10% opacity Secondary Blue -->
+        </shape>
+    </item>
+</layer-list>

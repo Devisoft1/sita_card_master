@@ -1,8 +1,8 @@
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+ <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@drawable/login_bg_geometric"
     android:fitsSystemWindows="true">
 
     <ScrollView
@@ -15,26 +15,16 @@
             android:layout_height="wrap_content"
             android:paddingBottom="@dimen/_32sdp">
 
-            <ImageView
-                android:id="@+id/logo"
-                android:layout_width="@dimen/_150sdp"
-                android:layout_height="@dimen/_150sdp"
-                android:layout_marginTop="@dimen/_60sdp"
-                android:src="@drawable/logo"
-                android:contentDescription="SITA Logo"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent" />
-
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/loginCard"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="@dimen/_12sdp"
-                android:layout_marginTop="@dimen/_30sdp"
-                app:cardCornerRadius="@dimen/_8sdp"
-                app:cardElevation="@dimen/_12sdp"
-                app:layout_constraintTop_toBottomOf="@id/logo"
+                app:cardCornerRadius="@dimen/_15sdp"
+                app:cardElevation="@dimen/_20sdp"
+                app:cardBackgroundColor="@color/white"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent">
 
@@ -42,8 +32,19 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="@dimen/_16sdp">
+                    android:paddingHorizontal="@dimen/_16sdp"
+                    android:paddingVertical="@dimen/_24sdp">
 
+                    <ImageView
+                        android:id="@+id/logo"
+                        android:layout_width="@dimen/_180sdp"
+                        android:layout_height="wrap_content"
+                        android:adjustViewBounds="true"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginBottom="@dimen/_16sdp"
+                        android:src="@drawable/logo"
+                        android:contentDescription="SITA Logo" />
+                    
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/adminIdLayout"
                         android:layout_width="match_parent"
@@ -51,16 +52,20 @@
                         android:layout_marginBottom="@dimen/_12sdp"
                         android:hint="Admin ID"
                         app:startIconDrawable="@drawable/ic_person"
-                        app:startIconTint="@color/brand_blue"
+                        app:startIconTint="@color/brand_orange"
+                        app:boxStrokeColor="@color/brand_orange"
+                        app:hintTextColor="@color/brand_orange"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/adminId"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:layout_marginTop="0dp"
+                            android:paddingVertical="@dimen/_8sdp"
                             android:inputType="text"
-                            android:textSize="@dimen/_14ssp"
-                            android:singleLine="true" />
+                            android:singleLine="true"
+                            android:textSize="@dimen/_14ssp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -70,7 +75,9 @@
                         android:layout_marginBottom="@dimen/_8sdp"
                         android:hint="Password"
                         app:startIconDrawable="@drawable/ic_lock"
-                        app:startIconTint="@color/brand_blue"
+                        app:startIconTint="@color/brand_orange"
+                        app:boxStrokeColor="@color/brand_orange"
+                        app:hintTextColor="@color/brand_orange"
                         app:passwordToggleEnabled="true"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
@@ -78,6 +85,7 @@
                             android:id="@+id/password"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:paddingVertical="@dimen/_8sdp"
                             android:inputType="textPassword"
                             android:textSize="@dimen/_14ssp"
                             android:singleLine="true" />
@@ -99,7 +107,7 @@
                         android:text="Keep me logged in"
                         android:textSize="@dimen/_12ssp"
                         android:textColor="@color/gray_text"
-                        android:buttonTint="@color/brand_blue"
+                        android:buttonTint="@color/brand_orange"
                         android:layout_marginBottom="@dimen/_20sdp" />
 
                     <Button
@@ -109,11 +117,23 @@
                         android:text="LOGIN"
                         android:textSize="@dimen/_14ssp"
                         android:textStyle="bold"
-                        app:cornerRadius="@dimen/_8sdp"
+                        app:cornerRadius="@dimen/_12sdp"
                         app:backgroundTint="@color/brand_blue" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Powered by DeviSoft"
+                android:textColor="@color/gray_text"
+                android:alpha="0.7"
+                android:textSize="@dimen/_10ssp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:layout_marginBottom="@dimen/_16sdp" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </ScrollView>
