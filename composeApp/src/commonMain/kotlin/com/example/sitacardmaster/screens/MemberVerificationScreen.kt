@@ -155,7 +155,7 @@ fun MemberVerificationScreen(
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                            Column {
                                Text("Member ID", style = MaterialTheme.typography.labelSmall)
-                               Text(data.memberId.toString(), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                               Text(data.memberId?.toString() ?: "N/A", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
                            }
                            Column(horizontalAlignment = Alignment.End) {
                                Text("Membership Validity", style = MaterialTheme.typography.labelSmall)
@@ -167,7 +167,7 @@ fun MemberVerificationScreen(
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                         Text("Company", style = MaterialTheme.typography.labelSmall)
-                        Text(data.companyName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(data.companyName ?: "N/A", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         
                         Spacer(modifier = Modifier.height(16.dp))
                         Divider()
@@ -234,7 +234,7 @@ fun MemberVerificationScreen(
                                if (amount != null && amount > 0) {
                                    isAddingAmount = true
                                    scope.launch {
-                                      val result = client.addAmount(data.memberId.toString(), amount)
+                                      val result = client.addAmount(data.memberId?.toString() ?: "", amount)
                                       result.fold(
                                           onSuccess = { res ->
                                               // Update local display

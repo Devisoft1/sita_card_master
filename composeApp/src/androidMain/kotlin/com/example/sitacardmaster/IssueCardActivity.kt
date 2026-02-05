@@ -53,6 +53,7 @@ class IssueCardActivity : AppCompatActivity() {
 
         startScanButton.setOnClickListener {
             if (memberIdInput.text.isEmpty() || companyNameInput.text.isEmpty()) {
+                statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
                 statusMessage.text = "Error: Please fill all fields"
                 return@setOnClickListener
             }
@@ -105,6 +106,7 @@ class IssueCardActivity : AppCompatActivity() {
 
     private fun startScanning() {
         isScanning = true
+        statusMessage.setTextColor(resources.getColor(R.color.brand_blue, theme))
         statusMessage.text = "Scanning... Tap Card"
         scanProgress.visibility = View.VISIBLE
         tapCardHint.visibility = View.VISIBLE
@@ -117,6 +119,7 @@ class IssueCardActivity : AppCompatActivity() {
     private fun stopScanning() {
         isScanning = false
         isClearing = false
+        statusMessage.setTextColor(resources.getColor(R.color.gray_text, theme))
         statusMessage.text = "Ready to write"
         scanProgress.visibility = View.GONE
         tapCardHint.visibility = View.GONE
@@ -149,7 +152,10 @@ class IssueCardActivity : AppCompatActivity() {
         val company = companyNameInput.text.toString()
         val validUpto = validUptoInput.text.toString()
 
-        statusMessage.text = "Verifying with API..."
+        runOnUiThread {
+             statusMessage.setTextColor(resources.getColor(R.color.brand_blue, theme))
+             statusMessage.text = "Verifying with API..."
+        }
         
         kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) { // Using GlobalScope for simplicity in Activity for now, ideally LifecycleScope
              logAction("API Request: Member=$memberId, Company=$company, MFID=$tagId, Validity=$validUpto")
@@ -162,12 +168,13 @@ class IssueCardActivity : AppCompatActivity() {
              
              runOnUiThread {
                  if (result.isSuccess) {
-                     statusMessage.text = "Verified! Writing Info..."
+                     statusMessage.setTextColor(android.graphics.Color.parseColor("#4CAF50"))
+                     statusMessage.text = "Member Verified! Writing to Card..."
                      writeCard()
                  } else {
                      val error = result.exceptionOrNull()?.message ?: "Verification Failed"
+                     statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
                      statusMessage.text = error
-                     Toast.makeText(this@IssueCardActivity, error, Toast.LENGTH_LONG).show()
                      stopScanning()
                  }
              }
@@ -181,7 +188,6 @@ class IssueCardActivity : AppCompatActivity() {
         // val totalBuy = totalBuyInput.text.toString() // Removed
         val totalBuy = "0" // Defaulting to 0 since input is removed
 
-        statusMessage.text = "Card detected! Writing..."
         nfcManager.writeCard(
             memberId = memberId,
             companyName = company,
@@ -192,6 +198,7 @@ class IssueCardActivity : AppCompatActivity() {
                     statusMessage.text = message
                     logAction("Write Result: $message")
                     if (success) {
+                        statusMessage.setTextColor(android.graphics.Color.parseColor("#4CAF50"))
                         // Save to local storage
                         // Assuming DatabaseHelper.saveIssuedCard signature might still need 'totalBuy', passing "0" or checking if it needs update
                         // If DatabaseHelper is strictly defined, I might need to update it too if I want to remove it there.
@@ -209,6 +216,8 @@ class IssueCardActivity : AppCompatActivity() {
                         }
                        
                         stopScanning()
+                    } else {
+                        statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
                     }
                 }
             }

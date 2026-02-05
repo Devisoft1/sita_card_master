@@ -35,11 +35,12 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
     var memberId by remember { mutableStateOf("") }
     var companyName by remember { mutableStateOf("") }
     var validUpto by remember { mutableStateOf("") }
-    var totalBuy by remember { mutableStateOf("") }
-    var lastBuyDate by remember { mutableStateOf("") }
+    // Total Buy is hidden in Android UI and defaults to 0
+    val totalBuy = "0" 
 
     var statusMessage by remember { mutableStateOf("Ready to write") }
-    var isScanning by remember { mutableStateOf(false) }
+    // scanningType: None, Writing, Clearing
+    var scanningMode by remember { mutableStateOf<ScanMode>(ScanMode.None) }
     var showDatePicker by remember { mutableStateOf(false) }
 
     val brandBlue = Color(0xFF2D2F91)
@@ -56,23 +57,35 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
     val tag by nfcManager.detectedTag
 
     LaunchedEffect(tag) {
-        if (isScanning && tag != null) {
-            statusMessage = "Card detected! Writing..."
-            nfcManager.writeCard(
-                memberId = memberId,
-                companyName = companyName,
-                validUpto = validUpto,
-                totalBuy = totalBuy,
-                onResult = { success, message ->
-                    statusMessage = message
-                    isScanning = false
-                    if (success) {
-                        scope.launch {
-                            snackbarHostState.showSnackbar("Success: $message")
+        if (scanningMode != ScanMode.None && tag != null) {
+            if (scanningMode == ScanMode.Writing) {
+                statusMessage = "Card detected! Writing..."
+                nfcManager.writeCard(
+                    memberId = memberId,
+                    companyName = companyName,
+                    validUpto = validUpto,
+                    totalBuy = totalBuy,
+                    onResult = { success, message ->
+                        statusMessage = message
+                        scanningMode = ScanMode.None
+                        if (success) {
+                            scope.launch { snackbarHostState.showSnackbar("Success: $message") }
                         }
                     }
+                )
+            } else if (scanningMode == ScanMode.Clearing) {
+                statusMessage = "Card detected! Clearing..."
+                nfcManager.clearCard { success, message ->
+                    statusMessage = message
+                    scanningMode = ScanMode.None
+                    if (success) {
+                         memberId = ""
+                         companyName = ""
+                         validUpto = ""
+                         scope.launch { snackbarHostState.showSnackbar("Card Cleared: $message") }
+                    }
                 }
-            )
+            }
         }
     }
 
@@ -86,12 +99,12 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .windowInsetsPadding(WindowInsets.statusBars)
-                        .height(56.dp) // Updated to match standard Material TopBar height (~@dimen/_35sdp)
+                        .height(56.dp)
                         .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = {
-                        isScanning = false
+                        scanningMode = ScanMode.None
                         onBack()
                     }) {
                         Icon(
@@ -154,7 +167,8 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                                 tint = brandBlue
                             )
                         },
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(8.dp),
+                        singleLine = true
                     )
 
                     OutlinedTextField(
@@ -171,47 +185,53 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                                 tint = brandBlue
                             )
                         },
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(8.dp),
+                        singleLine = true
                     )
 
-                    // Date Picker Field
-                    OutlinedTextField(
-                        value = validUpto,
-                        onValueChange = { },
-                        label = { Text("Valid Upto") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 12.dp)
-                            .clickable {
-                                platformLog("IssueCard", "Date field clicked!")
-                                showDatePicker = true
+                    // Date Picker Field - ReadOnly but Enabled (so it looks active but triggers click)
+                    // In Android XML it was not focusable but clickable.
+                    Box(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
+                        OutlinedTextField(
+                            value = validUpto,
+                            onValueChange = { },
+                            label = { Text("Valid Upto") },
+                            modifier = Modifier.fillMaxWidth(),
+                            readOnly = true,
+                            enabled = false, // Setting enabled=false gives the gray look
+                            colors = OutlinedTextFieldDefaults.colors(
+                                disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                                disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                disabledPlaceholderColor = grayText,
+                                disabledLeadingIconColor = brandBlue,
+                                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            leadingIcon = {
+                                Icon(
+                                    painter = painterResource(Res.drawable.ic_event),
+                                    contentDescription = null,
+                                    tint = brandBlue
+                                )
                             },
-                        placeholder = { Text("DD/MM/YYYY") },
-                        readOnly = true,
-                        enabled = false,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                            disabledBorderColor = MaterialTheme.colorScheme.outline,
-                            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            disabledPlaceholderColor = grayText,
-                            disabledLeadingIconColor = brandBlue,
-                            disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        ),
-                        leadingIcon = {
-                            Icon(
-                                painter = painterResource(Res.drawable.ic_event),
-                                contentDescription = null,
-                                tint = brandBlue
-                            )
-                        },
-                        trailingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.CalendarToday,
-                                contentDescription = "Select Date"
-                            )
-                        },
-                        shape = RoundedCornerShape(8.dp)
-                    )
+                            trailingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarToday,
+                                    contentDescription = "Select Date"
+                                )
+                            },
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        // Overlay invisible box to catch clicks since TextField is disabled
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .clickable {
+                                    platformLog("IssueCard", "Date field clicked!")
+                                    showDatePicker = true
+                                }
+                        )
+                    }
 
                     if (showDatePicker) {
                         DatePickerDialog(
@@ -232,30 +252,12 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                                 }
                             }
                         ) {
-                        DatePicker(
-                            state = datePickerState,
-                            title = null
-                        )
+                            DatePicker(
+                                state = datePickerState,
+                                title = null
+                            )
                         }
                     }
-
-                    OutlinedTextField(
-                        value = totalBuy,
-                        onValueChange = { totalBuy = it },
-                        label = { Text("Total Buy") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 20.dp),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        leadingIcon = {
-                            Icon(
-                                painter = painterResource(Res.drawable.ic_payments),
-                                contentDescription = null,
-                                tint = brandBlue
-                            )
-                        },
-                        shape = RoundedCornerShape(8.dp)
-                    )
 
                     HorizontalDivider(
                         modifier = Modifier
@@ -278,7 +280,8 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                             modifier = Modifier.padding(bottom = 12.dp)
                         )
 
-                        if (isScanning) {
+                        if (scanningMode != ScanMode.None) {
+                            // Scanning visible
                             CircularProgressIndicator(
                                 modifier = Modifier
                                     .size(40.dp)
@@ -286,13 +289,17 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                                 color = brandBlue
                             )
                             Text(
-                                text = "TAP CARD NOW...",
+                                text = if(scanningMode == ScanMode.Clearing) "TAP CARD TO CLEAR..." else "TAP CARD NOW...",
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                 color = brandBlue,
                                 modifier = Modifier.padding(bottom = 16.dp)
                             )
                             Button(
-                                onClick = { isScanning = false },
+                                onClick = { 
+                                    scanningMode = ScanMode.None
+                                    statusMessage = "Ready to write"
+                                    nfcManager.stopScanning()
+                                },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(48.dp),
@@ -302,14 +309,16 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                                 Text("Cancel Scan", fontWeight = FontWeight.Bold)
                             }
                         } else {
+                            // Start and Clear Buttons
                             Button(
                                 onClick = {
                                     if (memberId.isEmpty() || companyName.isEmpty()) {
                                         statusMessage = "Error: Please fill all fields"
                                         return@Button
                                     }
-                                    isScanning = true
+                                    scanningMode = ScanMode.Writing
                                     statusMessage = "Scanning... Tap Card"
+                                    nfcManager.startScanning()
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -319,12 +328,33 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                             ) {
                                 Text("Start Scan & Write", fontWeight = FontWeight.Bold)
                             }
+                            
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            Button(
+                                onClick = {
+                                    scanningMode = ScanMode.Clearing
+                                    statusMessage = "Tap Card to Clear Data..."
+                                    nfcManager.startScanning()
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = grayText),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Clear Card", fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
             }
         }
     }
+}
+
+enum class ScanMode {
+    None, Writing, Clearing
 }
 
 @Suppress("DEPRECATION")

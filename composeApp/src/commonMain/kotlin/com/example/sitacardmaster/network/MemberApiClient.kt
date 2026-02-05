@@ -46,7 +46,9 @@ class MemberApiClient {
                 )
             }.body()
 
-            if (response.message != null && response.message.lowercase().contains("not found")) {
+            if ((response.verified == false) || (response.expired == true)) {
+                 Result.failure(Exception(response.message ?: "Card verification failed"))
+            } else if (response.message != null && response.message.lowercase().contains("not found")) {
                  Result.failure(Exception(response.message))
             } else {
                  Result.success(response)

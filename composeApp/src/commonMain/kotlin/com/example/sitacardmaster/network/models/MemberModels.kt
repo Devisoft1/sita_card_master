@@ -12,14 +12,16 @@ data class VerifyMemberRequest(
 
 @Serializable
 data class VerifyMemberResponse(
-    val memberId: String,
-    val companyName: String,
+    val memberId: String? = null,
+    val companyName: String? = null,
     val card_mfid: String? = null,
     val cardValidity: String? = null,
     val message: String? = null, // For error case
     val currentTotal: Double = 0.0, // Restored for backward compatibility
     val globalTotal: Double = 0.0,
-    val validity: String? = null // Restored for backward compatibility
+    val validity: String? = null, // Restored for backward compatibility
+    val verified: Boolean? = null,
+    val expired: Boolean? = null
 )
 
 @Serializable

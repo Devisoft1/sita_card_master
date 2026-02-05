@@ -45,6 +45,9 @@ fun DashboardScreen(
     val scope = rememberCoroutineScope()
     var currentAmount by remember { mutableStateOf<String?>("Loading...") }
 
+    // Verified Member State
+    var verificationError by remember { mutableStateOf<String?>(null) }
+    
     // Logic to handle scan results
     val detectedTag by nfcManager.detectedTag
     LaunchedEffect(detectedTag) {
@@ -81,6 +84,8 @@ fun DashboardScreen(
                         platformLog("Dashboard", "Fetching Amount for ID: $memberId, Company: $companyName")
                         
                         currentAmount = "Loading..."
+                        verificationError = null // Reset error before new request
+                        
                         scope.launch {
                              val result = apiClient.verifyMember(memberId, companyName)
                              result.fold(
@@ -90,6 +95,7 @@ fun DashboardScreen(
                                  },
                                  onFailure = { error ->
                                      currentAmount = "N/A"
+                                     verificationError = error.message ?: "Member verification failed"
                                      platformLog("Dashboard", "Amount fetch error: ${error.message}")
                                  }
                              )
@@ -202,8 +208,52 @@ fun DashboardScreen(
                 }
             }
 
-            // Member Details Card
-            if (cardData != null) {
+            // Error Display Section
+            if (verificationError != null) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 24.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, errorRed)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(Res.drawable.ic_back), // Using back icon as placeholder if error icon is missing, or preferably an alert icon if available
+                            contentDescription = "Error",
+                            tint = errorRed,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = verificationError!!,
+                            color = errorRed,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Button(
+                            onClick = {
+                                // Reset all states
+                                cardData = null
+                                verificationError = null
+                                currentAmount = "Loading..."
+                                scanStatus = ""
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = errorRed),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Cancel / Reset", color = Color.White)
+                        }
+                    }
+                }
+            } 
+            // Member Details Card (Only show if no error)
+            else if (cardData != null) {
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -380,6 +430,8 @@ fun DashboardScreen(
         }
     }
 }
+
+
 
 @Composable
 fun DetailRow(label: String, value: String, valueColor: Color) {

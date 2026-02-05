@@ -47,8 +47,14 @@ class DashboardActivity : AppCompatActivity() {
     private lateinit var displayMembershipValidity: TextView
     private lateinit var newCardButton: Button
     private lateinit var deleteCardButton: Button
+    private lateinit var clearButton: Button
     private lateinit var stopScanButton: Button
     private lateinit var dashboardScroll: ScrollView
+    
+    // Error Views
+    private lateinit var errorContainer: LinearLayout
+    private lateinit var errorText: TextView
+    
     private val scanTimeoutHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val scanTimeoutRunnable = Runnable {
         if (isScanning) {
@@ -78,8 +84,13 @@ class DashboardActivity : AppCompatActivity() {
         displayMembershipValidity = findViewById(R.id.displayMembershipValidity)
         newCardButton = findViewById(R.id.newCardButton)
         deleteCardButton = findViewById(R.id.deleteCardButton)
+        clearButton = findViewById(R.id.clearButton)
         stopScanButton = findViewById(R.id.stopScanButton)
         dashboardScroll = findViewById(R.id.dashboardScroll)
+        
+        errorContainer = findViewById(R.id.errorContainer)
+        errorText = findViewById(R.id.errorText)
+        
         val logoutButton = findViewById<Button>(R.id.logoutButton)
         val backButton = findViewById<ImageButton>(R.id.backButton)
         val titleText = findViewById<TextView>(R.id.dashboardTitle)
@@ -116,6 +127,10 @@ class DashboardActivity : AppCompatActivity() {
             scanInstruction.text = "TAP CARD TO DELETE DATA..."
         }
 
+        clearButton.setOnClickListener {
+            resetUI()
+        }
+
         logoutButton.setOnClickListener {
             val sharedPref = getSharedPreferences("login_prefs", Context.MODE_PRIVATE)
             sharedPref.edit().putBoolean("isLoggedIn", false).apply()
@@ -124,6 +139,7 @@ class DashboardActivity : AppCompatActivity() {
             startActivity(intent)
             finish()
         }
+        
     }
 
     private fun startScanMode() {
@@ -134,6 +150,8 @@ class DashboardActivity : AppCompatActivity() {
         detailsContainer.visibility = View.GONE
         newCardButton.visibility = View.GONE
         deleteCardButton.visibility = View.GONE
+        clearButton.visibility = View.GONE
+        errorContainer.visibility = View.GONE
         
         logAction("Scanning started")
         
@@ -152,12 +170,7 @@ class DashboardActivity : AppCompatActivity() {
         
         logAction("Scanning stopped")
         
-        // Move logo back to center ONLY if no data is visible
-        if (detailsContainer.visibility != View.VISIBLE) {
-            val params = scanContainer.layoutParams as ConstraintLayout.LayoutParams
-            params.verticalBias = 0.5f
-            scanContainer.layoutParams = params
-        }
+
         
         // Clear timeout
         scanTimeoutHandler.removeCallbacks(scanTimeoutRunnable)
@@ -192,6 +205,7 @@ class DashboardActivity : AppCompatActivity() {
                     }
                     newCardButton.visibility = View.VISIBLE
                     deleteCardButton.visibility = View.VISIBLE
+                    clearButton.visibility = View.VISIBLE
                 }
             }
             return
@@ -208,28 +222,28 @@ class DashboardActivity : AppCompatActivity() {
                     showCardDetails(data)
                     newCardButton.visibility = View.VISIBLE
                     deleteCardButton.visibility = View.VISIBLE
+                    clearButton.visibility = View.VISIBLE
                 } else if (success && data == null) {
                     // Blank card
                     logAction("Card read success: Blank card")
                     statusSnackbar("No data in the card")
                     newCardButton.visibility = View.VISIBLE
                     deleteCardButton.visibility = View.VISIBLE
+                    clearButton.visibility = View.VISIBLE
                 } else {
                     // Error
                     logAction("Card read error: $message")
                     statusSnackbar(message)
                     newCardButton.visibility = View.VISIBLE
                     deleteCardButton.visibility = View.VISIBLE
+                    clearButton.visibility = View.VISIBLE
                 }
             }
         }
     }
 
     private fun showCardDetails(data: Map<String, String>) {
-        // Move logo to top before showing details
-        val params = scanContainer.layoutParams as ConstraintLayout.LayoutParams
-        params.verticalBias = 0.0f
-        scanContainer.layoutParams = params
+
 
         detailsContainer.visibility = View.VISIBLE
         displayMemberId.text = data["memberId"] ?: "N/A"
@@ -269,9 +283,12 @@ class DashboardActivity : AppCompatActivity() {
                     },
                     onFailure = { error ->
                         logAction("API Request Failed: ${error.message}")
-                        displayAmount.text = "N/A"
-                        displayGlobalTotal.text = "N/A"
-                        displayMembershipValidity.text = "N/A"
+                        
+                        // Show Error UI
+                        val errorMessage = error.message ?: "Member verification failed"
+                        runOnUiThread {
+                             showError(errorMessage)
+                        }
                     }
                 )
             } else {
@@ -282,12 +299,35 @@ class DashboardActivity : AppCompatActivity() {
             }
         }
 
-        statusSnackbar("Member Found: ${data["memberId"]}")
+
 
         // Auto-scroll to details
         dashboardScroll.post {
             dashboardScroll.smoothScrollTo(0, detailsContainer.top)
         }
+    }
+    
+    private fun showError(message: String) {
+
+
+        detailsContainer.visibility = View.GONE
+        errorContainer.visibility = View.VISIBLE
+        errorText.text = message
+        
+        // Auto-scroll to error
+        dashboardScroll.post {
+            dashboardScroll.smoothScrollTo(0, errorContainer.top)
+        }
+    }
+    
+    private fun resetUI() {
+         // Reset UI to initial state
+        detailsContainer.visibility = View.GONE
+        errorContainer.visibility = View.GONE
+
+
+
+        scanInstruction.text = "Tap logo to scan card"
     }
 
     private fun statusSnackbar(message: String) {

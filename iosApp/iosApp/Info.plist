@@ -4,5 +4,7 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>NFCReaderUsageDescription</key>
+	<string>NFC is required to read and write member cards.</string>
 </dict>
 </plist>
