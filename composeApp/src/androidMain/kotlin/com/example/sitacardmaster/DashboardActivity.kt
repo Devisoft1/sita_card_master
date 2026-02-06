@@ -42,9 +42,12 @@ class DashboardActivity : AppCompatActivity() {
     private lateinit var displayCompany: TextView
     private lateinit var displayValidUpto: TextView
     private lateinit var displayTotalBuy: TextView
-    private lateinit var displayAmount: TextView
-    private lateinit var displayGlobalTotal: TextView
-    private lateinit var displayMembershipValidity: TextView
+    private lateinit var displayAmount: TextView // Restored
+    private lateinit var displayAddress: TextView
+    private lateinit var displayPhone: TextView
+    private lateinit var displayEmail: TextView
+    private lateinit var displayWebsite: TextView
+    private lateinit var displayWhatsapp: TextView
     private lateinit var newCardButton: Button
     private lateinit var deleteCardButton: Button
     private lateinit var clearButton: Button
@@ -80,8 +83,12 @@ class DashboardActivity : AppCompatActivity() {
         displayValidUpto = findViewById(R.id.displayValidUpto)
         displayTotalBuy = findViewById(R.id.displayTotalBuy)
         displayAmount = findViewById(R.id.displayAmount)
-        displayGlobalTotal = findViewById(R.id.displayGlobalTotal)
-        displayMembershipValidity = findViewById(R.id.displayMembershipValidity)
+        displayValidUpto = findViewById(R.id.displayValidUpto)
+        displayAddress = findViewById(R.id.displayAddress)
+        displayPhone = findViewById(R.id.displayPhone)
+        displayEmail = findViewById(R.id.displayEmail)
+        displayWebsite = findViewById(R.id.displayWebsite)
+        displayWhatsapp = findViewById(R.id.displayWhatsapp)
         newCardButton = findViewById(R.id.newCardButton)
         deleteCardButton = findViewById(R.id.deleteCardButton)
         clearButton = findViewById(R.id.clearButton)
@@ -97,7 +104,12 @@ class DashboardActivity : AppCompatActivity() {
 
         val sharedPref = getSharedPreferences("login_prefs", Context.MODE_PRIVATE)
         val adminId = sharedPref.getString("adminId", "Admin")
+        val authToken = sharedPref.getString("authToken", "")
         titleText.text = adminId ?: "Admin"
+
+        // Verify/Fetch latest profile
+        // Removed as per request - relying on stored session
+        // if (!authToken.isNullOrEmpty()) { ... }
 
         backButton.setOnClickListener {
             // Force return to login page by resetting the session flag
@@ -250,10 +262,14 @@ class DashboardActivity : AppCompatActivity() {
         displayCompany.text = data["companyName"] ?: "N/A"
         displayValidUpto.text = formatDate(data["validUpto"])
         displayTotalBuy.text = "₹${data["totalBuy"] ?: "0.00"}"
+        displayAmount.text = "Loading..." // Restored
         
-        displayAmount.text = "Loading..."
-        displayGlobalTotal.text = "Loading..."
-        displayMembershipValidity.text = "Loading..."
+        // Hide extra details while loading
+        displayAddress.visibility = View.GONE
+        displayPhone.visibility = View.GONE
+        displayEmail.visibility = View.GONE
+        displayWebsite.visibility = View.GONE
+        displayWhatsapp.visibility = View.GONE
         
         scope.launch {
             val memberId = data["memberId"] ?: ""
@@ -276,10 +292,17 @@ class DashboardActivity : AppCompatActivity() {
                 result.fold(
                     onSuccess = { response ->
                         logAction("API Response Success: $response")
-                        logAction("Mapping Data - Current Total: ${response.currentTotal}, Global: ${response.globalTotal}")
-                        displayAmount.text = "₹${response.currentTotal}"
-                        displayGlobalTotal.text = "₹${response.globalTotal}"
-                        displayMembershipValidity.text = response.validity?.take(10) ?: "N/A"
+                        logAction("Mapping Data - Global Total: ${response.globalTotal}, Current: ${response.currentTotal}")
+                        displayTotalBuy.text = "₹${response.globalTotal}" // Global mapped to Total Buy
+                        displayAmount.text = "₹${response.currentTotal}" // Restored Current Amount
+                        displayValidUpto.text = formatDate(response.validity)
+                        
+                        // Bind Contact Info
+                        bindValue(displayAddress, response.companyAddress)
+                        bindValue(displayPhone, response.phoneNumber)
+                        bindValue(displayEmail, response.email)
+                        bindValue(displayWebsite, response.website)
+                        bindValue(displayWhatsapp, response.whatsapp)
                     },
                     onFailure = { error ->
                         logAction("API Request Failed: ${error.message}")
@@ -293,9 +316,9 @@ class DashboardActivity : AppCompatActivity() {
                 )
             } else {
                 logAction("API Skipped: Member ID is blank")
-                displayAmount.text = "N/A"
-                displayGlobalTotal.text = "N/A"
-                displayMembershipValidity.text = "N/A"
+                displayTotalBuy.text = "N/A"
+                displayAmount.text = "N/A" // Restored
+                displayValidUpto.text = "N/A"
             }
         }
 
@@ -336,6 +359,15 @@ class DashboardActivity : AppCompatActivity() {
             .setBackgroundTint(resources.getColor(R.color.brand_blue, theme))
             .setTextColor(resources.getColor(R.color.white, theme))
             .show()
+    }
+    
+    private fun bindValue(view: TextView, value: String?) {
+        if (!value.isNullOrBlank() && value != "null") {
+            view.text = value
+            view.visibility = View.VISIBLE
+        } else {
+            view.visibility = View.GONE
+        }
     }
 
     private fun formatDate(dateStr: String?): String {

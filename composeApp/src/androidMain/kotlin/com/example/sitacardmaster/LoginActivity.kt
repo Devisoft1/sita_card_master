@@ -12,7 +12,17 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.sitacardmaster.R
 
 
+import kotlinx.coroutines.launch
+import com.example.sitacardmaster.network.AuthApiClient
+
 class LoginActivity : AppCompatActivity() {
+
+    private fun logAction(action: String) {
+        android.util.Log.i("SITACardMaster", "Login: $action")
+    }
+
+    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
+    private val authApiClient = com.example.sitacardmaster.network.AuthApiClient()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,7 +37,7 @@ class LoginActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_login)
 
-        val adminIdInput = findViewById<EditText>(R.id.adminId)
+        val adminIdInput = findViewById<EditText>(R.id.Username)
         val passwordInput = findViewById<EditText>(R.id.password)
         val loginButton = findViewById<Button>(R.id.loginButton)
         val errorText = findViewById<TextView>(R.id.errorText)
@@ -46,28 +56,50 @@ class LoginActivity : AppCompatActivity() {
             val adminId = adminIdInput.text.toString().trim()
             val password = passwordInput.text.toString().trim()
 
-            if (adminId == "admin" && password == "admin") {
-                val editor = sharedPref.edit()
-                if (rememberMe.isChecked) {
-                    editor.putBoolean("isLoggedIn", true)
-                    editor.putString("adminId", adminId)
-                    editor.putString("password", password)
-                    editor.putBoolean("rememberMe", true)
-                } else {
-                    // If not remembered, clear everything or just the session?
-                    // Usually, if user unchecks it, we should clear the saved credentials too.
-                    editor.putBoolean("isLoggedIn", false)
-                    editor.putBoolean("rememberMe", false)
-                    editor.remove("adminId")
-                    editor.remove("password")
-                }
-                editor.apply()
+            if (adminId.isBlank() || password.isBlank()) {
+                 errorText.text = "Please enter ID and Password"
+                 errorText.visibility = View.VISIBLE
+                 return@setOnClickListener
+            }
 
-                logAction("Admin logged in")
-                goToDashboard()
-            } else {
-                errorText.text = "Invalid ID or Password"
-                errorText.visibility = View.VISIBLE
+            errorText.visibility = View.GONE
+            loginButton.isEnabled = false
+            loginButton.text = "Logging in..."
+
+            scope.launch {
+                // Using "App" as source
+                val loginResult = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                      authApiClient.login(adminId, password, "App")
+                }
+
+               loginResult.fold(
+                    onSuccess = { response ->
+                        val editor = sharedPref.edit()
+                        if (rememberMe.isChecked) {
+                            editor.putBoolean("isLoggedIn", true)
+                            editor.putString("adminId", adminId)
+                            editor.putString("password", password)
+                            editor.putBoolean("rememberMe", true)
+                        } else {
+                            editor.putBoolean("isLoggedIn", true) // Still logged in for session
+                            editor.putBoolean("rememberMe", false)
+                            // don't save creds if not remembered, but session needs to be active
+                        }
+                        // Save token
+                        editor.putString("authToken", response.token)
+                        editor.putString("role", response.role)
+                        editor.apply()
+
+                        logAction("Admin logged in: ${response.username}")
+                        goToDashboard()
+                    },
+                    onFailure = { error ->
+                        loginButton.isEnabled = true
+                        loginButton.text = "LOGIN"
+                        errorText.text = error.message ?: "Login Failed"
+                        errorText.visibility = View.VISIBLE
+                    }
+                )
             }
         }
     }

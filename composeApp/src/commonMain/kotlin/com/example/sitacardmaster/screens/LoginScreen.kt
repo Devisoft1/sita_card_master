@@ -26,6 +26,7 @@ import sitacardmaster.composeapp.generated.resources.Res
 import sitacardmaster.composeapp.generated.resources.logo
 import com.example.sitacardmaster.SettingsStorage
 import com.example.sitacardmaster.logAction
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(onLoginSuccess: () -> Unit) {
@@ -152,27 +153,58 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    val scope = rememberCoroutineScope()
+                    val authClient = remember { com.example.sitacardmaster.network.AuthApiClient() }
+                    var isLoading by remember { mutableStateOf(false) }
+
                     // Login Button
                     Button(
                         onClick = {
-                            if (adminId == "admin" && password == "admin") {
-                                logAction("Admin logged in")
+                            if (adminId.isBlank() || password.isBlank()) {
+                                errorText = "Please enter ID and Password"
+                                return@Button
+                            }
+                            
+                            isLoading = true
+                            errorText = ""
+                            
+                            scope.launch {
+                                val result = authClient.login(adminId, password, "App")
                                 
-                                if (rememberMe) {
-                                    settings.putString("adminId", adminId)
-                                    settings.putString("password", password)
-                                    settings.putBoolean("rememberMe", true)
-                                } else {
-                                    settings.remove("adminId")
-                                    settings.remove("password")
-                                    settings.putBoolean("rememberMe", false)
-                                }
-                                
-                                onLoginSuccess()
-                            } else {
-                                errorText = "Invalid ID or Password"
+                                result.fold(
+                                    onSuccess = { response ->
+                                        logAction("Admin logged in: ${response.username}")
+                                        
+                                        // Save Session
+                                        settings.putString("authToken", response.token)
+                                        settings.putString("role", response.role)
+                                        
+                                        if (rememberMe) {
+                                            settings.putString("adminId", adminId)
+                                            settings.putString("password", password)
+                                            settings.putBoolean("rememberMe", true)
+                                        } else {
+                                            // Keep adminId for convenience? Or clear? 
+                                            // Logic in Android was clear. Here let's clear if unchecked.
+                                            // Actually typically "Remember Me" means remember creds for next time.
+                                            settings.remove("password")
+                                            settings.putBoolean("rememberMe", false)
+                                            // We usually keep the ID or maybe clear it too.
+                                            // Let's stick to previous logic:
+                                            settings.remove("adminId")
+                                        }
+                                        
+                                        isLoading = false
+                                        onLoginSuccess()
+                                    },
+                                    onFailure = { error ->
+                                        isLoading = false
+                                        errorText = error.message ?: "Invalid ID or Password"
+                                    }
+                                )
                             }
                         },
+                        enabled = !isLoading,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(44.dp),
@@ -181,10 +213,18 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                             containerColor = brandBlue
                         )
                     ) {
-                        Text(
-                            text = "LOGIN",
-                            fontWeight = FontWeight.Bold
-                        )
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                text = "LOGIN",
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }

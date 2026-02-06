@@ -91,27 +91,13 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="@dimen/_12sdp"
-                        android:hint="Member ID"
-                        app:startIconDrawable="@drawable/ic_person"
-                        app:startIconTint="@color/brand_blue"
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/memberId"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:textSize="@dimen/_13ssp"
-                            android:inputType="textCapCharacters" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="@dimen/_12sdp"
                         android:hint="Company Name"
                         app:startIconDrawable="@drawable/ic_business"
                         app:startIconTint="@color/brand_blue"
+                        app:endIconMode="clear_text"
+                        app:endIconTint="@color/gray_text"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-                        <com.google.android.material.textfield.TextInputEditText
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
                             android:id="@+id/companyName"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -119,22 +105,203 @@
                             android:inputType="textCapWords" />
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <com.google.android.material.textfield.TextInputLayout
+
+                    <!-- Info Card for Read-only Details -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/memberInfoCard"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="@dimen/_12sdp"
-                        android:hint="Valid Upto"
-                        app:startIconDrawable="@drawable/ic_event"
-                        app:startIconTint="@color/brand_blue"
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/validUpto"
+                        android:layout_marginTop="@dimen/_4sdp"
+                        android:layout_marginBottom="@dimen/_16sdp"
+                        android:visibility="gone"
+                        app:cardCornerRadius="@dimen/_8sdp"
+                        app:cardElevation="0dp"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="#E0E0E0"
+                        app:cardBackgroundColor="#F8F9FF">
+
+                        <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:focusable="false"
-                            android:clickable="true"
-                            android:textSize="@dimen/_13ssp" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                            android:orientation="vertical"
+                            android:padding="@dimen/_12sdp">
+
+                            <!-- Member ID & Validity -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:baselineAligned="false"
+                                android:layout_marginBottom="@dimen/_12sdp">
+                                
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="MEMBER ID"
+                                        android:textSize="@dimen/_9ssp"
+                                        android:textColor="@color/gray_text"
+                                        android:textStyle="bold" />
+                                    <TextView
+                                        android:id="@+id/memberIdText"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="---"
+                                        android:textSize="@dimen/_13ssp"
+                                        android:textColor="@color/black"
+                                        android:textStyle="bold"
+                                        android:layout_marginTop="@dimen/_2sdp" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="VALID UPTO"
+                                        android:textSize="@dimen/_9ssp"
+                                        android:textColor="@color/gray_text"
+                                        android:textStyle="bold" />
+                                    <TextView
+                                        android:id="@+id/validUptoText"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="---"
+                                        android:textSize="@dimen/_13ssp"
+                                        android:textColor="@color/brand_blue"
+                                        android:textStyle="bold"
+                                        android:layout_marginTop="@dimen/_2sdp" />
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:background="#E0E0E0"
+                                android:layout_marginBottom="@dimen/_12sdp" />
+
+                            <!-- Contact Info Rows -->
+                            <LinearLayout
+                                android:id="@+id/phoneRow"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:layout_marginBottom="@dimen/_10sdp">
+                                <ImageView
+                                    android:layout_width="@dimen/_16sdp"
+                                    android:layout_height="@dimen/_16sdp"
+                                    android:src="@drawable/ic_phone"
+                                    app:tint="@color/brand_blue" />
+                                <TextView
+                                    android:id="@+id/phoneNumberText"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="@dimen/_10sdp"
+                                    android:text="---"
+                                    android:textSize="@dimen/_12ssp"
+                                    android:textColor="@color/black" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:id="@+id/whatsappRow"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:layout_marginBottom="@dimen/_10sdp">
+                                <ImageView
+                                    android:layout_width="@dimen/_16sdp"
+                                    android:layout_height="@dimen/_16sdp"
+                                    android:src="@drawable/ic_whatsapp_icon"
+                                    app:tint="@color/brand_blue" />
+                                <TextView
+                                    android:id="@+id/whatsappNumberText"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="@dimen/_10sdp"
+                                    android:text="---"
+                                    android:textSize="@dimen/_12ssp"
+                                    android:textColor="@color/black" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:id="@+id/emailRow"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:layout_marginBottom="@dimen/_10sdp">
+                                <ImageView
+                                    android:layout_width="@dimen/_16sdp"
+                                    android:layout_height="@dimen/_16sdp"
+                                    android:src="@drawable/ic_email"
+                                    app:tint="@color/brand_blue" />
+                                <TextView
+                                    android:id="@+id/emailText"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="@dimen/_10sdp"
+                                    android:text="---"
+                                    android:textSize="@dimen/_12ssp"
+                                    android:textColor="@color/black" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:id="@+id/websiteRow"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:layout_marginBottom="@dimen/_10sdp">
+                                <ImageView
+                                    android:layout_width="@dimen/_16sdp"
+                                    android:layout_height="@dimen/_16sdp"
+                                    android:src="@drawable/ic_globe"
+                                    app:tint="@color/brand_blue" />
+                                <TextView
+                                    android:id="@+id/websiteText"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="@dimen/_10sdp"
+                                    android:text="---"
+                                    android:textSize="@dimen/_12ssp"
+                                    android:textColor="@color/black" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:id="@+id/addressRow"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="top"
+                                android:layout_marginBottom="@dimen/_4sdp">
+                                <ImageView
+                                    android:layout_width="@dimen/_16sdp"
+                                    android:layout_height="@dimen/_16sdp"
+                                    android:layout_marginTop="@dimen/_2sdp"
+                                    android:src="@drawable/ic_location"
+                                    app:tint="@color/brand_blue" />
+                                <TextView
+                                    android:id="@+id/addressText"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="@dimen/_10sdp"
+                                    android:text="---"
+                                    android:textSize="@dimen/_12ssp"
+                                    android:textColor="@color/black"
+                                    android:lineSpacingExtra="2dp" />
+                            </LinearLayout>
+
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
 
 
 

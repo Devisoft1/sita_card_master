@@ -12,6 +12,9 @@ import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.MainScope
 
 
 class IssueCardActivity : AppCompatActivity() {
@@ -20,10 +23,16 @@ class IssueCardActivity : AppCompatActivity() {
     private var isScanning = false
     private var isClearing = false
 
-    private lateinit var memberIdInput: EditText
-    private lateinit var companyNameInput: EditText
-    private lateinit var validUptoInput: EditText
-    // private lateinit var totalBuyInput: EditText // Removed
+    private lateinit var memberIdText: TextView
+    private lateinit var companyNameInput: com.google.android.material.textfield.MaterialAutoCompleteTextView
+    private lateinit var validUptoText: TextView
+    private lateinit var phoneNumberText: TextView
+    private lateinit var whatsappInputText: TextView
+    private lateinit var emailText: TextView
+    private lateinit var websiteText: TextView
+    private lateinit var addressText: TextView
+    private lateinit var memberInfoCard: View
+
     private lateinit var statusMessage: TextView
     private lateinit var scanProgress: ProgressBar
     private lateinit var tapCardHint: TextView
@@ -38,10 +47,16 @@ class IssueCardActivity : AppCompatActivity() {
 
         nfcManager = AndroidNfcManager(this)
 
-        memberIdInput = findViewById(R.id.memberId)
+        memberIdText = findViewById(R.id.memberIdText)
         companyNameInput = findViewById(R.id.companyName)
-        validUptoInput = findViewById(R.id.validUpto)
-        // totalBuyInput = findViewById(R.id.totalBuy) // Removed
+        validUptoText = findViewById(R.id.validUptoText)
+        phoneNumberText = findViewById(R.id.phoneNumberText)
+        whatsappInputText = findViewById(R.id.whatsappNumberText)
+        emailText = findViewById(R.id.emailText)
+        websiteText = findViewById(R.id.websiteText)
+        addressText = findViewById(R.id.addressText)
+        memberInfoCard = findViewById(R.id.memberInfoCard)
+
         statusMessage = findViewById(R.id.statusMessage)
         scanProgress = findViewById(R.id.scanProgress)
         tapCardHint = findViewById(R.id.tapCardHint)
@@ -52,16 +67,18 @@ class IssueCardActivity : AppCompatActivity() {
         backButton.setOnClickListener { finish() }
 
         startScanButton.setOnClickListener {
-            if (memberIdInput.text.isEmpty() || companyNameInput.text.isEmpty()) {
+            val currentName = companyNameInput.text.toString()
+            if (selectedCompanyName.isEmpty() || currentName != selectedCompanyName) {
                 statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
-                statusMessage.text = "Error: Please fill all fields"
+                statusMessage.text = "Error: Please select a company from the list"
+                return@setOnClickListener
+            }
+            if (memberIdText.text.isEmpty() || memberIdText.text == "---") {
+                statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+                statusMessage.text = "Error: Member ID is missing"
                 return@setOnClickListener
             }
             startScanning()
-        }
-
-        validUptoInput.setOnClickListener {
-            showDatePickerDialog()
         }
 
         cancelScanButton.setOnClickListener {
@@ -71,6 +88,134 @@ class IssueCardActivity : AppCompatActivity() {
         findViewById<Button>(R.id.clearCardButton).setOnClickListener {
              startClearCard()
         }
+
+        setupAutoComplete()
+    }
+
+    private var selectedCompanyName: String = ""
+    private var searchJob: kotlinx.coroutines.Job? = null
+
+    private fun setupAutoComplete() {
+        companyNameInput.threshold = 0
+        companyNameInput.setOnItemClickListener { parent, view, position, id ->
+            val member = parent.getItemAtPosition(position) as? com.example.sitacardmaster.network.models.VerifyMemberResponse
+            android.util.Log.d("IssueCardActivity", "Suggestion clicked: ${member?.companyName}")
+            member?.let {
+                selectedCompanyName = it.companyName ?: ""
+                memberIdText.text = it.memberId ?: ""
+                validUptoText.text = formatDate(it.validity)
+                companyNameInput.setText(selectedCompanyName, false)
+                phoneNumberText.text = it.phoneNumber ?: ""
+                whatsappInputText.text = it.whatsapp ?: ""
+                emailText.text = it.email ?: ""
+                websiteText.text = it.website ?: ""
+                addressText.text = it.companyAddress ?: ""
+                memberInfoCard.visibility = View.VISIBLE
+                companyNameInput.dismissDropDown()
+            }
+        }
+
+        companyNameInput.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                val query = companyNameInput.text.toString()
+                android.util.Log.d("IssueCardActivity", "Focused: query=$query, selected=$selectedCompanyName")
+                // Only show suggestions if text doesn't match the previously selected company
+                if (query != selectedCompanyName || query.isEmpty()) {
+                    fetchSuggestions(query)
+                }
+            }
+        }
+
+        companyNameInput.setOnClickListener {
+            val query = companyNameInput.text.toString()
+            if (!companyNameInput.isPopupShowing && (query != selectedCompanyName || query.isEmpty())) {
+                fetchSuggestions(query)
+            }
+        }
+
+        companyNameInput.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                searchJob?.cancel()
+                val query = s?.toString() ?: ""
+                android.util.Log.d("IssueCardActivity", "onTextChanged: query=$query")
+                
+                if (query.isEmpty()) {
+                    selectedCompanyName = ""
+                    clearOtherFields()
+                }
+
+                // If user changes text from the selected one, reset selection and fetch
+                if (query != selectedCompanyName) {
+                    if (selectedCompanyName.isNotEmpty()) {
+                        selectedCompanyName = ""
+                    }
+                    searchJob = coroutineScope.launch {
+                        delay(300)
+                        fetchSuggestions(query)
+                    }
+                }
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+    }
+
+    private fun fetchSuggestions(query: String) {
+        android.util.Log.d("IssueCardActivity", "Fetching suggestions for: $query")
+        coroutineScope.launch {
+            val result = apiClient.getApprovedMembers(query)
+            if (result.isSuccess) {
+                val members = result.getOrNull() ?: emptyList()
+                android.util.Log.d("IssueCardActivity", "Success: found ${members.size} members")
+                val adapter = object : ArrayAdapter<com.example.sitacardmaster.network.models.VerifyMemberResponse>(
+                    this@IssueCardActivity,
+                    android.R.layout.simple_dropdown_item_1line,
+                    members
+                ) {
+                    override fun getView(position: Int, convertView: View?, parent: android.view.ViewGroup): View {
+                        val view = super.getView(position, convertView, parent) as TextView
+                        val member = getItem(position)
+                        view.text = "${member?.companyName} (${member?.memberId})"
+                        return view
+                    }
+                    
+                    override fun getFilter(): Filter {
+                        return object : Filter() {
+                            override fun performFiltering(constraint: CharSequence?): FilterResults {
+                                val results = FilterResults()
+                                results.values = members
+                                results.count = members.size
+                                return results
+                            }
+                            override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
+                                notifyDataSetChanged()
+                            }
+                            override fun convertResultToString(resultValue: Any?): CharSequence {
+                                return (resultValue as? com.example.sitacardmaster.network.models.VerifyMemberResponse)?.companyName ?: ""
+                            }
+                        }
+                    }
+                }
+                companyNameInput.setAdapter(adapter)
+                adapter.notifyDataSetChanged()
+                if (members.isNotEmpty() && companyNameInput.hasFocus()) {
+                    companyNameInput.showDropDown()
+                }
+            } else {
+                android.util.Log.e("IssueCardActivity", "API Error: ${result.exceptionOrNull()?.message}")
+            }
+        }
+    }
+
+    private fun clearOtherFields() {
+        memberIdText.text = "---"
+        validUptoText.text = "---"
+        phoneNumberText.text = "---"
+        whatsappInputText.text = "---"
+        emailText.text = "---"
+        websiteText.text = "---"
+        addressText.text = "---"
+        memberInfoCard.visibility = View.GONE
     }
 
     private fun startClearCard() {
@@ -87,22 +232,6 @@ class IssueCardActivity : AppCompatActivity() {
         isClearing = true
     }
 
-    private fun showDatePickerDialog() {
-        val calendar = java.util.Calendar.getInstance()
-        val year = calendar.get(java.util.Calendar.YEAR)
-        val month = calendar.get(java.util.Calendar.MONTH)
-        val day = calendar.get(java.util.Calendar.DAY_OF_MONTH)
-
-        val datePickerDialog = android.app.DatePickerDialog(
-            this,
-            { _, selectedYear, selectedMonth, selectedDay ->
-                val date = String.format("%02d/%02d/%04d", selectedDay, selectedMonth + 1, selectedYear)
-                validUptoInput.setText(date)
-            },
-            year, month, day
-        )
-        datePickerDialog.show()
-    }
 
     private fun startScanning() {
         isScanning = true
@@ -112,7 +241,7 @@ class IssueCardActivity : AppCompatActivity() {
         tapCardHint.visibility = View.VISIBLE
         startScanButton.visibility = View.GONE
         cancelScanButton.visibility = View.VISIBLE
-        logAction("Scanning started for Member: ${memberIdInput.text}")
+        logAction("Scanning started for Member: ${memberIdText.text}")
         nfcManager.startScanning()
     }
 
@@ -145,12 +274,17 @@ class IssueCardActivity : AppCompatActivity() {
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        coroutineScope.cancel()
+    }
+
     private fun verifyAndProcessCard(tag: Tag) {
         // Tag ID (MFID)
         val tagId = tag.id.joinToString("") { byte -> "%02X".format(byte) }
-        val memberId = memberIdInput.text.toString()
+        val memberId = memberIdText.text.toString()
         val company = companyNameInput.text.toString()
-        val validUpto = validUptoInput.text.toString()
+        val validUpto = validUptoText.text.toString()
 
         runOnUiThread {
              statusMessage.setTextColor(resources.getColor(R.color.brand_blue, theme))
@@ -182,9 +316,9 @@ class IssueCardActivity : AppCompatActivity() {
     }
 
     private fun writeCard() {
-        val memberId = memberIdInput.text.toString()
+        val memberId = memberIdText.text.toString()
         val company = companyNameInput.text.toString()
-        val validUpto = validUptoInput.text.toString()
+        val validUpto = validUptoText.text.toString()
         // val totalBuy = totalBuyInput.text.toString() // Removed
         val totalBuy = "0" // Defaulting to 0 since input is removed
 
@@ -232,10 +366,16 @@ class IssueCardActivity : AppCompatActivity() {
                 logAction("Clear Result: $message")
                 
                 if (success) {
-                    memberIdInput.setText("")
+                    memberIdText.text = "---"
                     companyNameInput.setText("")
-                    validUptoInput.setText("")
-                    // totalBuyInput.setText("")
+                    memberIdText.text = "---"
+                    validUptoText.text = "---"
+                    phoneNumberText.text = "---"
+                    whatsappInputText.text = "---"
+                    emailText.text = "---"
+                    websiteText.text = "---"
+                    addressText.text = "---"
+                    memberInfoCard.visibility = View.GONE
                 }
                 stopScanning()
             }

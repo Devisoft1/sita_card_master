@@ -27,6 +27,22 @@ class MemberApiClient {
 
     private val baseUrl = "https://apisita.shanti-pos.com/api"
 
+    suspend fun getApprovedMembers(search: String? = null): Result<List<VerifyMemberResponse>> {
+        return try {
+            val response: MemberListResponse = client.get("$baseUrl/members") {
+                if (search != null) {
+                    parameter("search", search)
+                }
+            }.body()
+            // The API returns all members, so we filter for status 1 (Approved) locally.
+            Result.success(response.members.filter { it.status == 1 })
+        } catch (e: Exception) {
+            // Log the error for easier debugging
+            println("API Error in getApprovedMembers: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
     suspend fun verifyMember(
         memberId: String,
         companyName: String,
