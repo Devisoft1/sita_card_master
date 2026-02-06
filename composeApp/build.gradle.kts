@@ -36,6 +36,7 @@ kotlin {
             implementation(libs.androidx.constraintlayout)
             implementation(libs.sdp.android)
             implementation(libs.ssp.android)
+            implementation("io.coil-kt:coil:2.5.0")
         }
         commonMain.dependencies {
             implementation(compose.runtime)

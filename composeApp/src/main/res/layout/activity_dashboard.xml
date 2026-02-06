@@ -100,7 +100,6 @@
                         android:src="@drawable/sita_logo"
                         android:clickable="true"
                         android:focusable="true"
-                        android:background="?attr/selectableItemBackgroundBorderless"
                         android:contentDescription="Logo" />
 
                     <TextView

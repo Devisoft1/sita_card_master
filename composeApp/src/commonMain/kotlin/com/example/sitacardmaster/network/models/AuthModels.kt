@@ -16,9 +16,10 @@ data class LoginResponse(
     @SerialName("_id") val id: String,
     val username: String,
     val role: String,
-    val allowedSource: String? = null
+    val allowedSource: String? = null,
+    val logo: String? = null
 ) {
-    fun toUser(): User = User(id, username, role, allowedSource)
+    fun toUser(): User = User(id, username, role, allowedSource, logo)
 }
 
 @Serializable
@@ -26,7 +27,8 @@ data class User(
     @SerialName("_id") val id: String,
     val username: String,
     val role: String,
-    val allowedSource: String? = null
+    val allowedSource: String? = null,
+    val logo: String? = null
 )
 
 @Serializable

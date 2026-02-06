@@ -74,6 +74,10 @@ class LoginActivity : AppCompatActivity() {
 
                loginResult.fold(
                     onSuccess = { response ->
+                        // LOG: Full login response
+                        logAction("Login Response - Username: ${response.username}, Role: ${response.role}")
+                        logAction("Login Response - Logo URL: ${response.logo}")
+                        
                         val editor = sharedPref.edit()
                         if (rememberMe.isChecked) {
                             editor.putBoolean("isLoggedIn", true)
@@ -88,7 +92,12 @@ class LoginActivity : AppCompatActivity() {
                         // Save token
                         editor.putString("authToken", response.token)
                         editor.putString("role", response.role)
+                        editor.putString("logoUrl", response.logo)
                         editor.apply()
+                        
+                        // LOG: Verify saved logo URL
+                        val savedLogoUrl = sharedPref.getString("logoUrl", null)
+                        logAction("Saved Logo URL to SharedPreferences: $savedLogoUrl")
 
                         logAction("Admin logged in: ${response.username}")
                         goToDashboard()

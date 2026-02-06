@@ -105,7 +105,54 @@ class DashboardActivity : AppCompatActivity() {
         val sharedPref = getSharedPreferences("login_prefs", Context.MODE_PRIVATE)
         val adminId = sharedPref.getString("adminId", "Admin")
         val authToken = sharedPref.getString("authToken", "")
+        val logoUrl = sharedPref.getString("logoUrl", null)
         titleText.text = adminId ?: "Admin"
+        
+        // LOG: Retrieved logo URL from SharedPreferences
+        logAction("Dashboard - Retrieved Logo URL from SharedPreferences: $logoUrl")
+
+        // Load shop logo from URL if available
+        if (!logoUrl.isNullOrEmpty()) {
+            // Convert relative path to full URL
+            val fullLogoUrl = if (logoUrl.startsWith("http")) {
+                logoUrl
+            } else {
+                "https://apisita.shanti-pos.com$logoUrl"
+            }
+            
+            logAction("Dashboard - Attempting to load logo from URL: $fullLogoUrl")
+            try {
+                val imageLoader = coil.ImageLoader.Builder(this)
+                    .build()
+                val request = coil.request.ImageRequest.Builder(this)
+                    .data(fullLogoUrl)
+                    .target(
+                        onStart = {
+                            logAction("Dashboard - Logo loading started")
+                        },
+                        onSuccess = { result ->
+                            logoCard.setImageDrawable(result)
+                            logAction("Dashboard - Logo loaded successfully from: $fullLogoUrl")
+                        },
+                        onError = { error ->
+                            logoCard.setImageResource(R.drawable.logo)
+                            logAction("Dashboard - Logo loading failed: ${error?.toString()}, using default logo")
+                        }
+                    )
+                    .placeholder(R.drawable.logo)
+                    .error(R.drawable.logo)
+                    .build()
+                imageLoader.enqueue(request)
+            } catch (e: Exception) {
+                // Fallback to default logo on error
+                logAction("Dashboard - Exception loading logo: ${e.message}, using default logo")
+                logoCard.setImageResource(R.drawable.logo)
+            }
+        } else {
+            // Use default logo if no URL available
+            logAction("Dashboard - No logo URL available, using default logo")
+            logoCard.setImageResource(R.drawable.logo)
+        }
 
         // Verify/Fetch latest profile
         // Removed as per request - relying on stored session
