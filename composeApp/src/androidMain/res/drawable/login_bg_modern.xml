@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Main Gradient Background -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="135"
+                android:endColor="@color/brand_blue_dark"
+                android:startColor="@color/brand_blue"
+                android:type="linear" />
+        </shape>
+    </item>
+
+    <!-- Top Right Decorative Circle (Subtle Overlay) -->
+    <item
+        android:right="-100dp"
+        android:top="-100dp">
+        <shape android:shape="oval">
+            <size
+                android:width="400dp"
+                android:height="400dp" />
+            <solid android:color="#1AFFFFFF" /> <!-- White with 10% opacity -->
+        </shape>
+    </item>
+
+    <!-- Bottom Left Decorative Circle (Subtle Overlay) -->
+    <item
+        android:bottom="-150dp"
+        android:left="-100dp">
+        <shape android:shape="oval">
+            <size
+                android:width="450dp"
+                android:height="450dp" />
+            <solid android:color="#0DFFFFFF" /> <!-- White with 5% opacity -->
+        </shape>
+    </item>
+    
+    <!-- Accent Circle -->
+    <item
+        android:top="150dp"
+        android:left="-50dp">
+        <shape android:shape="oval">
+            <size
+                android:width="200dp"
+                android:height="200dp" />
+            <solid android:color="#0AFFFFFF" /> 
+        </shape>
+    </item>
+</layer-list>

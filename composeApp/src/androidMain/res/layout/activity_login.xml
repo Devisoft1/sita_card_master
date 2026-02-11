@@ -1,8 +1,8 @@
- <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/login_bg_geometric"
+    android:background="@drawable/login_bg_geometric_modern"
     android:fitsSystemWindows="true">
 
     <ScrollView
@@ -15,100 +15,144 @@
             android:layout_height="wrap_content"
             android:paddingBottom="@dimen/_32sdp">
 
+            <!-- Header Text -->
+            <TextView
+                android:id="@+id/welcomeTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/_60sdp"
+                android:layout_marginStart="@dimen/_24sdp"
+                android:text="Welcome Back!"
+                android:textColor="@color/white"
+                android:textSize="@dimen/_24ssp"
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/welcomeSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/_4sdp"
+                android:text="Sign in to continue"
+                android:textColor="@color/white"
+                android:alpha="0.8"
+                android:textSize="@dimen/_14ssp"
+                app:layout_constraintStart_toStartOf="@id/welcomeTitle"
+                app:layout_constraintTop_toBottomOf="@id/welcomeTitle" />
+
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/loginCard"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="@dimen/_12sdp"
-                app:cardCornerRadius="@dimen/_15sdp"
-                app:cardElevation="@dimen/_20sdp"
+                android:layout_marginHorizontal="@dimen/_16sdp"
+                android:layout_marginTop="@dimen/_32sdp"
                 app:cardBackgroundColor="@color/white"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent"
+                app:cardCornerRadius="@dimen/_24sdp"
+                app:cardElevation="@dimen/_16sdp"
+                app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
+                app:layout_constraintTop_toBottomOf="@id/welcomeSubtitle">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:paddingHorizontal="@dimen/_16sdp"
+                    android:paddingHorizontal="@dimen/_20sdp"
                     android:paddingVertical="@dimen/_24sdp">
 
                     <ImageView
                         android:id="@+id/logo"
-                        android:layout_width="@dimen/_180sdp"
+                        android:layout_width="@dimen/_140sdp"
                         android:layout_height="wrap_content"
-                        android:adjustViewBounds="true"
                         android:layout_gravity="center_horizontal"
-                        android:layout_marginBottom="@dimen/_16sdp"
-                        android:src="@drawable/logo"
-                        android:contentDescription="SITA Logo" />
-                    
+                        android:layout_marginBottom="@dimen/_24sdp"
+                        android:adjustViewBounds="true"
+                        android:contentDescription="SITA Logo"
+                        android:src="@drawable/logo" />
+
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/adminIdLayout"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="@dimen/_12sdp"
                         android:hint="Username"
-                        app:startIconDrawable="@drawable/ic_person"
-                        app:startIconTint="@color/brand_orange"
+                        app:boxCornerRadiusBottomEnd="@dimen/_12sdp"
+                        app:boxCornerRadiusBottomStart="@dimen/_12sdp"
+                        app:boxCornerRadiusTopEnd="@dimen/_12sdp"
+                        app:boxCornerRadiusTopStart="@dimen/_12sdp"
                         app:boxStrokeColor="@color/brand_orange"
                         app:hintTextColor="@color/brand_orange"
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                        app:startIconDrawable="@drawable/ic_person"
+                        app:startIconTint="@color/brand_orange">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/Username"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="0dp"
-                            android:paddingVertical="@dimen/_8sdp"
                             android:inputType="text"
+                            android:paddingVertical="@dimen/_12sdp"
                             android:singleLine="true"
                             android:textSize="@dimen/_14ssp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/passwordLayout"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="@dimen/_8sdp"
                         android:hint="Password"
-                        app:startIconDrawable="@drawable/ic_lock"
-                        app:startIconTint="@color/brand_orange"
+                        app:boxCornerRadiusBottomEnd="@dimen/_12sdp"
+                        app:boxCornerRadiusBottomStart="@dimen/_12sdp"
+                        app:boxCornerRadiusTopEnd="@dimen/_12sdp"
+                        app:boxCornerRadiusTopStart="@dimen/_12sdp"
                         app:boxStrokeColor="@color/brand_orange"
                         app:hintTextColor="@color/brand_orange"
                         app:passwordToggleEnabled="true"
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                        app:startIconDrawable="@drawable/ic_lock"
+                        app:startIconTint="@color/brand_orange">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/password"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:paddingVertical="@dimen/_8sdp"
                             android:inputType="textPassword"
-                            android:textSize="@dimen/_14ssp"
-                            android:singleLine="true" />
+                            android:paddingVertical="@dimen/_12sdp"
+                            android:singleLine="true"
+                            android:textSize="@dimen/_14ssp" />
                     </com.google.android.material.textfield.TextInputLayout>
+
+                    <TextView
+                        android:id="@+id/forgotPassword"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="end"
+                        android:layout_marginBottom="@dimen/_16sdp"
+                        android:text="Forgot Password?"
+                        android:textColor="@color/brand_blue"
+                        android:textSize="@dimen/_12ssp"
+                        android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/errorText"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/_12sdp"
                         android:textColor="@color/error_red"
                         android:textSize="@dimen/_12ssp"
-                        android:layout_marginBottom="@dimen/_12sdp"
                         android:visibility="gone" />
 
                     <CheckBox
                         android:id="@+id/rememberMe"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Keep me logged in"
-                        android:textSize="@dimen/_12ssp"
-                        android:textColor="@color/gray_text"
+                        android:layout_marginBottom="@dimen/_20sdp"
                         android:buttonTint="@color/brand_orange"
-                        android:layout_marginBottom="@dimen/_20sdp" />
+                        android:text="Keep me logged in"
+                        android:textColor="@color/gray_text"
+                        android:textSize="@dimen/_12ssp" />
 
                     <Button
                         android:id="@+id/loginButton"
@@ -117,8 +161,9 @@
                         android:text="LOGIN"
                         android:textSize="@dimen/_14ssp"
                         android:textStyle="bold"
+                        app:backgroundTint="@color/brand_blue"
                         app:cornerRadius="@dimen/_12sdp"
-                        app:backgroundTint="@color/brand_blue" />
+                        app:elevation="@dimen/_4sdp" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -126,14 +171,16 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Powered by DeviSoft"
-                android:textColor="@color/gray_text"
+                android:layout_marginBottom="@dimen/_24sdp"
                 android:alpha="0.7"
-                android:textSize="@dimen/_10ssp"
+                android:text="Powered by DeviSoft"
+                android:textColor="@color/white"
+                android:textSize="@dimen/_11ssp"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                android:layout_marginBottom="@dimen/_16sdp" />
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/loginCard"
+                app:layout_constraintVertical_bias="1.0" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </ScrollView>
