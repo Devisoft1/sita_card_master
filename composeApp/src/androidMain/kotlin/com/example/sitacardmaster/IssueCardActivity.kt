@@ -25,6 +25,7 @@ class IssueCardActivity : AppCompatActivity() {
 
     private lateinit var memberIdText: TextView
     private lateinit var companyNameInput: com.google.android.material.textfield.MaterialAutoCompleteTextView
+    private lateinit var passwordInput: com.google.android.material.textfield.TextInputEditText
     private lateinit var validUptoText: TextView
     private lateinit var phoneNumberText: TextView
     private lateinit var whatsappInputText: TextView
@@ -49,6 +50,7 @@ class IssueCardActivity : AppCompatActivity() {
 
         memberIdText = findViewById(R.id.memberIdText)
         companyNameInput = findViewById(R.id.companyName)
+        passwordInput = findViewById(R.id.passwordInput)
         validUptoText = findViewById(R.id.validUptoText)
         phoneNumberText = findViewById(R.id.phoneNumberText)
         whatsappInputText = findViewById(R.id.whatsappNumberText)
@@ -76,6 +78,11 @@ class IssueCardActivity : AppCompatActivity() {
             if (memberIdText.text.isEmpty() || memberIdText.text == "---") {
                 statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
                 statusMessage.text = "Error: Member ID is missing"
+                return@setOnClickListener
+            }
+            if (passwordInput.text.isNullOrEmpty()) {
+                statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+                statusMessage.text = "Error: Please enter password"
                 return@setOnClickListener
             }
             startScanning()
@@ -209,6 +216,7 @@ class IssueCardActivity : AppCompatActivity() {
 
     private fun clearOtherFields() {
         memberIdText.text = "---"
+        passwordInput.text?.clear()
         validUptoText.text = "---"
         phoneNumberText.text = "---"
         whatsappInputText.text = "---"
@@ -284,6 +292,7 @@ class IssueCardActivity : AppCompatActivity() {
         val tagId = tag.id.joinToString("") { byte -> "%02X".format(byte) }
         val memberId = memberIdText.text.toString()
         val company = companyNameInput.text.toString()
+        val password = passwordInput.text.toString()
         val validUpto = validUptoText.text.toString()
 
         runOnUiThread {
@@ -293,9 +302,11 @@ class IssueCardActivity : AppCompatActivity() {
         
         kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) { // Using GlobalScope for simplicity in Activity for now, ideally LifecycleScope
              logAction("API Request: Member=$memberId, Company=$company, MFID=$tagId, Validity=$validUpto")
+             logAction("API Password: $password") // Added Log
              val result = apiClient.verifyMember(
                  memberId = memberId,
                  companyName = company,
+                 password = password,
                  cardMfid = tagId,
                  cardValidity = validUpto
              )
@@ -318,13 +329,17 @@ class IssueCardActivity : AppCompatActivity() {
     private fun writeCard() {
         val memberId = memberIdText.text.toString()
         val company = companyNameInput.text.toString()
+        val password = passwordInput.text.toString()
         val validUpto = validUptoText.text.toString()
         // val totalBuy = totalBuyInput.text.toString() // Removed
         val totalBuy = "0" // Defaulting to 0 since input is removed
 
+        logAction("Starting Write Card. Member: $memberId, Pwd: $password") // Added Log
+
         nfcManager.writeCard(
             memberId = memberId,
             companyName = company,
+            password = password,
             validUpto = validUpto,
             totalBuy = totalBuy,
             onResult = { success, message ->

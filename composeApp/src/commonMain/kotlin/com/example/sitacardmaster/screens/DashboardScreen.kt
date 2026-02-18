@@ -86,8 +86,9 @@ fun DashboardScreen(
                         currentAmount = "Loading..."
                         verificationError = null // Reset error before new request
                         
+                        val password = data["password"] ?: ""
                         scope.launch {
-                             val result = apiClient.verifyMember(memberId, companyName)
+                             val result = apiClient.verifyMember(memberId, companyName, password)
                              result.fold(
                                  onSuccess = { response ->
                                      currentAmount = "₹${response.currentTotal}"

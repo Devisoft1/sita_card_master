@@ -105,6 +105,24 @@
                             android:inputType="textCapWords" />
                     </com.google.android.material.textfield.TextInputLayout>
 
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/_12sdp"
+                        android:hint="Password"
+                        app:startIconDrawable="@drawable/ic_lock" 
+                        app:startIconTint="@color/brand_blue"
+                        app:endIconMode="password_toggle"
+                        app:endIconTint="@color/gray_text"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/passwordInput"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textPassword"
+                            android:textSize="@dimen/_13ssp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
 
                     <!-- Info Card for Read-only Details -->
                     <com.google.android.material.card.MaterialCardView

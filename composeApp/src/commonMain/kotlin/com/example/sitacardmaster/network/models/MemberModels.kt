@@ -16,6 +16,7 @@ import kotlinx.serialization.json.contentOrNull
 data class VerifyMemberRequest(
     val memberId: String,
     val companyName: String,
+    val password: String,
     val card_mfid: String,
     val cardValidity: String
 )

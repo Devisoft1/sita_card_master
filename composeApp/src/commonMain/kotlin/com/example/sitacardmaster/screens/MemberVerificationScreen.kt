@@ -105,7 +105,7 @@ fun MemberVerificationScreen(
                                 resultMessage = ""
                                 memberData = null
                                 scope.launch {
-                                    val result = client.verifyMember(memberId, companyName)
+                                    val result = client.verifyMember(memberId, companyName, password = "")
                                     result.fold(
                                         onSuccess = {
                                             memberData = it

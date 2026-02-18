@@ -2,6 +2,7 @@ package com.example.sitacardmaster
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.os.Bundle
@@ -199,6 +200,28 @@ class DashboardActivity : AppCompatActivity() {
             finish()
         }
         
+        // Click listeners for contact fields
+        displayAddress.setOnClickListener {
+            val address = displayAddress.text.toString()
+            if (address.isNotBlank() && address != "N/A") {
+                openLocationInMaps(address)
+            }
+        }
+        
+        displayPhone.setOnClickListener {
+            val phone = displayPhone.text.toString()
+            if (phone.isNotBlank() && phone != "N/A") {
+                openDialer(phone)
+            }
+        }
+        
+        displayEmail.setOnClickListener {
+            val email = displayEmail.text.toString()
+            if (email.isNotBlank() && email != "N/A") {
+                openEmailApp(email)
+            }
+        }
+        
     }
 
     private fun startScanMode() {
@@ -327,11 +350,13 @@ class DashboardActivity : AppCompatActivity() {
             if (memberId.isNotBlank()) {
                 val cardMfid = data["card_mfid"] ?: ""
                 val cardValidity = data["validUpto"] ?: ""
+                val password = data["password"] ?: ""
 
                 val result = withContext(Dispatchers.IO) {
                     memberApiClient.verifyMember(
                         memberId = memberId, 
                         companyName = companyName,
+                        password = password,
                         cardMfid = cardMfid,
                         cardValidity = cardValidity
                     )
@@ -436,6 +461,51 @@ class DashboardActivity : AppCompatActivity() {
         return dateStr // Return original if all parsing fails
     }
 
+    private fun openLocationInMaps(address: String) {
+        try {
+            val geoUri = Uri.parse("geo:0,0?q=${Uri.encode(address)}")
+            val intent = Intent(Intent.ACTION_VIEW, geoUri)
+            intent.setPackage("com.google.android.apps.maps")
+            
+            if (intent.resolveActivity(packageManager) != null) {
+                startActivity(intent)
+                logAction("Opened location in Maps: $address")
+            } else {
+                // Fallback to browser if Maps app not available
+                val browserIntent = Intent(Intent.ACTION_VIEW, geoUri)
+                startActivity(browserIntent)
+                logAction("Opened location in browser: $address")
+            }
+        } catch (e: Exception) {
+            logAction("Error opening maps: ${e.message}")
+            statusSnackbar("Could not open maps")
+        }
+    }
+    
+    private fun openDialer(phoneNumber: String) {
+        try {
+            val intent = Intent(Intent.ACTION_DIAL)
+            intent.data = Uri.parse("tel:$phoneNumber")
+            startActivity(intent)
+            logAction("Opened dialer for: $phoneNumber")
+        } catch (e: Exception) {
+            logAction("Error opening dialer: ${e.message}")
+            statusSnackbar("Could not open dialer")
+        }
+    }
+    
+    private fun openEmailApp(email: String) {
+        try {
+            val intent = Intent(Intent.ACTION_SENDTO)
+            intent.data = Uri.parse("mailto:$email")
+            startActivity(intent)
+            logAction("Opened email app for: $email")
+        } catch (e: Exception) {
+            logAction("Error opening email app: ${e.message}")
+            statusSnackbar("Could not open email app")
+        }
+    }
+    
     private fun logAction(action: String) {
         platformLog("SITACardMaster", "Dashboard: $action")
         android.util.Log.i("SITACardMaster_Verbose", "Dashboard: $action") // Duplicate to Info log in case Debug is filtered

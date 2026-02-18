@@ -55,6 +55,7 @@ class IosNfcManager : NfcManager {
     override fun writeCard(
         memberId: String,
         companyName: String,
+        password: String,
         validUpto: String,
         totalBuy: String,
         onResult: (Boolean, String) -> Unit
@@ -64,6 +65,7 @@ class IosNfcManager : NfcManager {
         pendingWriteData = mapOf(
             "memberId" to memberId,
             "companyName" to companyName,
+            "password" to password,
             "validUpto" to validUpto,
             "totalBuy" to totalBuy,
             "lastBuyDate" to "" // Optional or computed

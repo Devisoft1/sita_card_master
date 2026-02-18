@@ -46,6 +46,7 @@ class MemberApiClient {
     suspend fun verifyMember(
         memberId: String,
         companyName: String,
+        password: String,
         cardMfid: String = "",
         cardValidity: String = ""
     ): Result<VerifyMemberResponse> {
@@ -56,6 +57,7 @@ class MemberApiClient {
                     VerifyMemberRequest(
                         memberId = memberId,
                         companyName = companyName,
+                        password = password,
                         card_mfid = cardMfid,
                         cardValidity = cardValidity
                     )

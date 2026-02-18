@@ -63,6 +63,7 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                 nfcManager.writeCard(
                     memberId = memberId,
                     companyName = companyName,
+                    password = "", // TODO: Add password field to Compose UI if needed
                     validUpto = validUpto,
                     totalBuy = totalBuy,
                     onResult = { success, message ->

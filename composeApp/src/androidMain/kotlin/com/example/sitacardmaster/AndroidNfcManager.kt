@@ -82,6 +82,7 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
     override fun writeCard(
         memberId: String,
         companyName: String,
+        password: String,
         validUpto: String,
         totalBuy: String,
         onResult: (Boolean, String) -> Unit
@@ -116,13 +117,16 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                     platformLog("SITACardMaster", "Writing ValidUpto to Block 14...")
                     writeBlock(mifare, 14, validUpto)
 
-                     // Sector 4 (Block 16, 17)
+                     // Sector 4 (Block 16, 17, 18)
                     if (authenticateSector(mifare, 4)) {
                         platformLog("SITACardMaster", "Writing TotalBuy to Block 16...")
                         writeBlock(mifare, 16, totalBuy)
                         platformLog("SITACardMaster", "Writing today's date to Block 17...")
                         val today = java.text.SimpleDateFormat("dd-MM-yyyy", java.util.Locale.getDefault()).format(java.util.Date())
                         writeBlock(mifare, 17, today)
+                        
+                        platformLog("SITACardMaster", "Writing Password to Block 18: $password") // Updated Log
+                        writeBlock(mifare, 18, password)
                         
                         platformLog("SITACardMaster", "All blocks written successfully!")
                         success = true
@@ -217,6 +221,10 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                             val lastBuy = readBlock(mifare, 17)
                             platformLog("SITACardMaster", "Block 17 (Last Buy): $lastBuy")
                             data["lastBuyDate"] = lastBuy
+                            
+                            val password = readBlock(mifare, 18)
+                            platformLog("SITACardMaster", "Block 18 (Password): $password")
+                            data["password"] = password
                         } else {
                             platformLog("SITACardMaster", "Sector 4 Authentication Failed")
                         }

@@ -10,6 +10,7 @@ interface NfcManager {
     fun writeCard(
         memberId: String,
         companyName: String,
+        password: String,
         validUpto: String,
         totalBuy: String,
         onResult: (Boolean, String) -> Unit
