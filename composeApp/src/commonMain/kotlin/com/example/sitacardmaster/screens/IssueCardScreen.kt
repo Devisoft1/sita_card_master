@@ -71,7 +71,12 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                         statusMessage = message
                         scanningMode = ScanMode.None
                         if (success) {
-                            scope.launch { snackbarHostState.showSnackbar("Success: $message") }
+                            // scope.launch { snackbarHostState.showSnackbar("Success: $message") }
+                            // Reset fields
+                            memberId = ""
+                            companyName = ""
+                            validUpto = ""
+                            statusMessage = "Card Issued Successfully. Ready for next."
                         }
                     }
                 )

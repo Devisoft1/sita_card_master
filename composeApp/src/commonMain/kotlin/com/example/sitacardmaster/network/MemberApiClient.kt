@@ -78,6 +78,21 @@ class MemberApiClient {
         }
     }
 
+    suspend fun getMemberById(id: String): Result<VerifyMemberResponse> {
+        return try {
+            val response = client.get("$baseUrl/members/$id")
+            if (response.status.value in 200..299) {
+                // We're reusing VerifyMemberResponse as it has all the fields we need
+                val member: VerifyMemberResponse = response.body()
+                Result.success(member)
+            } else {
+                Result.failure(Exception("Member not found (ID: $id)"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun addAmount(memberId: String, amount: Double): Result<AddAmountResponse> {
         // Keeping this as is/mock for now as user request didn't ask to change this logic specifically, 
         // but ensuring it remains compatible if any model changes affected it (none did).

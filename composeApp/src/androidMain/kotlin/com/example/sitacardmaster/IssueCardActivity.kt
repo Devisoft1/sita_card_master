@@ -385,7 +385,9 @@ class IssueCardActivity : AppCompatActivity() {
                             logAction("Local Storage Error: ${e.message}")
                         }
                        
-                        stopScanning()
+                         stopScanning()
+                        // Refresh/Reset the page
+                        resetForm()
                     } else {
                         statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
                     }
@@ -439,6 +441,14 @@ class IssueCardActivity : AppCompatActivity() {
             }
         }
         return dateStr
+    }
+
+    private fun resetForm() {
+        companyNameInput.setText("", false)
+        selectedCompanyName = ""
+        clearOtherFields()
+        statusMessage.text = "Card Issued Successfully. Ready for next."
+        statusMessage.setTextColor(resources.getColor(R.color.brand_blue, theme))
     }
 
     override fun onPause() {

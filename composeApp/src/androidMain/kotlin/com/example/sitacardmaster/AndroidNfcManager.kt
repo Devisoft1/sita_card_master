@@ -115,10 +115,11 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                     // Treating MemberID as Hex String (e.g. "1010" -> 0x10 0x10)
                     writeHexBlock(mifare, 12, memberId)
                     
-                    platformLog("SITACardMaster", "Writing Company (Hex) to Block 13...")
-                    writeHexBlock(mifare, 13, companyName)
+                            // Write Company Name as ASCII Hex
+                            platformLog("SITACardMaster", "Writing Company (Hex) to Block 13...")
+                            writeHexBlock(mifare, 13, stringToHex(companyName))
                     
-                    platformLog("SITACardMaster", "Writing ValidUpto (Hex) to Block 14...")
+                            platformLog("SITACardMaster", "Writing ValidUpto (Hex) to Block 14...")
                     // Convert DD-MM-YYYY or DD/MM/YYYY to DDMMYYYY for Hex storage
                     val cleanDate = validUpto.replace("-", "").replace("/", "")
                     writeHexBlock(mifare, 14, cleanDate)
@@ -138,7 +139,7 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                         // Sector 5 (Block 20) for Card Type
                         if (authenticateSector(mifare, 5)) {
                             platformLog("SITACardMaster", "Writing Card Type (Hex) to Block 20: $cardType")
-                            writeHexBlock(mifare, 20, cardType)
+                            writeHexBlock(mifare, 20, stringToHex(cardType))
 
                             platformLog("SITACardMaster", "All blocks written successfully!")
                             success = true
@@ -229,10 +230,10 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                         
                         val companyHex = readBlockHexStrings(mifare, 13)
                         platformLog("SITACardMaster", "Block 13 (Company Hex): $companyHex")
-                        // Return Hex string for Company too? Or ASCII? 
-                        // User wants "badhu hexa majj save krvanu che" (Everything Hex).
-                        // So I return the Hex string.
-                        data["companyName"] = companyHex.replace(" ", "").trimEnd('0') // Hex string
+                        // Decode Hex to ASCII for Company Name
+                        val companyAscii = hexToString(companyHex.replace(" ", ""))
+                        data["companyName"] = companyAscii.trimNulls() // Use helper to trim nulls/garbage
+
                         
                         val validUptoHex = readBlockHexStrings(mifare, 14)
                         platformLog("SITACardMaster", "Block 14 (Valid Upto Hex): $validUptoHex")
@@ -259,7 +260,9 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                             if (authenticateSector(mifare, 5)) {
                                 val cardTypeHex = readBlockHexStrings(mifare, 20)
                                 platformLog("SITACardMaster", "Block 20 (Card Type Hex): $cardTypeHex")
-                                data["cardType"] = cardTypeHex.replace(" ", "").trimEnd('0') // Assuming Hex string storage
+                                // Decode Hex to ASCII/String for Card Type
+                                val cardTypeAscii = hexToString(cardTypeHex.replace(" ", ""))
+                                data["cardType"] = cardTypeAscii.trimNulls()
                             } else {
                                 platformLog("SITACardMaster", "Sector 5 Authentication Failed")
                             }
@@ -301,6 +304,34 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
 
     private fun bytesToHex(bytes: ByteArray): String {
         return bytes.joinToString(" ") { "%02X".format(it) }
+    }
+
+    private fun stringToHex(input: String): String {
+        return input.toByteArray(Charset.forName("US-ASCII")).joinToString("") { "%02X".format(it) }
+    }
+
+    private fun hexToString(hex: String): String {
+        val cleanHex = hex.replace(" ", "")
+        val result = StringBuilder()
+        var i = 0
+        while (i < cleanHex.length - 1) {
+            val str = cleanHex.substring(i, i + 2)
+            try {
+                val charCode = Integer.parseInt(str, 16)
+                if (charCode != 0) { // Skip null bytes
+                    result.append(charCode.toChar())
+                }
+            } catch (e: NumberFormatException) {
+                // Ignore invalid
+            }
+            i += 2
+        }
+        return result.toString()
+    }
+    
+    // Extension to clean up string from nulls and extra spaces if needed
+    private fun String.trimNulls(): String {
+        return this.filter { it != '\u0000' }.trim()
     }
 
     private fun readBlockHexStrings(mifare: MifareClassic, blockIndex: Int): String {

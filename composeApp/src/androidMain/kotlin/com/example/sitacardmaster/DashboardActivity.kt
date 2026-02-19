@@ -369,6 +369,14 @@ class DashboardActivity : AppCompatActivity() {
                         displayAmount.text = "₹${response.currentTotal}" // Restored Current Amount
                         displayValidUpto.text = formatDate(response.validity)
                         
+                        // Ensure Company Name is updated from API (fixes garbage data issue)
+                        if (!response.companyName.isNullOrBlank()) {
+                            displayCompany.text = response.companyName
+                        }
+                        if (!response.memberId.isNullOrBlank()) {
+                            displayMemberId.text = response.memberId
+                        }
+                        
                         // Bind Contact Info
                         bindValue(displayAddress, response.companyAddress)
                         bindValue(displayPhone, response.phoneNumber)
@@ -377,12 +385,48 @@ class DashboardActivity : AppCompatActivity() {
                         bindValue(displayWhatsapp, response.whatsapp)
                     },
                     onFailure = { error ->
-                        logAction("API Request Failed: ${error.message}")
-                        
-                        // Show Error UI
                         val errorMessage = error.message ?: "Member verification failed"
-                        runOnUiThread {
-                             showError(errorMessage)
+                        
+                        // Fallback: If strict verification failed, try fetching by ID only
+                        // This handles cases where card data (Company/Password) is old/corrupted but ID is valid.
+                        logAction("Strict Verify Failed ($errorMessage). Attempting Fallback by ID: $memberId")
+                        
+                        scope.launch {
+                             val fallbackResult = withContext(Dispatchers.IO) {
+                                 memberApiClient.getMemberById(memberId)
+                             }
+                             
+                             fallbackResult.fold(
+                                 onSuccess = { response ->
+                                     logAction("Fallback Success! Member found by ID.")
+                                     displayTotalBuy.text = "₹${response.globalTotal}"
+                                     displayAmount.text = "₹${response.currentTotal}"
+                                     displayValidUpto.text = formatDate(response.validity)
+
+                                     // Ensure Company Name is updated from API (Critical for fallback)
+                                     if (!response.companyName.isNullOrBlank()) {
+                                         displayCompany.text = response.companyName
+                                     }
+                                     if (!response.memberId.isNullOrBlank()) {
+                                         displayMemberId.text = response.memberId
+                                     }
+                                     
+                                     bindValue(displayAddress, response.companyAddress)
+                                     bindValue(displayPhone, response.phoneNumber)
+                                     bindValue(displayEmail, response.email)
+                                     bindValue(displayWebsite, response.website)
+                                     bindValue(displayWhatsapp, response.whatsapp)
+                                     
+                                     // Ensure error is hidden if fallback works
+                                     errorContainer.visibility = View.GONE
+                                 },
+                                 onFailure = { fallbackError ->
+                                     logAction("Fallback Failed: ${fallbackError.message}")
+                                     runOnUiThread {
+                                         showError(errorMessage) // Show the original verification error
+                                     }
+                                 }
+                             )
                         }
                     }
                 )
@@ -405,13 +449,13 @@ class DashboardActivity : AppCompatActivity() {
     private fun showError(message: String) {
 
 
-        detailsContainer.visibility = View.GONE
+        detailsContainer.visibility = View.VISIBLE
         errorContainer.visibility = View.VISIBLE
         errorText.text = message
         
-        // Auto-scroll to error
+        // Auto-scroll to details so user sees the data
         dashboardScroll.post {
-            dashboardScroll.smoothScrollTo(0, errorContainer.top)
+            dashboardScroll.smoothScrollTo(0, detailsContainer.top)
         }
     }
     
