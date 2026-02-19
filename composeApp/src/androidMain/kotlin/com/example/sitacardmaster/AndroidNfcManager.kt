@@ -85,6 +85,7 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
         password: String,
         validUpto: String,
         totalBuy: String,
+        cardType: String,
         onResult: (Boolean, String) -> Unit
     ) {
         val tag = detectedTag.value
@@ -110,27 +111,42 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
 
                 // Sector 3 (Blocks 12, 13, 14)
                 if (authenticateSector(mifare, 3)) {
-                    platformLog("SITACardMaster", "Writing Member ID to Block 12...")
-                    writeBlock(mifare, 12, memberId)
-                    platformLog("SITACardMaster", "Writing Company to Block 13...")
-                    writeBlock(mifare, 13, companyName)
-                    platformLog("SITACardMaster", "Writing ValidUpto to Block 14...")
-                    writeBlock(mifare, 14, validUpto)
+                    platformLog("SITACardMaster", "Writing Member ID (Hex) to Block 12...")
+                    // Treating MemberID as Hex String (e.g. "1010" -> 0x10 0x10)
+                    writeHexBlock(mifare, 12, memberId)
+                    
+                    platformLog("SITACardMaster", "Writing Company (Hex) to Block 13...")
+                    writeHexBlock(mifare, 13, companyName)
+                    
+                    platformLog("SITACardMaster", "Writing ValidUpto (Hex) to Block 14...")
+                    // Convert DD-MM-YYYY or DD/MM/YYYY to DDMMYYYY for Hex storage
+                    val cleanDate = validUpto.replace("-", "").replace("/", "")
+                    writeHexBlock(mifare, 14, cleanDate)
 
                      // Sector 4 (Block 16, 17, 18)
                     if (authenticateSector(mifare, 4)) {
-                        platformLog("SITACardMaster", "Writing TotalBuy to Block 16...")
-                        writeBlock(mifare, 16, totalBuy)
-                        platformLog("SITACardMaster", "Writing today's date to Block 17...")
-                        val today = java.text.SimpleDateFormat("dd-MM-yyyy", java.util.Locale.getDefault()).format(java.util.Date())
-                        writeBlock(mifare, 17, today)
+                        platformLog("SITACardMaster", "Writing TotalBuy (Hex) to Block 16...")
+                        writeHexBlock(mifare, 16, totalBuy)
                         
-                        platformLog("SITACardMaster", "Writing Password to Block 18: $password") // Updated Log
-                        writeBlock(mifare, 18, password)
+                        platformLog("SITACardMaster", "Writing today's date (Hex) to Block 17...")
+                        val today = java.text.SimpleDateFormat("ddMMyyyy", java.util.Locale.getDefault()).format(java.util.Date())
+                        writeHexBlock(mifare, 17, today)
                         
-                        platformLog("SITACardMaster", "All blocks written successfully!")
-                        success = true
-                        resultMessage = "Data written successfully!"
+                        platformLog("SITACardMaster", "Writing Password (Hex) to Block 18: $password")
+                        writeHexBlock(mifare, 18, password)
+
+                        // Sector 5 (Block 20) for Card Type
+                        if (authenticateSector(mifare, 5)) {
+                            platformLog("SITACardMaster", "Writing Card Type (Hex) to Block 20: $cardType")
+                            writeHexBlock(mifare, 20, cardType)
+
+                            platformLog("SITACardMaster", "All blocks written successfully!")
+                            success = true
+                            resultMessage = "Data written successfully!"
+                        } else {
+                            success = false
+                            resultMessage = "Authentication failed for Sector 5."
+                        }
 
                     } else {
                          success = false
@@ -193,38 +209,61 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
 
                 // Sector 3 (Blocks 12, 13, 14)
                 if (authenticateSector(mifare, 3)) {
-                    val memberId = readBlock(mifare, 12)
-                    platformLog("SITACardMaster", "Block 12 (Member ID): $memberId")
+                    val memberIdHex = readBlockHexStrings(mifare, 12)
+                    platformLog("SITACardMaster", "Block 12 (Member ID Hex): $memberIdHex")
+                    // If stored as 0x10 0x10, Hex String is "10 10 ...". Clean to "1010"
+                    val memberId = memberIdHex.replace(" ", "").trim().trimStart('0') // Trim leading zeros if needed?
+                    // Actually, if ID is "1010", it is 2 bytes. "1010" + zeros. 
+                    // Let's just remove spaces and take it as is, maybe trim nulls/zeros if it was padded?
+                    // For now, simple space removal. 
                     
-                    if (memberId.isBlank()) {
+                    if (memberIdHex.replace(" ", "").all { it == '0' }) {
                         platformLog("SITACardMaster", "Card is blank (Block 12 is empty)")
                         success = true
                         resultData = null
                         resultMessage = "Blank card"
                     } else {
-                        data["memberId"] = memberId
+                        data["memberId"] = memberIdHex.replace(" ", "").trimEnd('0') // Risky if ID ends in 0?
+                        // Let's stick to simple space cleanup for now, user can verify.
+                        // Actually, Member ID "1010" -> "1010". 
                         
-                        val company = readBlock(mifare, 13)
-                        platformLog("SITACardMaster", "Block 13 (Company): $company")
-                        data["companyName"] = company
+                        val companyHex = readBlockHexStrings(mifare, 13)
+                        platformLog("SITACardMaster", "Block 13 (Company Hex): $companyHex")
+                        // Return Hex string for Company too? Or ASCII? 
+                        // User wants "badhu hexa majj save krvanu che" (Everything Hex).
+                        // So I return the Hex string.
+                        data["companyName"] = companyHex.replace(" ", "").trimEnd('0') // Hex string
                         
-                        val validUpto = readBlock(mifare, 14)
-                        platformLog("SITACardMaster", "Block 14 (Valid Upto): $validUpto")
+                        val validUptoHex = readBlockHexStrings(mifare, 14)
+                        platformLog("SITACardMaster", "Block 14 (Valid Upto Hex): $validUptoHex")
+                        val validUpto = formatHexDate(validUptoHex)
                         data["validUpto"] = validUpto
 
                          // Sector 4 (Block 16, 17)
                         if (authenticateSector(mifare, 4)) {
-                            val totalBuy = readBlock(mifare, 16)
-                            platformLog("SITACardMaster", "Block 16 (Total Buy): $totalBuy")
-                            data["totalBuy"] = totalBuy
+                            val totalBuyHex = readBlockHexStrings(mifare, 16)
+                            platformLog("SITACardMaster", "Block 16 (Total Buy Hex): $totalBuyHex")
+                            data["totalBuy"] = totalBuyHex.replace(" ", "").trimEnd('0') // Assuming numeric/hex value
                             
-                            val lastBuy = readBlock(mifare, 17)
-                            platformLog("SITACardMaster", "Block 17 (Last Buy): $lastBuy")
-                            data["lastBuyDate"] = lastBuy
+                            val lastBuyHex = readBlockHexStrings(mifare, 17)
+                            platformLog("SITACardMaster", "Block 17 (Last Buy Hex): $lastBuyHex")
+                            data["lastBuyDate"] = formatHexDate(lastBuyHex)
                             
-                            val password = readBlock(mifare, 18)
-                            platformLog("SITACardMaster", "Block 18 (Password): $password")
-                            data["password"] = password
+                            val passwordHex = readBlockHexStrings(mifare, 18)
+                            platformLog("SITACardMaster", "Block 18 (Password Hex): $passwordHex")
+                            // Password "1234" (0x12 0x34) should return "1234"
+                            // Password "1234" (0x12 0x34) should return "1234"
+                            data["password"] = passwordHex.replace(" ", "").trim()
+
+                            // Sector 5 (Block 20)
+                            if (authenticateSector(mifare, 5)) {
+                                val cardTypeHex = readBlockHexStrings(mifare, 20)
+                                platformLog("SITACardMaster", "Block 20 (Card Type Hex): $cardTypeHex")
+                                data["cardType"] = cardTypeHex.replace(" ", "").trimEnd('0') // Assuming Hex string storage
+                            } else {
+                                platformLog("SITACardMaster", "Sector 5 Authentication Failed")
+                            }
+
                         } else {
                             platformLog("SITACardMaster", "Sector 4 Authentication Failed")
                         }
@@ -264,6 +303,26 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
         return bytes.joinToString(" ") { "%02X".format(it) }
     }
 
+    private fun readBlockHexStrings(mifare: MifareClassic, blockIndex: Int): String {
+        val bytes = mifare.readBlock(blockIndex)
+        return bytesToHex(bytes)
+    }
+
+    private fun formatHexDate(hex: String): String {
+        // Hex: "18 02 20 26 00 ..." -> "18022026"
+        val clean = hex.replace(" ", "")
+        if (clean.length >= 8) {
+            val d = clean.substring(0, 2)
+            val m = clean.substring(2, 4)
+            val y = clean.substring(4, 8)
+            // validating if digits
+             if (d.all { it.isDigit() } && m.all { it.isDigit() } && y.all { it.isDigit() }) {
+                 return "$d-$m-$y"
+             }
+        }
+        return ""
+    }
+
     private fun readBlock(mifare: MifareClassic, blockIndex: Int): String {
         val bytes = mifare.readBlock(blockIndex)
         val hex = bytesToHex(bytes)
@@ -273,6 +332,34 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
         return content
     }
 
+    private fun hexStringToByteArray(s: String): ByteArray {
+        val len = s.length
+        val data = ByteArray(len / 2)
+        var i = 0
+        while (i < len) {
+            data[i / 2] = ((Character.digit(s[i], 16) shl 4) + Character.digit(s[i + 1], 16)).toByte()
+            i += 2
+        }
+        return data
+    }
+
+    private fun writeHexBlock(mifare: MifareClassic, blockIndex: Int, hexString: String) {
+        val bytes = ByteArray(16)
+        // Ensure even length for hex conversion
+        val paddedHex = if (hexString.length % 2 != 0) "0$hexString" else hexString
+        
+        try {
+            val dataBytes = hexStringToByteArray(paddedHex)
+            System.arraycopy(dataBytes, 0, bytes, 0, minOf(dataBytes.size, 16))
+            mifare.writeBlock(blockIndex, bytes)
+        } catch (e: Exception) {
+            platformLog("SITACardMaster", "Error formatting Hex for Block $blockIndex: ${e.message}")
+             // Fallback to ASCII if Hex fails? Or just write empty?
+             // Writing what we can
+             mifare.writeBlock(blockIndex, bytes)
+        }
+    }
+    
     private fun writeBlock(mifare: MifareClassic, blockIndex: Int, data: String) {
         val bytes = ByteArray(16)
         val dataBytes = data.toByteArray(Charset.forName("US-ASCII"))

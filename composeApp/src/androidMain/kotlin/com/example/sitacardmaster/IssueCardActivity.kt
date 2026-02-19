@@ -26,6 +26,7 @@ class IssueCardActivity : AppCompatActivity() {
     private lateinit var memberIdText: TextView
     private lateinit var companyNameInput: com.google.android.material.textfield.MaterialAutoCompleteTextView
     private lateinit var passwordInput: com.google.android.material.textfield.TextInputEditText
+    private lateinit var cardTypeInput: com.google.android.material.textfield.MaterialAutoCompleteTextView
     private lateinit var validUptoText: TextView
     private lateinit var phoneNumberText: TextView
     private lateinit var whatsappInputText: TextView
@@ -51,6 +52,7 @@ class IssueCardActivity : AppCompatActivity() {
         memberIdText = findViewById(R.id.memberIdText)
         companyNameInput = findViewById(R.id.companyName)
         passwordInput = findViewById(R.id.passwordInput)
+        cardTypeInput = findViewById(R.id.cardTypeInput)
         validUptoText = findViewById(R.id.validUptoText)
         phoneNumberText = findViewById(R.id.phoneNumberText)
         whatsappInputText = findViewById(R.id.whatsappNumberText)
@@ -83,6 +85,12 @@ class IssueCardActivity : AppCompatActivity() {
             if (passwordInput.text.isNullOrEmpty()) {
                 statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
                 statusMessage.text = "Error: Please enter password"
+                statusMessage.text = "Error: Please enter password"
+                return@setOnClickListener
+            }
+            if (cardTypeInput.text.isEmpty()) {
+                statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+                statusMessage.text = "Error: Please select card type"
                 return@setOnClickListener
             }
             startScanning()
@@ -97,6 +105,14 @@ class IssueCardActivity : AppCompatActivity() {
         }
 
         setupAutoComplete()
+        setupCardTypeDropdown()
+    }
+
+    private fun setupCardTypeDropdown() {
+        val cardTypes = arrayOf("Membership", "Add-on", "Event")
+        val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, cardTypes)
+        cardTypeInput.setAdapter(adapter)
+        cardTypeInput.setText("Membership", false) // Default
     }
 
     private var selectedCompanyName: String = ""
@@ -224,6 +240,7 @@ class IssueCardActivity : AppCompatActivity() {
         websiteText.text = "---"
         addressText.text = "---"
         memberInfoCard.visibility = View.GONE
+        cardTypeInput.setText("Membership", false)
     }
 
     private fun startClearCard() {
@@ -293,6 +310,7 @@ class IssueCardActivity : AppCompatActivity() {
         val memberId = memberIdText.text.toString()
         val company = companyNameInput.text.toString()
         val password = passwordInput.text.toString()
+        val cardType = cardTypeInput.text.toString()
         val validUpto = validUptoText.text.toString()
 
         runOnUiThread {
@@ -308,7 +326,8 @@ class IssueCardActivity : AppCompatActivity() {
                  companyName = company,
                  password = password,
                  cardMfid = tagId,
-                 cardValidity = validUpto
+                 cardValidity = validUpto,
+                 cardType = cardType
              )
              
              runOnUiThread {
@@ -330,6 +349,7 @@ class IssueCardActivity : AppCompatActivity() {
         val memberId = memberIdText.text.toString()
         val company = companyNameInput.text.toString()
         val password = passwordInput.text.toString()
+        val cardType = cardTypeInput.text.toString()
         val validUpto = validUptoText.text.toString()
         // val totalBuy = totalBuyInput.text.toString() // Removed
         val totalBuy = "0" // Defaulting to 0 since input is removed
@@ -342,6 +362,7 @@ class IssueCardActivity : AppCompatActivity() {
             password = password,
             validUpto = validUpto,
             totalBuy = totalBuy,
+            cardType = cardType,
             onResult = { success, message ->
                 runOnUiThread {
                     statusMessage.text = message

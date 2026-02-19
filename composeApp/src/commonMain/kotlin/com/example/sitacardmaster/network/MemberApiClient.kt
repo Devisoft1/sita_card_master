@@ -48,7 +48,8 @@ class MemberApiClient {
         companyName: String,
         password: String,
         cardMfid: String = "",
-        cardValidity: String = ""
+        cardValidity: String = "",
+        cardType: String = "Membership" // Default to Membership if not provided
     ): Result<VerifyMemberResponse> {
         return try {
             val response: VerifyMemberResponse = client.post("$baseUrl/members/verify") {
@@ -59,7 +60,8 @@ class MemberApiClient {
                         companyName = companyName,
                         password = password,
                         card_mfid = cardMfid,
-                        cardValidity = cardValidity
+                        cardValidity = cardValidity,
+                        cardType = cardType
                     )
                 )
             }.body()

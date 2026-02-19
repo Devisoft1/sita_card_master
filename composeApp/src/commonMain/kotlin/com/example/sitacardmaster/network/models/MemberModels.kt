@@ -18,7 +18,8 @@ data class VerifyMemberRequest(
     val companyName: String,
     val password: String,
     val card_mfid: String,
-    val cardValidity: String
+    val cardValidity: String,
+    val cardType: String // "Membership", "Add-on", "Event"
 )
 
 @Serializable

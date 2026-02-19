@@ -13,6 +13,7 @@ interface NfcManager {
         password: String,
         validUpto: String,
         totalBuy: String,
+        cardType: String,
         onResult: (Boolean, String) -> Unit
     )
     fun readCard(onResult: (Boolean, Map<String, String>?, String) -> Unit)

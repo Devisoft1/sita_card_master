@@ -66,6 +66,7 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                     password = "", // TODO: Add password field to Compose UI if needed
                     validUpto = validUpto,
                     totalBuy = totalBuy,
+                    cardType = "Membership", // Default for compose UI
                     onResult = { success, message ->
                         statusMessage = message
                         scanningMode = ScanMode.None
