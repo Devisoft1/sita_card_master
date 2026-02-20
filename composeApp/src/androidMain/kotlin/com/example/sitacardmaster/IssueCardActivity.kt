@@ -106,6 +106,20 @@ class IssueCardActivity : AppCompatActivity() {
 
         setupAutoComplete()
         setupCardTypeDropdown()
+        
+        logTotalCompanyCount()
+    }
+    
+    private fun logTotalCompanyCount() {
+        coroutineScope.launch {
+            val result = apiClient.getApprovedMembers("") // Empty search to get all
+            if (result.isSuccess) {
+                val members = result.getOrNull() ?: emptyList()
+                platformLog("SITACardMaster", "IssueCard: Total companies available: ${members.size}")
+            } else {
+                platformLog("SITACardMaster", "IssueCard: Failed to fetch companies for count: ${result.exceptionOrNull()?.message}")
+            }
+        }
     }
 
     private fun setupCardTypeDropdown() {

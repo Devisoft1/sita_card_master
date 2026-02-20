@@ -49,6 +49,7 @@ class DashboardActivity : AppCompatActivity() {
     private lateinit var displayEmail: TextView
     private lateinit var displayWebsite: TextView
     private lateinit var displayWhatsapp: TextView
+    private lateinit var premiumMemberLabel: TextView
     private lateinit var newCardButton: Button
     private lateinit var deleteCardButton: Button
     private lateinit var clearButton: Button
@@ -84,12 +85,12 @@ class DashboardActivity : AppCompatActivity() {
         displayValidUpto = findViewById(R.id.displayValidUpto)
         displayTotalBuy = findViewById(R.id.displayTotalBuy)
         displayAmount = findViewById(R.id.displayAmount)
-        displayValidUpto = findViewById(R.id.displayValidUpto)
         displayAddress = findViewById(R.id.displayAddress)
         displayPhone = findViewById(R.id.displayPhone)
         displayEmail = findViewById(R.id.displayEmail)
         displayWebsite = findViewById(R.id.displayWebsite)
         displayWhatsapp = findViewById(R.id.displayWhatsapp)
+        premiumMemberLabel = findViewById(R.id.premiumMemberLabel)
         newCardButton = findViewById(R.id.newCardButton)
         deleteCardButton = findViewById(R.id.deleteCardButton)
         clearButton = findViewById(R.id.clearButton)
@@ -328,6 +329,9 @@ class DashboardActivity : AppCompatActivity() {
 
 
         detailsContainer.visibility = View.VISIBLE
+        val cardType = data["cardType"] ?: "Membership"
+        premiumMemberLabel.text = cardType.uppercase()
+        
         displayMemberId.text = data["memberId"] ?: "N/A"
         displayCompany.text = data["companyName"] ?: "N/A"
         displayValidUpto.text = formatDate(data["validUpto"])
