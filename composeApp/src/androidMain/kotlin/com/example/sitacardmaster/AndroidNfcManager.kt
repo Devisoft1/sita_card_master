@@ -219,9 +219,8 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                         resultData = null
                         resultMessage = "Blank card"
                     } else {
-                        // Decode Hex to ASCII for Member ID
-                        val memberIdAscii = hexToString(memberIdHex.replace(" ", ""))
-                        data["memberId"] = memberIdAscii.trimNulls()
+                        // Decode Member ID with Smart Decode
+                        data["memberId"] = smartDecode(memberIdHex)
                         
                         val companyHex = readBlockHexStrings(mifare, 13)
                         platformLog("SITACardMaster", "Block 13 (Company Hex): $companyHex")
@@ -296,6 +295,35 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
             // Callback AFTER closing connection
             onResult(success, resultData, resultMessage)
         }.start()
+    }
+
+    private fun smartDecode(hexStr: String): String {
+        // 1. Try standard ASCII decode
+        val ascii = hexToString(hexStr)
+        val cleanAscii = ascii.trimNulls()
+        
+        // 2. Check heuristically if it looks like garbage/control characters
+        // Valid text should mostly be printable (ASCII 32-126)
+        // If we see chars < 32 (except 0 which is padding), it's likely raw data
+        val hasControlChars = cleanAscii.any { it.code < 32 && it.code != 0 }
+        
+        // Also check if it's empty but the input wasn't just zeros
+        val rawInput = hexStr.replace(" ", "").replace("00", "")
+        val isNotEmptyButDecodedEmpty = rawInput.isNotEmpty() && cleanAscii.isEmpty()
+
+        if (hasControlChars || isNotEmptyButDecodedEmpty) {
+             platformLog("SITACardMaster", "SmartDecode: Detected non-ASCII content ($cleanAscii), treating Hex as String")
+             // Fallback: "10 10" -> "1010"
+             val sb = StringBuilder()
+             val parts = hexStr.trim().split(" ")
+             for (p in parts) {
+                 if (p == "00") break // Stop at null terminator
+                 sb.append(p)
+             }
+             return sb.toString()
+        }
+        
+        return cleanAscii
     }
 
     private fun bytesToHex(bytes: ByteArray): String {
