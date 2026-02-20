@@ -1,6 +1,8 @@
 package com.example.sitacardmaster
 
 import android.content.Intent
+import android.content.Context
+import android.view.inputmethod.InputMethodManager
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.os.Bundle
@@ -463,6 +465,11 @@ class IssueCardActivity : AppCompatActivity() {
         clearOtherFields()
         statusMessage.text = "Card Issued Successfully. Ready for next."
         statusMessage.setTextColor(resources.getColor(R.color.brand_blue, theme))
+        
+        // Auto-focus on company name for next entry
+        companyNameInput.requestFocus()
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.showSoftInput(companyNameInput, InputMethodManager.SHOW_IMPLICIT)
     }
 
     override fun onPause() {
