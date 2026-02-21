@@ -15,6 +15,7 @@ class IosNfcManager : NfcManager {
     private val delegate = IosNfcDelegate(this)
     
     override val detectedTag: State<Any?> = delegate.detectedTag
+    override val detectedTagId: State<String?> = delegate.detectedTagId
 
     // Callback storage for pending operations
     internal var onReadResult: ((Boolean, Map<String, String>?, String) -> Unit)? = null
@@ -58,6 +59,7 @@ class IosNfcManager : NfcManager {
         password: String,
         validUpto: String,
         totalBuy: String,
+        cardType: String,
         onResult: (Boolean, String) -> Unit
     ) {
         cleanup()
@@ -68,6 +70,7 @@ class IosNfcManager : NfcManager {
             "password" to password,
             "validUpto" to validUpto,
             "totalBuy" to totalBuy,
+            "cardType" to cardType,
             "lastBuyDate" to "" // Optional or computed
         )
         // Re-start session if needed to ensure we capture a tag for writing
@@ -90,6 +93,7 @@ class IosNfcManager : NfcManager {
 @OptIn(ExperimentalForeignApi::class)
 private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), NFCNDEFReaderSessionDelegateProtocol {
     val detectedTag: MutableState<Any?> = mutableStateOf(null)
+    val detectedTagId: MutableState<String?> = mutableStateOf(null)
 
     // Handle session invalidation
     override fun readerSession(session: NFCNDEFReaderSession, didInvalidateWithError: NSError) {
@@ -103,6 +107,7 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
         }
         
         detectedTag.value = null
+        detectedTagId.value = null
     }
 
     // Resolve conflicting overloads with @ObjCSignatureOverride

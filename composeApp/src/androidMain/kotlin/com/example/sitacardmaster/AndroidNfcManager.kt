@@ -24,9 +24,11 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
     private val intentFilters = arrayOf(IntentFilter(NfcAdapter.ACTION_TAG_DISCOVERED))
 
     override val detectedTag: State<Tag?> = mutableStateOf(null)
+    override val detectedTagId: State<String?> = mutableStateOf(null)
 
     override fun startScanning() {
         (detectedTag as MutableState<Tag?>).value = null
+        (detectedTagId as MutableState<String?>).value = null
         try {
             nfcAdapter?.enableForegroundDispatch(activity, pendingIntent, intentFilters, null)
         } catch (e: IllegalStateException) {
@@ -48,13 +50,17 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
             NfcAdapter.ACTION_NDEF_DISCOVERED == intent.action
         ) {
             val tag = intent.getParcelableExtra<Tag>(NfcAdapter.EXTRA_TAG)
+            var currentTagId: String? = null
             tag?.let {
-                val tagId = it.id.joinToString(":") { byte -> "%02X".format(byte) }
-                platformLog("SITACardMaster", "NFC Tag Detected! ID: $tagId")
-                platformLog("SITACardMaster", "Manufacturing Number: $tagId")
+                val tagId = it.id.joinToString("") { byte -> "%02X".format(byte) }
+                currentTagId = tagId
+                val logTagId = it.id.joinToString(":") { byte -> "%02X".format(byte) }
+                platformLog("SITACardMaster", "NFC Tag Detected! ID: $logTagId")
+                platformLog("SITACardMaster", "Manufacturing Number: $logTagId")
                 platformLog("SITACardMaster", "Technologies: ${it.techList.joinToString(", ")}")
             }
             (detectedTag as MutableState<Tag?>).value = tag
+            (detectedTagId as MutableState<String?>).value = currentTagId
         }
     }
 

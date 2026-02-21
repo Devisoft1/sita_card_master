@@ -37,6 +37,7 @@ kotlin {
             implementation(libs.sdp.android)
             implementation(libs.ssp.android)
             implementation("io.coil-kt:coil:2.5.0")
+            implementation(libs.ktor.client.cio)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -51,13 +52,15 @@ kotlin {
             implementation(libs.kotlinx.datetime)
 
             implementation(libs.ktor.client.core)
-            implementation(libs.ktor.client.cio)
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(libs.ktor.client.logging)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+        }
+        iosMain.dependencies {
+            implementation(libs.ktor.client.darwin)
         }
     }
 }
