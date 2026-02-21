@@ -102,7 +102,10 @@ class DashboardActivity : AppCompatActivity() {
         
         val logoutButton = findViewById<Button>(R.id.logoutButton)
         val backButton = findViewById<ImageButton>(R.id.backButton)
-        val titleText = findViewById<TextView>(R.id.dashboardTitle)
+        val titleText = findViewById<TextView>(R.id.appBarTitle)
+
+        // Hide back button on dashboard
+        backButton.visibility = View.GONE
 
         val sharedPref = getSharedPreferences("login_prefs", Context.MODE_PRIVATE)
         val adminId = sharedPref.getString("adminId", "Admin")
@@ -160,14 +163,7 @@ class DashboardActivity : AppCompatActivity() {
         // Removed as per request - relying on stored session
         // if (!authToken.isNullOrEmpty()) { ... }
 
-        backButton.setOnClickListener {
-            // Force return to login page by resetting the session flag
-            sharedPref.edit().putBoolean("isLoggedIn", false).apply()
-            
-            val intent = Intent(this, LoginActivity::class.java)
-            startActivity(intent)
-            finish()
-        }
+        // Removed backButton.setOnClickListener logic as the button is hidden in the dashboard
 
         logoCard.setOnClickListener {
             startScanMode()

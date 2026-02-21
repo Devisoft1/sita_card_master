@@ -69,6 +69,8 @@ class IssueCardActivity : AppCompatActivity() {
         startScanButton = findViewById(R.id.startScanButton)
         cancelScanButton = findViewById(R.id.cancelScanButton)
         val backButton = findViewById<ImageButton>(R.id.backButton)
+        findViewById<TextView>(R.id.appBarTitle).text = "Issue New Card"
+        findViewById<Button>(R.id.logoutButton)?.visibility = View.GONE
 
         backButton.setOnClickListener { finish() }
 

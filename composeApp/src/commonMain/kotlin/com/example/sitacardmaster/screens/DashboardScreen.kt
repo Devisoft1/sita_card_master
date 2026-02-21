@@ -125,15 +125,6 @@ fun DashboardScreen(
                         .padding(start = 4.dp, end = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = onLogout) {
-                        Icon(
-                            painter = painterResource(Res.drawable.ic_back),
-                            contentDescription = "Back",
-                            tint = brandBlue,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-
                     Text(
                         text = "Admin",
                         style = MaterialTheme.typography.titleMedium,
@@ -404,29 +395,67 @@ fun DashboardScreen(
             // Action Buttons
             Button(
                 onClick = onIssueCardClick,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .padding(bottom = 8.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = brandBlue)
             ) {
-                Text("Issue New Card", fontWeight = FontWeight.Bold)
+                Text(
+                    text = "ISSUE NEW CARD",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall
+                )
             }
             
-            Spacer(modifier = Modifier.height(16.dp))
-            
-             Button(
-                onClick = {
-                    isScanning = true
-                    isDeleteMode = true
-                    scanStatus = "TAP CARD TO DELETE DATA..."
-                    nfcManager.startScanning()
-                },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = errorRed)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("Delete Card Data", fontWeight = FontWeight.Bold)
+                Button(
+                    onClick = {
+                        isScanning = true
+                        isDeleteMode = true
+                        scanStatus = "TAP CARD TO DELETE DATA..."
+                        nfcManager.startScanning()
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = errorRed)
+                ) {
+                    Text(
+                        text = "DELETE CARD",
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+
+                Button(
+                    onClick = {
+                        cardData = null
+                        verificationError = null
+                        currentAmount = "Loading..."
+                        scanStatus = ""
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9E9E9E))
+                ) {
+                    Text(
+                        text = "CLEAR PAGE",
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
             }
-            
 
         }
     }
