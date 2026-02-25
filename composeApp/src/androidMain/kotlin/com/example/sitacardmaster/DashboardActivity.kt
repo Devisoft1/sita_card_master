@@ -64,7 +64,7 @@ class DashboardActivity : AppCompatActivity() {
     private val scanTimeoutRunnable = Runnable {
         if (isScanning) {
             stopScanMode()
-            statusSnackbar("Scanning timed out")
+            statusSnackbar("No card detected")
         }
     }
 
@@ -246,6 +246,9 @@ class DashboardActivity : AppCompatActivity() {
         scanInstruction.text = "Tap logo to scan card"
         scanProgress.visibility = View.GONE
         stopScanButton.visibility = View.GONE
+        newCardButton.visibility = View.VISIBLE
+        deleteCardButton.visibility = View.VISIBLE
+        clearButton.visibility = View.VISIBLE
         
         logAction("Scanning stopped")
         
@@ -555,8 +558,17 @@ class DashboardActivity : AppCompatActivity() {
         android.util.Log.i("SITACardMaster_Verbose", "Dashboard: $action") // Duplicate to Info log in case Debug is filtered
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (isScanning) {
+            nfcManager.startScanning()
+        }
+    }
+
     override fun onPause() {
         super.onPause()
+        // Do NOT set isScanning = false here.
+        // Just disable NFC foreground dispatch when app is not in foreground.
         nfcManager.stopScanning()
     }
 }

@@ -96,6 +96,18 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
         }
     }
 
+    // 1-minute auto-timeout
+    LaunchedEffect(scanningMode) {
+        if (scanningMode != ScanMode.None) {
+            delay(60000)
+            if (scanningMode != ScanMode.None) {
+                scanningMode = ScanMode.None
+                nfcManager.stopScanning()
+                statusMessage = "No card detected"
+            }
+        }
+    }
+
     LaunchedEffect(tag) {
         if (scanningMode != ScanMode.None && tag != null) {
             if (scanningMode == ScanMode.Writing) {

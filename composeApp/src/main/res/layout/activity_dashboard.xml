@@ -72,6 +72,16 @@
                         android:indeterminateTint="@color/brand_blue"
                         android:visibility="gone" />
 
+                    <Button
+                        android:id="@+id/stopScanButton"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="Stop Scanning"
+                        android:textColor="@color/error_red"
+                        android:visibility="gone" />
+
                 </LinearLayout>
 
                 <!-- Details Card -->
@@ -408,18 +418,6 @@
                             app:backgroundTint="#9E9E9E"
                             android:layout_marginStart="@dimen/_4sdp" />
                     </LinearLayout>
-
-                    <Button
-                        android:id="@+id/stopScanButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="@dimen/_45sdp"
-                        android:layout_marginTop="@dimen/_8sdp"
-                        android:text="Stop Scanning"
-                        android:textSize="@dimen/_10ssp"
-                        android:textStyle="bold"
-                        android:visibility="gone"
-                        app:cornerRadius="@dimen/_10sdp"
-                        app:backgroundTint="@color/gray_text" />
 
                 </LinearLayout>
 

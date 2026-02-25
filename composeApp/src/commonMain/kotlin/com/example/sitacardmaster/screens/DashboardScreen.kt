@@ -111,6 +111,19 @@ fun DashboardScreen(
         }
     }
 
+    // 1-minute auto-timeout
+    LaunchedEffect(isScanning) {
+        if (isScanning) {
+            kotlinx.coroutines.delay(60000)
+            if (isScanning) {
+                isScanning = false
+                isDeleteMode = false
+                nfcManager.stopScanning()
+                scanStatus = "No card detected"
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             Surface(
