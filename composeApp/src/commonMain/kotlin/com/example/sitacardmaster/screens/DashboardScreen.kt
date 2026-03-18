@@ -96,13 +96,15 @@ fun DashboardScreen(
                                      val matchingCard = response.cards?.find { it.card_mfid.equals(scannedMfid, ignoreCase = true) }
                                      
                                      if (matchingCard != null) {
-                                         currentAmount = "₹${matchingCard.cardTotal}" // Current Total
+                                         // Use cardTotal from matchingCard if available, otherwise from response root, otherwise currentTotal
+                                         val displayTotal = if (matchingCard.cardTotal > 0) matchingCard.cardTotal else if (response.cardTotal > 0) response.cardTotal else response.currentTotal
+                                         currentAmount = "₹$displayTotal"
                                          globalAmount = "₹${response.globalTotal}" // Global Total
-                                         platformLog("Dashboard", "Card-specific balance: ${matchingCard.cardTotal}")
+                                         platformLog("Dashboard", "Card-specific balance: $displayTotal (from cards list or fallback)")
                                      } else {
                                          currentAmount = "₹${response.globalTotal}"
                                          globalAmount = "₹${response.currentTotal}"
-                                         platformLog("Dashboard", "No matching card. Fallback to globalTotal.")
+                                         platformLog("Dashboard", "No matching card. Fallback to global totals.")
                                      }
                                  },
                                  onFailure = { error ->

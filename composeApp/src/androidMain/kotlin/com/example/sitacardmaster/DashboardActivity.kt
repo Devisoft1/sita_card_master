@@ -371,11 +371,12 @@ class DashboardActivity : AppCompatActivity() {
                         val matchingCard = response.cards?.find { it.card_mfid.equals(scannedMfid, ignoreCase = true) }
                         
                         if (matchingCard != null) {
-                            logAction("Found Matching Card: $scannedMfid. Using cardTotal for Current Total.")
-                            displayTotalBuy.text = "₹${matchingCard.cardTotal}" // Corrected: current total is cardTotal
+                            logAction("Found Matching Card: $scannedMfid. Using card-specific data.")
+                            val displayTotal = if (matchingCard.cardTotal > 0) matchingCard.cardTotal else if (response.cardTotal > 0) response.cardTotal else response.currentTotal
+                            displayTotalBuy.text = "₹$displayTotal" 
                             displayAmount.text = "₹${response.globalTotal}" // Global Total
                         } else {
-                            logAction("No matching card found. Using member-level totals.")
+                            logAction("No matching card found in member's cards list ($scannedMfid).")
                             displayTotalBuy.text = "₹${response.globalTotal}" 
                             displayAmount.text = "₹${response.currentTotal}" 
                         }
@@ -418,7 +419,8 @@ class DashboardActivity : AppCompatActivity() {
                                      
                                      if (matchingCard != null) {
                                          logAction("Fallback: Found Matching Card: $scannedMfid.")
-                                         displayTotalBuy.text = "₹${matchingCard.cardTotal}" // Current Total
+                                         val displayTotal = if (matchingCard.cardTotal > 0) matchingCard.cardTotal else if (response.cardTotal > 0) response.cardTotal else response.currentTotal
+                                         displayTotalBuy.text = "₹$displayTotal" 
                                          displayAmount.text = "₹${response.globalTotal}" // Global Total
                                      } else {
                                          logAction("Fallback: No matching card found for $scannedMfid.")

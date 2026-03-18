@@ -47,6 +47,8 @@ data class VerifyMemberResponse(
     val currentTotal: Double = 0.0,
     @SerialName("total")
     val globalTotal: Double = 0.0,
+    val cardTotal: Double = 0.0,
+    val password: String? = null,
     val validity: String? = null, // Restored for backward compatibility
     val verified: Boolean? = null,
     val expired: Boolean? = null,
@@ -56,8 +58,35 @@ data class VerifyMemberResponse(
     val website: String? = null,
     val whatsapp: String? = null,
     val status: Int? = null,
+    @Serializable(with = CardListSerializer::class)
     val cards: List<CardDetails>? = null
 )
+
+object CardListSerializer : KSerializer<List<CardDetails>?> {
+    private val delegate = kotlinx.serialization.builtins.ListSerializer(CardDetails.serializer())
+    override val descriptor: SerialDescriptor = delegate.descriptor
+
+    override fun serialize(encoder: Encoder, value: List<CardDetails>?) {
+        if (value == null) encoder.encodeNull() else delegate.serialize(encoder, value)
+    }
+
+    override fun deserialize(decoder: Decoder): List<CardDetails>? {
+        if (decoder !is JsonDecoder) return delegate.deserialize(decoder)
+        
+        val element = decoder.decodeJsonElement()
+        if (element !is kotlinx.serialization.json.JsonArray) return null
+        
+        return element.map {
+            if (it is kotlinx.serialization.json.JsonPrimitive) {
+                // Handle list of strings (card IDs)
+                CardDetails(card_mfid = it.contentOrNull)
+            } else {
+                // Handle list of objects (CardDetails)
+                decoder.json.decodeFromJsonElement(CardDetails.serializer(), it)
+            }
+        }
+    }
+}
 
 object StringOrIntSerializer : KSerializer<String?> {
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("StringOrInt", PrimitiveKind.STRING)
