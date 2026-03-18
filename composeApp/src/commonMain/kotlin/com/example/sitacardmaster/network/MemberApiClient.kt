@@ -8,6 +8,7 @@ import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import io.ktor.client.statement.bodyAsText
 import kotlinx.serialization.json.Json
 
 class MemberApiClient {
@@ -52,7 +53,8 @@ class MemberApiClient {
         cardType: String = "Membership" // Default to Membership if not provided
     ): Result<VerifyMemberResponse> {
         return try {
-            val response: VerifyMemberResponse = client.post("$baseUrl/members/verify") {
+            val endpoint = "$baseUrl/members/verify"
+            val response = client.post(endpoint) {
                 contentType(ContentType.Application.Json)
                 setBody(
                     VerifyMemberRequest(
@@ -64,14 +66,20 @@ class MemberApiClient {
                         cardType = cardType
                     )
                 )
-            }.body()
+            }
 
-            if ((response.verified == false) || (response.expired == true)) {
-                 Result.failure(Exception(response.message ?: "Card verification failed"))
-            } else if (response.message != null && response.message.lowercase().contains("not found")) {
-                 Result.failure(Exception(response.message))
+            if (response.status == HttpStatusCode.OK) {
+                val memberResponse: VerifyMemberResponse = response.body()
+                if ((memberResponse.verified == false) || (memberResponse.expired == true)) {
+                    Result.failure(Exception(memberResponse.message ?: "Card verification failed"))
+                } else if (memberResponse.message != null && memberResponse.message.lowercase().contains("not found")) {
+                    Result.failure(Exception(memberResponse.message))
+                } else {
+                    Result.success(memberResponse)
+                }
             } else {
-                 Result.success(response)
+                val errorBody = try { response.bodyAsText() } catch (e: Exception) { "No error body" }
+                Result.failure(Exception("Verification failed: ${response.status.value} ${response.status.description}"))
             }
         } catch (e: Exception) {
             Result.failure(e)

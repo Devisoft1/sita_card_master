@@ -355,8 +355,8 @@ class IssueCardActivity : AppCompatActivity() {
                      writeCard()
                  }
              } else {
-                 val error = result.exceptionOrNull()?.message ?: "Verification Failed"
-                 logAction("Strict Verify Failed ($error). Attempting Fallback by ID: $memberId")
+                 val error = result.exceptionOrNull()?.message ?: "Verification failed"
+                 logAction("Verification using card data was not possible: $error. Attempting fallback lookup by ID: $memberId")
                  
                  // Fallback: Try fetching by ID only
                  val fallbackResult = apiClient.getMemberById(memberId)

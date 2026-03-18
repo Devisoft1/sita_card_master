@@ -398,11 +398,11 @@ class DashboardActivity : AppCompatActivity() {
                         bindValue(displayWhatsapp, response.whatsapp)
                     },
                     onFailure = { error ->
-                        val errorMessage = error.message ?: "Member verification failed"
+                        val errorMessage = error.message ?: "Verification failed"
                         
-                        // Fallback: If strict verification failed, try fetching by ID only
-                        // This handles cases where card data (Company/Password) is old/corrupted but ID is valid.
-                        logAction("Strict Verify Failed ($errorMessage). Attempting Fallback by ID: $memberId")
+                        // Fallback: If strict verification failed (e.g., 404 or data mismatch), try fetching by ID only.
+                        // This handles cases where card content might be old or the verify endpoint is unavailable.
+                        logAction("Verification using card data was not possible: $errorMessage. Attempting fallback lookup by ID: $memberId")
                         
                         scope.launch {
                              val fallbackResult = withContext(Dispatchers.IO) {
