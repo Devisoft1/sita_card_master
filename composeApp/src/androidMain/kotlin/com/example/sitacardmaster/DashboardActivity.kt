@@ -366,10 +366,19 @@ class DashboardActivity : AppCompatActivity() {
                 }
                 result.fold(
                     onSuccess = { response ->
-                        logAction("API Response Success: $response")
-                        logAction("Mapping Data - Global Total: ${response.globalTotal}, Current: ${response.currentTotal}")
-                        displayTotalBuy.text = "₹${response.globalTotal}" // Global mapped to Total Buy
-                        displayAmount.text = "₹${response.currentTotal}" // Restored Current Amount
+                        // Prioritize Card-Specific Data from the cards list
+                        val scannedMfid = data["card_mfid"] ?: ""
+                        val matchingCard = response.cards?.find { it.card_mfid.equals(scannedMfid, ignoreCase = true) }
+                        
+                        if (matchingCard != null) {
+                            logAction("Found Matching Card: $scannedMfid. Using cardTotal for Current Total.")
+                            displayTotalBuy.text = "₹${matchingCard.cardTotal}" // Corrected: current total is cardTotal
+                            displayAmount.text = "₹${response.globalTotal}" // Global Total
+                        } else {
+                            logAction("No matching card found. Using member-level totals.")
+                            displayTotalBuy.text = "₹${response.globalTotal}" 
+                            displayAmount.text = "₹${response.currentTotal}" 
+                        }
                         displayValidUpto.text = formatDate(response.validity)
                         
                         // Ensure Company Name is updated from API (fixes garbage data issue)
@@ -402,8 +411,20 @@ class DashboardActivity : AppCompatActivity() {
                              fallbackResult.fold(
                                  onSuccess = { response ->
                                      logAction("Fallback Success! Member found by ID.")
-                                     displayTotalBuy.text = "₹${response.globalTotal}"
-                                     displayAmount.text = "₹${response.currentTotal}"
+                                     
+                                     // Prioritize Card-Specific Data (Fallback)
+                                     val scannedMfid = data["card_mfid"] ?: ""
+                                     val matchingCard = response.cards?.find { it.card_mfid.equals(scannedMfid, ignoreCase = true) }
+                                     
+                                     if (matchingCard != null) {
+                                         logAction("Fallback: Found Matching Card: $scannedMfid.")
+                                         displayTotalBuy.text = "₹${matchingCard.cardTotal}" // Current Total
+                                         displayAmount.text = "₹${response.globalTotal}" // Global Total
+                                     } else {
+                                         logAction("Fallback: No matching card found for $scannedMfid.")
+                                         displayTotalBuy.text = "₹${response.globalTotal}"
+                                         displayAmount.text = "₹${response.currentTotal}"
+                                     }
                                      displayValidUpto.text = formatDate(response.validity)
 
                                      // Ensure Company Name is updated from API (Critical for fallback)

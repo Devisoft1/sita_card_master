@@ -269,11 +269,11 @@
                                 android:layout_height="wrap_content"
                                 android:padding="@dimen/_8sdp">
                                 
-                                 <TextView
-                                    android:id="@+id/totalBuyLabel"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Total Buy"
+                                    <TextView
+                                       android:id="@+id/totalBuyLabel"
+                                       android:layout_width="wrap_content"
+                                       android:layout_height="wrap_content"
+                                       android:text="Current Total"
                                     android:textColor="@color/gray_text"
                                     android:textSize="@dimen/_7ssp"
                                     app:layout_constraintStart_toStartOf="parent"
@@ -295,7 +295,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="@dimen/_6sdp"
-                                    android:text="Current Total"
+                                    android:text="Global Total"
                                     android:textColor="@color/gray_text"
                                     android:textSize="@dimen/_7ssp"
                                     app:layout_constraintStart_toStartOf="parent"

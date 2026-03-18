@@ -28,6 +28,14 @@ data class MemberListResponse(
 )
 
 @Serializable
+data class CardDetails(
+    val card_mfid: String? = null,
+    val cardTotal: Double = 0.0,
+    val amount: Double = 0.0,
+    val status: String? = null
+)
+
+@Serializable
 data class VerifyMemberResponse(
     @Serializable(with = StringOrIntSerializer::class)
     val memberId: String? = null,
@@ -35,7 +43,9 @@ data class VerifyMemberResponse(
     val card_mfid: String? = null,
     val cardValidity: String? = null,
     val message: String? = null, // For error case
-    val currentTotal: Double = 0.0, // Restored for backward compatibility
+    @SerialName("amount")
+    val currentTotal: Double = 0.0,
+    @SerialName("total")
     val globalTotal: Double = 0.0,
     val validity: String? = null, // Restored for backward compatibility
     val verified: Boolean? = null,
@@ -44,9 +54,9 @@ data class VerifyMemberResponse(
     val phoneNumber: String? = null,
     val email: String? = null,
     val website: String? = null,
-    @SerialName("communicatorWhatsapp")
     val whatsapp: String? = null,
-    val status: Int? = null
+    val status: Int? = null,
+    val cards: List<CardDetails>? = null
 )
 
 object StringOrIntSerializer : KSerializer<String?> {

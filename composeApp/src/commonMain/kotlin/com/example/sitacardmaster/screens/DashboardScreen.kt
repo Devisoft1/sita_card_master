@@ -44,6 +44,7 @@ fun DashboardScreen(
     val apiClient = remember { MemberApiClient() }
     val scope = rememberCoroutineScope()
     var currentAmount by remember { mutableStateOf<String?>("Loading...") }
+    var globalAmount by remember { mutableStateOf<String?>("0.00") }
 
     // Verified Member State
     var verificationError by remember { mutableStateOf<String?>(null) }
@@ -91,11 +92,22 @@ fun DashboardScreen(
                              val result = apiClient.verifyMember(memberId, companyName, password)
                              result.fold(
                                  onSuccess = { response ->
-                                     currentAmount = "₹${response.currentTotal}"
-                                     platformLog("Dashboard", "Amount fetched: ${response.currentTotal}")
+                                     val scannedMfid = data["card_mfid"] ?: ""
+                                     val matchingCard = response.cards?.find { it.card_mfid.equals(scannedMfid, ignoreCase = true) }
+                                     
+                                     if (matchingCard != null) {
+                                         currentAmount = "₹${matchingCard.cardTotal}" // Current Total
+                                         globalAmount = "₹${response.globalTotal}" // Global Total
+                                         platformLog("Dashboard", "Card-specific balance: ${matchingCard.cardTotal}")
+                                     } else {
+                                         currentAmount = "₹${response.globalTotal}"
+                                         globalAmount = "₹${response.currentTotal}"
+                                         platformLog("Dashboard", "No matching card. Fallback to globalTotal.")
+                                     }
                                  },
                                  onFailure = { error ->
                                      currentAmount = "N/A"
+                                     globalAmount = "N/A"
                                      verificationError = error.message ?: "Member verification failed"
                                      platformLog("Dashboard", "Amount fetch error: ${error.message}")
                                  }
@@ -343,19 +355,19 @@ fun DashboardScreen(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Column {
-                                            Text(
-                                                "Total Buy",
-                                                color = Color.White.copy(alpha = 0.7f),
-                                                style = MaterialTheme.typography.bodySmall
-                                            )
-                                            Text(
-                                                "₹${cardData!!["totalBuy"] ?: "0.00"}",
-                                                color = Color(0xFFFFD700),
-                                                style = MaterialTheme.typography.headlineSmall,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
+                                         Column {
+                                             Text(
+                                                 "Current Total",
+                                                 color = Color.White.copy(alpha = 0.7f),
+                                                 style = MaterialTheme.typography.bodySmall
+                                             )
+                                             Text(
+                                                 currentAmount ?: "₹0.00",
+                                                 color = Color(0xFFFFD700),
+                                                 style = MaterialTheme.typography.headlineSmall,
+                                                 fontWeight = FontWeight.Bold
+                                             )
+                                         }
                                         Column(horizontalAlignment = Alignment.End) {
                                             Text(
                                                 "Valid Upto",
@@ -379,19 +391,19 @@ fun DashboardScreen(
                                     shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Column(modifier = Modifier.padding(16.dp)) {
+                                     Column(modifier = Modifier.padding(16.dp)) {
+                                          Text(
+                                             "Global Total",
+                                             color = Color.White.copy(alpha = 0.7f),
+                                             style = MaterialTheme.typography.bodySmall
+                                         )
                                          Text(
-                                            "Amount (Current Total)",
-                                            color = Color.White.copy(alpha = 0.7f),
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                        Text(
-                                            currentAmount ?: "N/A",
-                                            color = Color(0xFF4CAF50),
-                                            style = MaterialTheme.typography.headlineMedium,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
+                                             globalAmount ?: "N/A",
+                                             color = Color(0xFF4CAF50),
+                                             style = MaterialTheme.typography.headlineMedium,
+                                             fontWeight = FontWeight.Bold
+                                         )
+                                     }
                                 }
                             }
                         }
@@ -453,6 +465,7 @@ fun DashboardScreen(
                         cardData = null
                         verificationError = null
                         currentAmount = "Loading..."
+                        globalAmount = "0.00"
                         scanStatus = ""
                     },
                     modifier = Modifier
