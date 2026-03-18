@@ -348,16 +348,31 @@ class IssueCardActivity : AppCompatActivity() {
                  cardType = cardType
              )
              
-             runOnUiThread {
-                 if (result.isSuccess) {
+             if (result.isSuccess) {
+                 runOnUiThread {
                      statusMessage.setTextColor(android.graphics.Color.parseColor("#4CAF50"))
                      statusMessage.text = "Member Verified! Writing to Card..."
                      writeCard()
-                 } else {
-                     val error = result.exceptionOrNull()?.message ?: "Verification Failed"
-                     statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
-                     statusMessage.text = error
-                     stopScanning()
+                 }
+             } else {
+                 val error = result.exceptionOrNull()?.message ?: "Verification Failed"
+                 logAction("Strict Verify Failed ($error). Attempting Fallback by ID: $memberId")
+                 
+                 // Fallback: Try fetching by ID only
+                 val fallbackResult = apiClient.getMemberById(memberId)
+                 
+                 runOnUiThread {
+                     if (fallbackResult.isSuccess) {
+                         logAction("Fallback Success! Member found by ID.")
+                         statusMessage.setTextColor(android.graphics.Color.parseColor("#4CAF50"))
+                         statusMessage.text = "Fallback Verified! Writing to Card..."
+                         writeCard()
+                     } else {
+                         logAction("Fallback Failed: ${fallbackResult.exceptionOrNull()?.message}")
+                         statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+                         statusMessage.text = error
+                         stopScanning()
+                     }
                  }
              }
         }
