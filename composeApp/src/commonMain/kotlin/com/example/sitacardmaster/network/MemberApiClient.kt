@@ -54,7 +54,7 @@ class MemberApiClient {
     ): Result<VerifyMemberResponse> {
         return try {
             val endpoint = "$baseUrl/members/verify"
-            val response = client.post(endpoint) {
+            val response = client.patch(endpoint) {
                 contentType(ContentType.Application.Json)
                 setBody(
                     VerifyMemberRequest(
