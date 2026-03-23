@@ -377,8 +377,8 @@ class DashboardActivity : AppCompatActivity() {
                             displayAmount.text = "₹${response.globalTotal}" // Global Total
                         } else {
                             logAction("No matching card found in member's cards list ($scannedMfid).")
-                            displayTotalBuy.text = "₹${response.globalTotal}" 
-                            displayAmount.text = "₹${response.currentTotal}" 
+                            displayTotalBuy.text = "₹${response.currentTotal}" 
+                            displayAmount.text = "₹${response.globalTotal}" 
                         }
                         displayValidUpto.text = formatDate(response.validity)
                         
@@ -424,8 +424,8 @@ class DashboardActivity : AppCompatActivity() {
                                          displayAmount.text = "₹${response.globalTotal}" // Global Total
                                      } else {
                                          logAction("Fallback: No matching card found for $scannedMfid.")
-                                         displayTotalBuy.text = "₹${response.globalTotal}"
-                                         displayAmount.text = "₹${response.currentTotal}"
+                                         displayTotalBuy.text = "₹${response.currentTotal}"
+                                         displayAmount.text = "₹${response.globalTotal}"
                                      }
                                      displayValidUpto.text = formatDate(response.validity)
 

@@ -43,9 +43,7 @@ data class VerifyMemberResponse(
     val card_mfid: String? = null,
     val cardValidity: String? = null,
     val message: String? = null, // For error case
-    @SerialName("amount")
     val currentTotal: Double = 0.0,
-    @SerialName("total")
     val globalTotal: Double = 0.0,
     val cardTotal: Double = 0.0,
     val password: String? = null,
