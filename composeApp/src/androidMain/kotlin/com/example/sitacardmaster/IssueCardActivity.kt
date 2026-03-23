@@ -460,6 +460,7 @@ class IssueCardActivity : AppCompatActivity() {
         clearOtherFields()
         statusMessage.text = "Card Issued Successfully. Ready for next."
         statusMessage.setTextColor(resources.getColor(R.color.brand_blue, theme))
+        companyNameInput.requestFocus()
     }
 
     override fun onPause() {
