@@ -54,6 +54,7 @@ class DashboardActivity : AppCompatActivity() {
     private lateinit var clearButton: Button
     private lateinit var deleteCardButton: Button // Added
     private lateinit var stopScanButton: Button
+    private lateinit var scanStatus: TextView // Added
     private lateinit var dashboardScroll: ScrollView
     
     // Error Views
@@ -95,6 +96,7 @@ class DashboardActivity : AppCompatActivity() {
         clearButton = findViewById(R.id.clearButton)
         deleteCardButton = findViewById(R.id.deleteCardButton) // Added
         stopScanButton = findViewById(R.id.stopScanButton)
+        scanStatus = findViewById(R.id.scanStatus) // Added
         dashboardScroll = findViewById(R.id.dashboardScroll)
         
         errorContainer = findViewById(R.id.errorContainer)
@@ -230,6 +232,7 @@ class DashboardActivity : AppCompatActivity() {
         clearButton.visibility = View.GONE
         deleteCardButton.visibility = View.GONE // Added
         errorContainer.visibility = View.GONE
+        scanStatus.visibility = View.GONE // Reset
         
         logAction("Scanning started")
         
@@ -267,6 +270,7 @@ class DashboardActivity : AppCompatActivity() {
         newCardButton.visibility = View.VISIBLE
         clearButton.visibility = View.VISIBLE
         deleteCardButton.visibility = View.VISIBLE // Added
+        // Notice: We don't hide scanStatus here automatically if we want to show a message
         
         logAction("Scanning stopped")
         
@@ -310,11 +314,15 @@ class DashboardActivity : AppCompatActivity() {
                 } else if (success && data == null) {
                     // Blank card
                     logAction("Card read success: Blank card")
-                    statusSnackbar("No data in the card")
+                    scanStatus.text = "Blank card - No data found"
+                    scanStatus.visibility = View.VISIBLE
+                    scanStatus.setTextColor(getColor(R.color.error_red)) // Changed to red
                 } else {
                     // Error
                     logAction("Card read error: $message")
-                    statusSnackbar(message)
+                    scanStatus.text = message
+                    scanStatus.visibility = View.VISIBLE
+                    scanStatus.setTextColor(getColor(R.color.error_red)) // Error color
                 }
             }
         }
@@ -327,7 +335,9 @@ class DashboardActivity : AppCompatActivity() {
             runOnUiThread {
                 stopScanMode()
                 logAction("Card delete $message")
-                statusSnackbar(message)
+                scanStatus.text = message
+                scanStatus.visibility = View.VISIBLE
+                scanStatus.setTextColor(getColor(R.color.error_red)) // Always red as requested
                 resetUI()
             }
         }
