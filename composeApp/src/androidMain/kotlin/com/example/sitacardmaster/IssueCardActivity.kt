@@ -265,7 +265,16 @@ class IssueCardActivity : AppCompatActivity() {
         startScanButton.visibility = View.GONE
         cancelScanButton.visibility = View.VISIBLE
         logAction("Scanning started for Member: ${memberIdText.text}")
+        hideKeyboard()
         nfcManager.startScanning()
+    }
+
+    private fun hideKeyboard() {
+        val view = this.currentFocus
+        if (view != null) {
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.hideSoftInputFromWindow(view.windowToken, 0)
+        }
     }
 
     private fun stopScanning() {
@@ -451,11 +460,6 @@ class IssueCardActivity : AppCompatActivity() {
         clearOtherFields()
         statusMessage.text = "Card Issued Successfully. Ready for next."
         statusMessage.setTextColor(resources.getColor(R.color.brand_blue, theme))
-        
-        // Auto-focus on company name for next entry
-        companyNameInput.requestFocus()
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.showSoftInput(companyNameInput, InputMethodManager.SHOW_IMPLICIT)
     }
 
     override fun onPause() {
