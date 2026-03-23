@@ -37,6 +37,8 @@ fun MemberVerificationScreen(
     // Add Amount State
     var amountToAdd by remember { mutableStateOf("") }
     var isAddingAmount by remember { mutableStateOf(false) }
+    var showSuccessDialog by remember { mutableStateOf(false) }
+    var successDialogMessage by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -240,7 +242,10 @@ fun MemberVerificationScreen(
                                               // Update local display
                                               memberData = memberData?.copy(currentTotal = res.newTotal)
                                               amountToAdd = ""
-                                              resultMessage = "Added ₹${res.addedAmount} successfully. New Total: ₹${res.newTotal}"
+                                              val msg = "Added ₹${res.addedAmount} successfully.\nNew Total Balance: ₹${res.newTotal}"
+                                              resultMessage = msg
+                                              successDialogMessage = msg
+                                              showSuccessDialog = true
                                           },
                                           onFailure = {
                                               resultMessage = "Failed to add amount: ${it.message}"
@@ -263,6 +268,35 @@ fun MemberVerificationScreen(
                    }
                 }
             }
+        }
+
+        if (showSuccessDialog) {
+            AlertDialog(
+                onDismissRequest = { showSuccessDialog = false },
+                title = { 
+                    Text(
+                        "Success", 
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color(0xFF4CAF50),
+                        fontWeight = FontWeight.Bold
+                    ) 
+                },
+                text = { 
+                    Text(
+                        successDialogMessage,
+                        style = MaterialTheme.typography.bodyLarge
+                    ) 
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showSuccessDialog = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                    ) {
+                        Text("OK")
+                    }
+                },
+                containerColor = Color.White
+            )
         }
     }
 }
