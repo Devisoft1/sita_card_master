@@ -30,6 +30,7 @@ class DashboardActivity : AppCompatActivity() {
 
     private lateinit var nfcManager: AndroidNfcManager
     private var isScanning = false
+    private var isDeleteMode = false // Added
     private val scope = CoroutineScope(Dispatchers.Main)
     private val memberApiClient = MemberApiClient()
 
@@ -51,6 +52,7 @@ class DashboardActivity : AppCompatActivity() {
     private lateinit var premiumMemberLabel: TextView
     private lateinit var newCardButton: Button
     private lateinit var clearButton: Button
+    private lateinit var deleteCardButton: Button // Added
     private lateinit var stopScanButton: Button
     private lateinit var dashboardScroll: ScrollView
     
@@ -91,6 +93,7 @@ class DashboardActivity : AppCompatActivity() {
         premiumMemberLabel = findViewById(R.id.premiumMemberLabel)
         newCardButton = findViewById(R.id.newCardButton)
         clearButton = findViewById(R.id.clearButton)
+        deleteCardButton = findViewById(R.id.deleteCardButton) // Added
         stopScanButton = findViewById(R.id.stopScanButton)
         dashboardScroll = findViewById(R.id.dashboardScroll)
         
@@ -179,6 +182,10 @@ class DashboardActivity : AppCompatActivity() {
             resetUI()
         }
 
+        deleteCardButton.setOnClickListener {
+            startDeleteMode()
+        }
+
         logoutButton.setOnClickListener {
             val sharedPref = getSharedPreferences("login_prefs", Context.MODE_PRIVATE)
             sharedPref.edit().putBoolean("isLoggedIn", false).apply()
@@ -214,15 +221,37 @@ class DashboardActivity : AppCompatActivity() {
 
     private fun startScanMode() {
         isScanning = true
+        isDeleteMode = false
         scanInstruction.text = "TAP CARD NOW..."
         scanProgress.visibility = View.VISIBLE
         stopScanButton.visibility = View.VISIBLE
         detailsContainer.visibility = View.GONE
         newCardButton.visibility = View.GONE
         clearButton.visibility = View.GONE
+        deleteCardButton.visibility = View.GONE // Added
         errorContainer.visibility = View.GONE
         
         logAction("Scanning started")
+        
+        // Auto-stop after 1 minute
+        scanTimeoutHandler.postDelayed(scanTimeoutRunnable, 60000)
+        
+        nfcManager.startScanning()
+    }
+
+    private fun startDeleteMode() {
+        isScanning = true
+        isDeleteMode = true
+        scanInstruction.text = "TAP CARD TO DELETE DATA..." // Different instruction
+        scanProgress.visibility = View.VISIBLE
+        stopScanButton.visibility = View.VISIBLE
+        detailsContainer.visibility = View.GONE
+        newCardButton.visibility = View.GONE
+        clearButton.visibility = View.GONE
+        deleteCardButton.visibility = View.GONE
+        errorContainer.visibility = View.GONE
+        
+        logAction("Delete mode started")
         
         // Auto-stop after 1 minute
         scanTimeoutHandler.postDelayed(scanTimeoutRunnable, 60000)
@@ -237,6 +266,7 @@ class DashboardActivity : AppCompatActivity() {
         stopScanButton.visibility = View.GONE
         newCardButton.visibility = View.VISIBLE
         clearButton.visibility = View.VISIBLE
+        deleteCardButton.visibility = View.VISIBLE // Added
         
         logAction("Scanning stopped")
         
@@ -260,9 +290,16 @@ class DashboardActivity : AppCompatActivity() {
     }
 
     private fun processCard() {
+        if (isDeleteMode) {
+            processDelete()
+        } else {
+            processRead()
+        }
+    }
 
+    private fun processRead() {
         scanInstruction.text = "Checking card..."
-        logAction("Processing detected card")
+        logAction("Processing detected card (Read)")
         nfcManager.readCard { success, data, message ->
             runOnUiThread {
                 stopScanMode()
@@ -270,21 +307,28 @@ class DashboardActivity : AppCompatActivity() {
                     // Member exists
                     logAction("Card read success: ${data["memberId"]}")
                     showCardDetails(data)
-                    newCardButton.visibility = View.VISIBLE
-                    clearButton.visibility = View.VISIBLE
                 } else if (success && data == null) {
                     // Blank card
                     logAction("Card read success: Blank card")
                     statusSnackbar("No data in the card")
-                    newCardButton.visibility = View.VISIBLE
-                    clearButton.visibility = View.VISIBLE
                 } else {
                     // Error
                     logAction("Card read error: $message")
                     statusSnackbar(message)
-                    newCardButton.visibility = View.VISIBLE
-                    clearButton.visibility = View.VISIBLE
                 }
+            }
+        }
+    }
+
+    private fun processDelete() {
+        scanInstruction.text = "Deleting data..."
+        logAction("Processing detected card (Delete)")
+        nfcManager.deleteCardData { success: Boolean, message: String ->
+            runOnUiThread {
+                stopScanMode()
+                logAction("Card delete $message")
+                statusSnackbar(message)
+                resetUI()
             }
         }
     }

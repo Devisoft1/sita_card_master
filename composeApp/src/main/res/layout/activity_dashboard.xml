@@ -385,18 +385,34 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:weightSum="1">
+                        android:weightSum="2">
 
-                    <Button
-                        android:id="@+id/clearButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="@dimen/_40sdp"
-                        android:text="Clear Page"
-                        android:textSize="@dimen/_9ssp"
-                        android:textStyle="bold"
-                        android:textColor="@color/white"
-                        app:cornerRadius="@dimen/_8sdp"
-                        app:backgroundTint="#9E9E9E" />
+                        <Button
+                            android:id="@+id/clearButton"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="@dimen/_40sdp"
+                            android:layout_marginEnd="@dimen/_4sdp"
+                            android:text="Clear Page"
+                            android:textSize="@dimen/_9ssp"
+                            android:textStyle="bold"
+                            android:textColor="@color/white"
+                            app:cornerRadius="@dimen/_8sdp"
+                            app:backgroundTint="#9E9E9E" />
+
+                        <Button
+                            android:id="@+id/deleteCardButton"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="@dimen/_40sdp"
+                            android:layout_marginStart="@dimen/_4sdp"
+                            android:text="Delete Card"
+                            android:textSize="@dimen/_9ssp"
+                            android:textStyle="bold"
+                            android:textColor="@color/white"
+                            app:cornerRadius="@dimen/_8sdp"
+                            app:backgroundTint="@color/error_red" />
+
                     </LinearLayout>
 
                 </LinearLayout>

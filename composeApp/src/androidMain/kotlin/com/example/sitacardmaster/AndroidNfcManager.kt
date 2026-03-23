@@ -67,22 +67,103 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
     private fun authenticateSector(mifare: MifareClassic, sector: Int): Boolean {
         platformLog("SITACardMaster", "Authenticating Sector $sector...")
         
-        // Try Default Key (Factory Default)
-        platformLog("SITACardMaster", "Attempting with KEY_DEFAULT...")
-        if (mifare.authenticateSectorWithKeyA(sector, MifareClassic.KEY_DEFAULT)) {
-            platformLog("SITACardMaster", "Authenticated with KEY_DEFAULT")
-            return true
-        }
-        
-        // Try NFC Forum Key (Commonly used after formatting)
-        platformLog("SITACardMaster", "Attempting with KEY_NFC_FORUM...")
-        if (mifare.authenticateSectorWithKeyA(sector, MifareClassic.KEY_NFC_FORUM)) {
-            platformLog("SITACardMaster", "Authenticated with KEY_NFC_FORUM")
-            return true
+        // Comprehensive Key Dictionary from various sources
+        val commonKeys = arrayOf(
+            MifareClassic.KEY_DEFAULT, // FF FF FF FF FF FF
+            MifareClassic.KEY_NFC_FORUM, // D3 F7 D3 F7 D3 F7
+            MifareClassic.KEY_MIFARE_APPLICATION_DIRECTORY, // A0 A1 A2 A3 A4 A5
+            byteArrayOf(0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte()),
+            byteArrayOf(0xB0.toByte(), 0xB1.toByte(), 0xB2.toByte(), 0xB3.toByte(), 0xB4.toByte(), 0xB5.toByte()),
+            byteArrayOf(0x4D.toByte(), 0x31.toByte(), 0x30.toByte(), 0x31.toByte(), 0x32.toByte(), 0x33.toByte()),
+            byteArrayOf(0x1A.toByte(), 0x2B.toByte(), 0x3C.toByte(), 0x4D.toByte(), 0x5E.toByte(), 0x6F.toByte()),
+            byteArrayOf(0xA0.toByte(), 0xB0.toByte(), 0xC0.toByte(), 0xD0.toByte(), 0xE0.toByte(), 0xF0.toByte()),
+            byteArrayOf(0x11.toByte(), 0x22.toByte(), 0x33.toByte(), 0x44.toByte(), 0x55.toByte(), 0x66.toByte()),
+            byteArrayOf(0x88.toByte(), 0x88.toByte(), 0x88.toByte(), 0x88.toByte(), 0x88.toByte(), 0x88.toByte())
+        )
+
+        val keyNames = arrayOf("DEFAULT", "NFC_FORUM", "MAD", "ZERO", "B0B1", "M101", "1A2B", "A0B0", "1122", "8888")
+
+        for (i in commonKeys.indices) {
+            val key = commonKeys[i]
+            val keyName = keyNames[i]
+            
+            // Try Key A
+            try {
+                if (mifare.authenticateSectorWithKeyA(sector, key)) {
+                    platformLog("SITACardMaster", "Authenticated Sector $sector using Key A ($keyName)")
+                    return true
+                }
+            } catch (e: Exception) { }
+
+            // Try Key B
+            try {
+                if (mifare.authenticateSectorWithKeyB(sector, key)) {
+                    platformLog("SITACardMaster", "Authenticated Sector $sector using Key B ($keyName)")
+                    return true
+                }
+            } catch (e: Exception) { }
         }
 
-        platformLog("SITACardMaster", "Authentication failed for Sector $sector with all known keys")
+        platformLog("SITACardMaster", "Authentication failed for Sector $sector after trying all common A/B keys")
         return false
+    }
+
+    private fun logCardDiagnostics(mifare: MifareClassic) {
+        try {
+            val typeStr = when(mifare.type) {
+                MifareClassic.TYPE_CLASSIC -> "Classic"
+                MifareClassic.TYPE_PLUS -> "Plus"
+                MifareClassic.TYPE_PRO -> "Pro"
+                else -> "Unknown (${mifare.type})"
+            }
+            platformLog("SITACardMaster", "Card Info - Type: $typeStr, Size: ${mifare.size} bytes, Sectors: ${mifare.sectorCount}")
+            
+            // Baseline test for Sectors 0, 1, 2
+            for (s in 0..2) {
+                val success = authenticateSector(mifare, s)
+                platformLog("SITACardMaster", "Baseline - Sector $s Auth: ${if(success) "SUCCESS" else "FAILED"}")
+            }
+            
+            if (!authenticateSector(mifare, 3)) {
+                checkNdef(mifare.tag)
+                checkUltralight(mifare.tag)
+            }
+        } catch (e: Exception) {
+            platformLog("SITACardMaster", "Diagnostic Error: ${e.message}")
+        }
+    }
+
+    private fun checkNdef(tag: Tag) {
+        try {
+            val ndef = android.nfc.tech.Ndef.get(tag)
+            if (ndef != null) {
+                ndef.connect()
+                platformLog("SITACardMaster", "NDEF Info - Type: ${ndef.type}, Size: ${ndef.maxSize} bytes")
+                val msg = ndef.ndefMessage
+                if (msg != null) {
+                    platformLog("SITACardMaster", "NDEF Message found with ${msg.records.size} records")
+                }
+                ndef.close()
+            }
+        } catch (e: Exception) {
+            platformLog("SITACardMaster", "NDEF Check Error: ${e.message}")
+        }
+    }
+
+    private fun checkUltralight(tag: Tag) {
+        try {
+            val ultralight = android.nfc.tech.MifareUltralight.get(tag)
+            if (ultralight != null) {
+                ultralight.connect()
+                platformLog("SITACardMaster", "Ultralight Info - Type: ${ultralight.type}")
+                // Read first page just to verify
+                val page = ultralight.readPages(0)
+                platformLog("SITACardMaster", "Ultralight Page 0: ${bytesToHex(page)}")
+                ultralight.close()
+            }
+        } catch (e: Exception) {
+            platformLog("SITACardMaster", "Ultralight Check Error: ${e.message}")
+        }
     }
 
     override fun writeCard(
@@ -113,6 +194,7 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
             try {
                 platformLog("SITACardMaster", "Connecting to Mifare card for Write...")
                 mifare.connect()
+                logCardDiagnostics(mifare)
                 platformLog("SITACardMaster", "Connected. Checking Sector 3...")
 
                 // Sector 3 (Blocks 12, 13, 14)
@@ -207,6 +289,7 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
             try {
                 platformLog("SITACardMaster", "Reading card...")
                 mifare.connect()
+                logCardDiagnostics(mifare)
                 val data = mutableMapOf<String, String>()
 
                 // Add MFID to data
@@ -435,7 +518,7 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
             return
         }
 
-        val mifare = MifareClassic.get(tag)
+        val mifare = MifareClassic.get(tag as Tag)
         if (mifare == null) {
             onResult(false, "Not a Mifare Classic card.")
             return
@@ -451,9 +534,7 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
 
                 if (authenticateSector(mifare, 3)) {
                     platformLog("SITACardMaster", "Clearing Sector 3...")
-                    writeBlock(mifare, 12, "") // Empty string fills with 0s in writeBlock implementation? 
-                    // Wait, my writeBlock uses ByteArray(16) which is 0-init, then copies data. 
-                    // So passing "" makes it all 0s. Correct.
+                    writeBlock(mifare, 12, "")
                     writeBlock(mifare, 13, "")
                     writeBlock(mifare, 14, "")
 
@@ -461,8 +542,19 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                         platformLog("SITACardMaster", "Clearing Sector 4...")
                         writeBlock(mifare, 16, "")
                         writeBlock(mifare, 17, "")
-                        success = true
-                        resultMessage = "Card cleared successfully."
+                        writeBlock(mifare, 18, "") // Also clear password block
+                        
+                        if (authenticateSector(mifare, 5)) {
+                            platformLog("SITACardMaster", "Clearing Sector 5...")
+                            writeBlock(mifare, 20, "")
+                            success = true
+                            resultMessage = "Card cleared successfully."
+                        } else {
+                            // Sector 5 auth failed but others succeeded, still good enough for a clear?
+                            // Let's be strict for now.
+                            success = false
+                            resultMessage = "Failed to auth Sector 5."
+                        }
                     } else {
                         success = false
                         resultMessage = "Failed to auth Sector 4."
@@ -478,6 +570,70 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
             } finally {
                 try {
                     if (mifare.isConnected)  mifare.close()
+                } catch (e: Exception) { }
+            }
+            onResult(success, resultMessage)
+        }.start()
+    }
+
+    override fun deleteCardData(onResult: (Boolean, String) -> Unit) {
+        val tag = detectedTag.value
+        if (tag == null) {
+            onResult(false, "No card detected.")
+            return
+        }
+
+        val mifare = MifareClassic.get(tag as Tag)
+        if (mifare == null) {
+            onResult(false, "Not a Mifare Classic card.")
+            return
+        }
+
+        Thread {
+            var success = false
+            var resultMessage = ""
+
+            try {
+                platformLog("SITACardMaster", "Connecting to delete card data...")
+                mifare.connect()
+
+                // Wipe sectors 3, 4, and 5 which contain the member data
+                val sectorsToWipe = intArrayOf(3, 4, 5)
+                var sectorsWiped = 0
+
+                for (sector in sectorsToWipe) {
+                    if (authenticateSector(mifare, sector)) {
+                        platformLog("SITACardMaster", "Wiping Sector $sector...")
+                        val firstBlock = mifare.sectorToBlock(sector)
+                        val numBlocks = mifare.getBlockCountInSector(sector)
+                        
+                        // Wipe all blocks in sector EXCEPT the last one (sector trailer)
+                        for (i in 0 until (numBlocks - 1)) {
+                            val blockIndex = firstBlock + i
+                            platformLog("SITACardMaster", "Wiping Block $blockIndex")
+                            mifare.writeBlock(blockIndex, ByteArray(16))
+                        }
+                        sectorsWiped++
+                    } else {
+                        platformLog("SITACardMaster", "Failed to authenticate Sector $sector for wiping")
+                    }
+                }
+
+                if (sectorsWiped > 0) {
+                    success = true
+                    resultMessage = "Card data deleted successfully ($sectorsWiped sectors wiped)."
+                } else {
+                    success = false
+                    resultMessage = "Failed to authenticate any sectors for deletion."
+                }
+
+            } catch (e: Exception) {
+                platformLog("SITACardMaster", "Delete Data Error: ${e.message}")
+                success = false
+                resultMessage = "Error: ${e.message}"
+            } finally {
+                try {
+                    if (mifare.isConnected) mifare.close()
                 } catch (e: Exception) { }
             }
             onResult(success, resultMessage)

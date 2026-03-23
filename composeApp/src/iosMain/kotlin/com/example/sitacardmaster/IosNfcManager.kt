@@ -21,6 +21,7 @@ class IosNfcManager : NfcManager {
     internal var onReadResult: ((Boolean, Map<String, String>?, String) -> Unit)? = null
     internal var onWriteResult: ((Boolean, String) -> Unit)? = null
     internal var onClearResult: ((Boolean, String) -> Unit)? = null
+    internal var onDeleteResult: ((Boolean, String) -> Unit)? = null
     
     // Data to write (if any)
     internal var pendingWriteData: Map<String, String>? = null
@@ -50,6 +51,7 @@ class IosNfcManager : NfcManager {
         onReadResult = null
         onWriteResult = null
         onClearResult = null
+        onDeleteResult = null
         pendingWriteData = null
     }
 
@@ -86,6 +88,14 @@ class IosNfcManager : NfcManager {
     override fun clearCard(onResult: (Boolean, String) -> Unit) {
         cleanup()
         onClearResult = onResult
+        startSession()
+    }
+
+    override fun deleteCardData(onResult: (Boolean, String) -> Unit) {
+        cleanup()
+        onDeleteResult = onResult
+        // On iOS, we could potentially just clear the NDEF records
+        // For now, let's just trigger a session
         startSession()
     }
 }
