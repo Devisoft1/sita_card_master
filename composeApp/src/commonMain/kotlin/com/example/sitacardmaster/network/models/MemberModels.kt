@@ -118,3 +118,8 @@ data class AddAmountResponse(
     val addedAmount: Double,
     val newTotal: Double
 )
+
+@Serializable
+data class ErrorResponse(
+    val message: String
+)

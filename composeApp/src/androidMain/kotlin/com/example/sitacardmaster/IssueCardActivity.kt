@@ -23,7 +23,6 @@ class IssueCardActivity : AppCompatActivity() {
 
     private lateinit var nfcManager: AndroidNfcManager
     private var isScanning = false
-    private var isClearing = false
 
     private lateinit var memberIdText: TextView
     private lateinit var companyNameInput: com.google.android.material.textfield.MaterialAutoCompleteTextView
@@ -102,10 +101,6 @@ class IssueCardActivity : AppCompatActivity() {
 
         cancelScanButton.setOnClickListener {
             stopScanning()
-        }
-        
-        findViewById<Button>(R.id.clearCardButton).setOnClickListener {
-             startClearCard()
         }
 
         setupAutoComplete()
@@ -261,21 +256,6 @@ class IssueCardActivity : AppCompatActivity() {
         cardTypeInput.setText("Membership", false)
     }
 
-    private fun startClearCard() {
-        isScanning = true
-        statusMessage.text = "Tap Card to Clear Data..."
-        scanProgress.visibility = View.VISIBLE
-        tapCardHint.visibility = View.VISIBLE
-        startScanButton.visibility = View.GONE
-        cancelScanButton.visibility = View.VISIBLE
-        findViewById<Button>(R.id.clearCardButton).visibility = View.GONE
-        
-        logAction("Clear Card Scanning started")
-        nfcManager.startScanning()
-        isClearing = true
-    }
-
-
     private fun startScanning() {
         isScanning = true
         statusMessage.setTextColor(resources.getColor(R.color.brand_blue, theme))
@@ -290,14 +270,12 @@ class IssueCardActivity : AppCompatActivity() {
 
     private fun stopScanning() {
         isScanning = false
-        isClearing = false
         statusMessage.setTextColor(resources.getColor(R.color.gray_text, theme))
         statusMessage.text = "Ready to write"
         scanProgress.visibility = View.GONE
         tapCardHint.visibility = View.GONE
         startScanButton.visibility = View.VISIBLE
         cancelScanButton.visibility = View.GONE
-        findViewById<Button>(R.id.clearCardButton).visibility = View.VISIBLE
         nfcManager.stopScanning()
     }
 
@@ -307,12 +285,8 @@ class IssueCardActivity : AppCompatActivity() {
             nfcManager.onNewIntent(intent)
             val tag = intent.getParcelableExtra<Tag>(NfcAdapter.EXTRA_TAG)
             if (tag != null) {
-                if (isClearing) {
-                    performClearCard()
-                } else {
-                    // Start Verification Process
-                    verifyAndProcessCard(tag)
-                }
+                // Start Verification Process
+                verifyAndProcessCard(tag)
             }
         }
     }
@@ -356,6 +330,25 @@ class IssueCardActivity : AppCompatActivity() {
                  }
              } else {
                  val error = result.exceptionOrNull()?.message ?: "Verification failed"
+                 
+                 // CRITICAL: If the error is about a duplicate card, STOP and do NOT proceed to fallback.
+                 if (error.contains("already registered", ignoreCase = true) || 
+                     error.contains("different member", ignoreCase = true)) {
+                     
+                     logAction("API Blocked: $error")
+                     runOnUiThread {
+                         com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
+                             .setTitle("Card Already Issued")
+                             .setMessage(error)
+                             .setPositiveButton("OK", null)
+                             .show()
+                         statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+                         statusMessage.text = error
+                         stopScanning()
+                     }
+                     return@launch
+                 }
+
                  logAction("Verification using card data was not possible: $error. Attempting fallback lookup by ID: $memberId")
                  
                  // Fallback: Try fetching by ID only
@@ -427,30 +420,6 @@ class IssueCardActivity : AppCompatActivity() {
                 }
             }
         )
-    }
-
-    private fun performClearCard() {
-        statusMessage.text = "Clearing card data..."
-        nfcManager.clearCard { success, message ->
-            runOnUiThread {
-                statusMessage.text = message
-                logAction("Clear Result: $message")
-                
-                if (success) {
-                    memberIdText.text = "---"
-                    companyNameInput.setText("")
-                    memberIdText.text = "---"
-                    validUptoText.text = "---"
-                    phoneNumberText.text = "---"
-                    whatsappInputText.text = "---"
-                    emailText.text = "---"
-                    websiteText.text = "---"
-                    addressText.text = "---"
-                    memberInfoCard.visibility = View.GONE
-                }
-                stopScanning()
-            }
-        }
     }
 
     private fun logAction(action: String) {

@@ -78,8 +78,15 @@ class MemberApiClient {
                     Result.success(memberResponse)
                 }
             } else {
-                val errorBody = try { response.bodyAsText() } catch (e: Exception) { "No error body" }
-                Result.failure(Exception("Verification failed: ${response.status.value} ${response.status.description}"))
+                val errorBody = try { response.bodyAsText() } catch (e: Exception) { "" }
+                val errorMessage = try {
+                    val json = Json { ignoreUnknownKeys = true }
+                    val errorObj = json.decodeFromString<ErrorResponse>(errorBody)
+                    errorObj.message
+                } catch (e: Exception) {
+                    "Verification failed: ${response.status.value}"
+                }
+                Result.failure(Exception(errorMessage))
             }
         } catch (e: Exception) {
             Result.failure(e)

@@ -30,7 +30,6 @@ class DashboardActivity : AppCompatActivity() {
 
     private lateinit var nfcManager: AndroidNfcManager
     private var isScanning = false
-    private var isDeleteMode = false
     private val scope = CoroutineScope(Dispatchers.Main)
     private val memberApiClient = MemberApiClient()
 
@@ -51,7 +50,6 @@ class DashboardActivity : AppCompatActivity() {
     private lateinit var displayWhatsapp: TextView
     private lateinit var premiumMemberLabel: TextView
     private lateinit var newCardButton: Button
-    private lateinit var deleteCardButton: Button
     private lateinit var clearButton: Button
     private lateinit var stopScanButton: Button
     private lateinit var dashboardScroll: ScrollView
@@ -92,7 +90,6 @@ class DashboardActivity : AppCompatActivity() {
         displayWhatsapp = findViewById(R.id.displayWhatsapp)
         premiumMemberLabel = findViewById(R.id.premiumMemberLabel)
         newCardButton = findViewById(R.id.newCardButton)
-        deleteCardButton = findViewById(R.id.deleteCardButton)
         clearButton = findViewById(R.id.clearButton)
         stopScanButton = findViewById(R.id.stopScanButton)
         dashboardScroll = findViewById(R.id.dashboardScroll)
@@ -178,12 +175,6 @@ class DashboardActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-        deleteCardButton.setOnClickListener {
-            isDeleteMode = true
-            startScanMode()
-            scanInstruction.text = "TAP CARD TO DELETE DATA..."
-        }
-
         clearButton.setOnClickListener {
             resetUI()
         }
@@ -228,7 +219,6 @@ class DashboardActivity : AppCompatActivity() {
         stopScanButton.visibility = View.VISIBLE
         detailsContainer.visibility = View.GONE
         newCardButton.visibility = View.GONE
-        deleteCardButton.visibility = View.GONE
         clearButton.visibility = View.GONE
         errorContainer.visibility = View.GONE
         
@@ -242,12 +232,10 @@ class DashboardActivity : AppCompatActivity() {
 
     private fun stopScanMode() {
         isScanning = false
-        isDeleteMode = false
         scanInstruction.text = "Tap logo to scan card"
         scanProgress.visibility = View.GONE
         stopScanButton.visibility = View.GONE
         newCardButton.visibility = View.VISIBLE
-        deleteCardButton.visibility = View.VISIBLE
         clearButton.visibility = View.VISIBLE
         
         logAction("Scanning stopped")
@@ -272,26 +260,6 @@ class DashboardActivity : AppCompatActivity() {
     }
 
     private fun processCard() {
-        if (isDeleteMode) {
-            scanInstruction.text = "Deleting data..."
-            logAction("Processing delete card")
-            nfcManager.clearCard { success, message ->
-                runOnUiThread {
-                    stopScanMode()
-                    if (success) {
-                        logAction("Card cleared successfully")
-                        statusSnackbar("Card data deleted successfully!")
-                    } else {
-                        logAction("Card clear error: $message")
-                        statusSnackbar("Delete Failed: $message")
-                    }
-                    newCardButton.visibility = View.VISIBLE
-                    deleteCardButton.visibility = View.VISIBLE
-                    clearButton.visibility = View.VISIBLE
-                }
-            }
-            return
-        }
 
         scanInstruction.text = "Checking card..."
         logAction("Processing detected card")
@@ -303,21 +271,18 @@ class DashboardActivity : AppCompatActivity() {
                     logAction("Card read success: ${data["memberId"]}")
                     showCardDetails(data)
                     newCardButton.visibility = View.VISIBLE
-                    deleteCardButton.visibility = View.VISIBLE
                     clearButton.visibility = View.VISIBLE
                 } else if (success && data == null) {
                     // Blank card
                     logAction("Card read success: Blank card")
                     statusSnackbar("No data in the card")
                     newCardButton.visibility = View.VISIBLE
-                    deleteCardButton.visibility = View.VISIBLE
                     clearButton.visibility = View.VISIBLE
                 } else {
                     // Error
                     logAction("Card read error: $message")
                     statusSnackbar(message)
                     newCardButton.visibility = View.VISIBLE
-                    deleteCardButton.visibility = View.VISIBLE
                     clearButton.visibility = View.VISIBLE
                 }
             }
@@ -400,8 +365,24 @@ class DashboardActivity : AppCompatActivity() {
                     onFailure = { error ->
                         val errorMessage = error.message ?: "Verification failed"
                         
+                        // CRITICAL: If the error is about a duplicate card, STOP and do NOT proceed to fallback.
+                        if (errorMessage.contains("already registered", ignoreCase = true) || 
+                            errorMessage.contains("different member", ignoreCase = true)) {
+                            
+                            logAction("API Blocked: $errorMessage")
+                            runOnUiThread {
+                                com.google.android.material.dialog.MaterialAlertDialogBuilder(this@DashboardActivity)
+                                    .setTitle("Card Error")
+                                    .setMessage(errorMessage)
+                                    .setPositiveButton("OK", null)
+                                    .show()
+                                displayAmount.text = "BLOCKED: $errorMessage"
+                                displayAmount.setTextColor(resources.getColor(R.color.error_red, theme))
+                            }
+                            return@fold
+                        }
+
                         // Fallback: If strict verification failed (e.g., 404 or data mismatch), try fetching by ID only.
-                        // This handles cases where card content might be old or the verify endpoint is unavailable.
                         logAction("Verification using card data was not possible: $errorMessage. Attempting fallback lookup by ID: $memberId")
                         
                         scope.launch {

@@ -387,36 +387,16 @@
                         android:orientation="horizontal"
                         android:weightSum="1">
 
-                        <Button
-                            android:id="@+id/deleteCardButton"
-                            android:layout_width="0dp"
-                            android:layout_height="@dimen/_40sdp"
-                            android:layout_weight="0.48"
-                            android:text="Delete Card"
-                            android:textSize="@dimen/_9ssp"
-                            android:textStyle="bold"
-                            android:textColor="@color/white"
-                            app:cornerRadius="@dimen/_8sdp"
-                            app:backgroundTint="@color/error_red"
-                            android:layout_marginEnd="@dimen/_4sdp" />
-                            
-                        <View
-                            android:layout_width="0dp"
-                            android:layout_height="match_parent"
-                            android:layout_weight="0.04" />
-
-                        <Button
-                            android:id="@+id/clearButton"
-                            android:layout_width="0dp"
-                            android:layout_height="@dimen/_40sdp"
-                            android:layout_weight="0.48"
-                            android:text="Clear Page"
-                            android:textSize="@dimen/_9ssp"
-                            android:textStyle="bold"
-                            android:textColor="@color/white"
-                            app:cornerRadius="@dimen/_8sdp"
-                            app:backgroundTint="#9E9E9E"
-                            android:layout_marginStart="@dimen/_4sdp" />
+                    <Button
+                        android:id="@+id/clearButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/_40sdp"
+                        android:text="Clear Page"
+                        android:textSize="@dimen/_9ssp"
+                        android:textStyle="bold"
+                        android:textColor="@color/white"
+                        app:cornerRadius="@dimen/_8sdp"
+                        app:backgroundTint="#9E9E9E" />
                     </LinearLayout>
 
                 </LinearLayout>
