@@ -62,6 +62,22 @@ kotlin {
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
         }
+        
+        iosMain.get().dependsOn(commonMain.get())
+
+        val iosDeviceMain by creating {
+            dependsOn(iosMain.get())
+        }
+        
+        val iosSimulatorMain by creating {
+            dependsOn(iosMain.get())
+        }
+        
+        iosArm64Main.get().dependsOn(iosDeviceMain)
+        iosSimulatorArm64Main.get().dependsOn(iosSimulatorMain)
+        
+        iosDeviceMain.dependsOn(commonMain.get())
+        iosSimulatorMain.dependsOn(commonMain.get())
     }
 }
 

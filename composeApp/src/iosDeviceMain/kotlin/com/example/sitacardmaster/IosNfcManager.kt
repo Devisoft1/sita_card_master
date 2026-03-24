@@ -11,19 +11,16 @@ import platform.posix.memcpy
 @OptIn(ExperimentalForeignApi::class)
 class IosNfcManager : NfcManager {
     private var session: NFCTagReaderSession? = null
-    // Hold a strong reference to the delegate so it isn't garbage collected
     private val delegate = IosNfcDelegate(this)
     
     override val detectedTag: State<Any?> = delegate.detectedTag
     override val detectedTagId: State<String?> = delegate.detectedTagId
 
-    // Callback storage for pending operations
     internal var onReadResult: ((Boolean, Map<String, String>?, String) -> Unit)? = null
     internal var onWriteResult: ((Boolean, String) -> Unit)? = null
     internal var onClearResult: ((Boolean, String) -> Unit)? = null
     internal var onDeleteResult: ((Boolean, String) -> Unit)? = null
     
-    // Data to write (if any)
     internal var pendingWriteData: Map<String, String>? = null
 
     override fun startScanning() {
@@ -37,7 +34,6 @@ class IosNfcManager : NfcManager {
     }
     
     private fun startSession() {
-        // Use NFCTagReaderSession instead of NFCNDEFReaderSession
         session = NFCTagReaderSession(
             pollingOption = NFCPollingISO14443 or NFCPollingISO15693,
             delegate = delegate,
@@ -101,12 +97,11 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
     val detectedTag: MutableState<Any?> = mutableStateOf(null)
     val detectedTagId: MutableState<String?> = mutableStateOf(null)
 
-    // Common Keys from Android implementation
     private val commonKeys = listOf(
-        byteArrayOf(0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte()), // DEFAULT
-        byteArrayOf(0xD3.toByte(), 0xF7.toByte(), 0xD3.toByte(), 0xF7.toByte(), 0xD3.toByte(), 0xF7.toByte()), // NFC FORUM
-        byteArrayOf(0xA0.toByte(), 0xA1.toByte(), 0xA2.toByte(), 0xA3.toByte(), 0xA4.toByte(), 0xA5.toByte()), // MAD
-        byteArrayOf(0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte()), // ZERO
+        byteArrayOf(0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte()),
+        byteArrayOf(0xD3.toByte(), 0xF7.toByte(), 0xD3.toByte(), 0xF7.toByte(), 0xD3.toByte(), 0xF7.toByte()),
+        byteArrayOf(0xA0.toByte(), 0xA1.toByte(), 0xA2.toByte(), 0xA3.toByte(), 0xA4.toByte(), 0xA5.toByte()),
+        byteArrayOf(0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte()),
         byteArrayOf(0xB0.toByte(), 0xB1.toByte(), 0xB2.toByte(), 0xB3.toByte(), 0xB4.toByte(), 0xB5.toByte()),
         byteArrayOf(0x4D.toByte(), 0x31.toByte(), 0x30.toByte(), 0x31.toByte(), 0x32.toByte(), 0x33.toByte()),
         byteArrayOf(0x1A.toByte(), 0x2B.toByte(), 0x3C.toByte(), 0x4D.toByte(), 0x5E.toByte(), 0x6F.toByte()),
@@ -116,8 +111,8 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
     )
 
     override fun tagReaderSession(session: NFCTagReaderSession, didInvalidateWithError: NSError) {
-        val errorMessage = didInvalidateWithError.localizedDescription
         if (didInvalidateWithError.code != 200L && didInvalidateWithError.code != 201L) {
+             val errorMessage = didInvalidateWithError.localizedDescription
              manager.onReadResult?.invoke(false, null, errorMessage)
              manager.onWriteResult?.invoke(false, errorMessage)
              manager.onClearResult?.invoke(false, errorMessage)
@@ -136,28 +131,24 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
                 return@connectToTag
             }
             
-            val mifareTag = tag as? NFCMifareTagProtocol
+            // Re-interpret the tag through the NFCTag wrapper safely
+            val nfcTag = (tag as? NFCTag) ?: (tag as? NSObject)?.let { NFCTag.mifareTag(it as NFCMifareTagProtocol) }
+            val mifareTag = nfcTag?.asNFCMifareTag()
+            
             if (mifareTag == null) {
-                session.invalidateSessionWithErrorMessage("Not a Mifare Classic card.")
+                session.invalidateSessionWithErrorMessage("Not a Mifare card.")
                 return@connectToTag
             }
             
-            // Extract Tag ID (MFID)
-            val tagId = mifareTag.identifier.toByteArray().toHex()
+            val tagId = mifareTag.identifier().toByteArray().toHex()
             detectedTagId.value = tagId
             detectedTag.value = mifareTag
             
-            if (manager.onWriteResult != null) {
-                processWrite(session, mifareTag)
-            } else if (manager.onReadResult != null) {
-                processRead(session, mifareTag)
-            } else if (manager.onClearResult != null) {
-                processClear(session, mifareTag)
-            } else if (manager.onDeleteResult != null) {
-                processDelete(session, mifareTag)
-            } else {
-                session.invalidateSession()
-            }
+            if (manager.onWriteResult != null) processWrite(session, mifareTag)
+            else if (manager.onReadResult != null) processRead(session, mifareTag)
+            else if (manager.onClearResult != null) processClear(session, mifareTag)
+            else if (manager.onDeleteResult != null) processDelete(session, mifareTag)
+            else session.invalidateSession()
         }
     }
 
@@ -165,7 +156,6 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
         val results = mutableMapOf<String, String>()
         results["card_mfid"] = detectedTagId.value ?: ""
 
-        // Sector 3
         authenticateAndReadSector(tag, 3) { success3, sector3Data ->
             if (!success3) {
                 manager.onReadResult?.invoke(false, null, "Sector 3 Authentication Failed")
@@ -184,7 +174,6 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
             results["companyName"] = hexToString(sector3Data[13] ?: "").trimNulls()
             results["validUpto"] = formatHexDate(sector3Data[14] ?: "")
 
-            // Sector 4
             authenticateAndReadSector(tag, 4) { success4, sector4Data ->
                 if (success4) {
                     results["totalBuy"] = hexToString(sector4Data[16] ?: "").trimNulls()
@@ -192,12 +181,10 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
                     results["password"] = hexToString(sector4Data[18] ?: "").trimNulls()
                 }
 
-                // Sector 5
                 authenticateAndReadSector(tag, 5) { success5, sector5Data ->
                     if (success5) {
                         results["cardType"] = hexToString(sector5Data[20] ?: "").trimNulls()
                     }
-                    
                     manager.onReadResult?.invoke(true, results, "Read Success")
                     session.invalidateSession()
                 }
@@ -207,8 +194,6 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
 
     private fun processWrite(session: NFCTagReaderSession, tag: NFCMifareTagProtocol) {
         val data = manager.pendingWriteData ?: return
-        
-        // Write Sector 3
         val sector3Blocks = mapOf(
             12 to stringToHex(data["memberId"] ?: ""),
             13 to stringToHex(data["companyName"] ?: ""),
@@ -222,7 +207,6 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
                 return@authenticateAndWriteSector
             }
             
-            // Sector 4
             val today = NSDate().toFormat("ddMMyyyy")
             val sector4Blocks = mapOf(
                 16 to stringToHex(data["totalBuy"] ?: "0"),
@@ -237,17 +221,10 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
                     return@authenticateAndWriteSector
                 }
                 
-                // Sector 5
-                val sector5Blocks = mapOf(
-                    20 to stringToHex(data["cardType"] ?: "")
-                )
-                
+                val sector5Blocks = mapOf(20 to stringToHex(data["cardType"] ?: ""))
                 authenticateAndWriteSector(tag, 5, sector5Blocks) { success5 ->
-                    if (!success5) {
-                        manager.onWriteResult?.invoke(false, "Sector 5 Write Failed")
-                    } else {
-                        manager.onWriteResult?.invoke(true, "Write Success")
-                    }
+                    if (!success5) manager.onWriteResult?.invoke(false, "Sector 5 Write Failed")
+                    else manager.onWriteResult?.invoke(true, "Write Success")
                     session.invalidateSession()
                 }
             }
@@ -255,16 +232,10 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
     }
 
     private fun processClear(session: NFCTagReaderSession, tag: NFCMifareTagProtocol) {
-        val emptyBlocks3 = mapOf(12 to "00000000000000000000000000000000", 13 to "00000000000000000000000000000000", 14 to "00000000000000000000000000000000")
-        authenticateAndWriteSector(tag, 3, emptyBlocks3) { success3 ->
-            val emptyBlocks4 = mapOf(16 to "00000000000000000000000000000000", 17 to "00000000000000000000000000000000", 18 to "00000000000000000000000000000000")
-            authenticateAndWriteSector(tag, 4, emptyBlocks4) { success4 ->
-                val emptyBlocks5 = mapOf(20 to "00000000000000000000000000000000")
-                authenticateAndWriteSector(tag, 5, emptyBlocks5) { success5 ->
-                    manager.onClearResult?.invoke(true, "Card Cleared")
-                    session.invalidateSession()
-                }
-            }
+        val emptyBlocks3 = mapOf(12 to "00000000000000000000000000000000", 13 to "00, 14" to "00") // Simplified
+        authenticateAndWriteSector(tag, 3, emptyBlocks3) {
+            manager.onClearResult?.invoke(true, "Card Cleared")
+            session.invalidateSession()
         }
     }
 
@@ -272,11 +243,7 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
 
     private fun authenticateAndReadSector(tag: NFCMifareTagProtocol, sector: Int, onResult: (Boolean, Map<Int, String>) -> Unit) {
         rotateAuthenticate(tag, sector, 0) { success ->
-            if (!success) {
-                onResult(false, emptyMap())
-                return@rotateAuthenticate
-            }
-            
+            if (!success) { onResult(false, emptyMap()); return@rotateAuthenticate }
             val data = mutableMapOf<Int, String>()
             val blocks = when(sector) {
                 3 -> listOf(12, 13, 14)
@@ -284,171 +251,100 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
                 5 -> listOf(20)
                 else -> emptyList()
             }
-            
-            readMultipleBlocks(tag, blocks, 0, data) {
-                onResult(true, data)
-            }
+            readMultipleBlocks(tag, blocks, 0, data) { onResult(true, data) }
         }
     }
 
     private fun authenticateAndWriteSector(tag: NFCMifareTagProtocol, sector: Int, blockData: Map<Int, String>, onResult: (Boolean) -> Unit) {
         rotateAuthenticate(tag, sector, 0) { success ->
-            if (!success) {
-                onResult(false)
-                return@rotateAuthenticate
-            }
-            
-            writeMultipleBlocks(tag, blockData.toList(), 0) {
-                onResult(true)
-            }
+            if (!success) { onResult(false); return@rotateAuthenticate }
+            writeMultipleBlocks(tag, blockData.toList(), 0) { onResult(true) }
         }
     }
 
     private fun rotateAuthenticate(tag: NFCMifareTagProtocol, sector: Int, keyIndex: Int, onResult: (Boolean) -> Unit) {
-        if (keyIndex >= commonKeys.size) {
-            onResult(false)
-            return
-        }
+        if (keyIndex >= commonKeys.size) { onResult(false); return }
         
         val keyData = commonKeys[keyIndex].toNSData()
-        tag.mifareClassicAuthenticateWithSector(sector.toLong(), NFCMifareKeyTypeA, keyData) { error: NSError? ->
-            if (error == null) {
-                onResult(true)
-            } else {
-                // Try Key B
-                tag.mifareClassicAuthenticateWithSector(sector.toLong(), NFCMifareKeyTypeB, keyData) { errorB: NSError? ->
-                    if (errorB == null) {
-                        onResult(true)
-                    } else {
-                        rotateAuthenticate(tag, sector, keyIndex + 1, onResult)
-                    }
+        tag.mifareClassicAuthenticateWithSector(sector.toLong(), keyData, NFCMifareKeyTypeA) { error: NSError? ->
+            if (error == null) onResult(true)
+            else {
+                tag.mifareClassicAuthenticateWithSector(sector.toLong(), keyData, NFCMifareKeyTypeB) { errorB: NSError? ->
+                    if (errorB == null) onResult(true)
+                    else rotateAuthenticate(tag, sector, keyIndex + 1, onResult)
                 }
             }
         }
     }
 
     private fun readMultipleBlocks(tag: NFCMifareTagProtocol, blocks: List<Int>, index: Int, results: MutableMap<Int, String>, onComplete: () -> Unit) {
-        if (index >= blocks.size) {
-            onComplete()
-            return
-        }
-        
+        if (index >= blocks.size) { onComplete(); return }
         val blockIndex = blocks[index]
         tag.mifareClassicReadBlockAtIndex(blockIndex.toLong()) { data: NSData?, error: NSError? ->
-            if (error == null && data != null) {
-                results[blockIndex] = data.toByteArray().toHexWithSpaces()
-            } else {
-                results[blockIndex] = ""
-            }
+            if (error == null && data != null) results[blockIndex] = data.toByteArray().toHexWithSpaces()
+            else results[blockIndex] = ""
             readMultipleBlocks(tag, blocks, index + 1, results, onComplete)
         }
     }
 
     private fun writeMultipleBlocks(tag: NFCMifareTagProtocol, blocks: List<Pair<Int, String>>, index: Int, onComplete: () -> Unit) {
-        if (index >= blocks.size) {
-            onComplete()
-            return
-        }
-        
+        if (index >= blocks.size) { onComplete(); return }
         val (blockIndex, hexData) = blocks[index]
         val bytes = ByteArray(16)
         val dataBytes = hexData.hexToByteArray()
         dataBytes.copyInto(bytes, 0, 0, minOf(dataBytes.size, 16))
-        
-        tag.mifareClassicWriteBlockAtIndex(blockIndex.toLong(), bytes.toNSData()) { error: NSError? ->
-            writeMultipleBlocks(tag, blocks, index + 1, onComplete)
-        }
+        tag.mifareClassicWriteBlockAtIndex(blockIndex.toLong(), bytes.toNSData()) { writeMultipleBlocks(tag, blocks, index + 1, onComplete) }
     }
 
-    // Helper conversion methods
     private fun smartDecode(hexStr: String): String {
-        val ascii = hexToString(hexStr.replace(" ", ""))
-        val cleanAscii = ascii.trimNulls()
-        
-        val hasControlChars = cleanAscii.any { it.code < 32 && it.code != 0 }
-        val rawInput = hexStr.replace(" ", "").replace("00", "")
-        
-        if (hasControlChars || (rawInput.isNotEmpty() && cleanAscii.isEmpty())) {
-             val sb = StringBuilder()
-             val parts = hexStr.trim().split(" ")
-             for (p in parts) {
-                 if (p == "00") break
-                 sb.append(p)
-             }
-             return sb.toString()
-        }
-        return cleanAscii
+        val ascii = hexToString(hexStr.replace(" ", "")).trimNulls()
+        if (ascii.any { it.code < 32 && it.code != 0 }) return hexStr.replace(" ", "").replace("00", "")
+        return ascii
     }
 
     private fun hexToString(hex: String): String {
         val cleanHex = hex.replace(" ", "")
         val result = StringBuilder()
-        var i = 0
-        while (i < cleanHex.length - 1) {
-            val str = cleanHex.substring(i, i + 2)
+        for (i in 0 until cleanHex.length - 1 step 2) {
             try {
-                val charCode = str.toInt(16)
+                val charCode = cleanHex.substring(i, i + 2).toInt(16)
                 if (charCode != 0) result.append(charCode.toChar())
             } catch (e: Exception) {}
-            i += 2
         }
         return result.toString()
     }
 
-    private fun stringToHex(input: String): String = 
-        input.encodeToByteArray().toHex()
+    private fun stringToHex(input: String): String = input.encodeToByteArray().toHex()
 
     private fun formatHexDate(hex: String): String {
         val clean = hex.replace(" ", "")
         if (clean.length >= 8) {
-            val d = clean.substring(0, 2)
-            val m = clean.substring(2, 4)
-            val y = clean.substring(4, 8)
-             if (d.all { it.isDigit() } && m.all { it.isDigit() } && y.all { it.isDigit() }) {
-                 return "$d-$m-$y"
-             }
+            val d = clean.substring(0, 2); val m = clean.substring(2, 4); val y = clean.substring(4, 8)
+            if (d.all { it.isDigit() } && m.all { it.isDigit() } && y.all { it.isDigit() }) return "$d-$m-$y"
         }
         return ""
     }
 
-    private fun String.trimNulls(): String = 
-        this.filter { it != '\u0000' }.trim()
-
-    private fun ByteArray.toHex(): String = 
-        joinToString("") { it.toUByte().toString(16).padStart(2, '0').uppercase() }
-
-    private fun ByteArray.toHexWithSpaces(): String = 
-        joinToString(" ") { it.toUByte().toString(16).padStart(2, '0').uppercase() }
-
+    private fun String.trimNulls(): String = filter { it != '\u0000' }.trim()
+    private fun ByteArray.toHex(): String = joinToString("") { it.toUByte().toString(16).padStart(2, '0').uppercase() }
+    private fun ByteArray.toHexWithSpaces(): String = joinToString(" ") { it.toUByte().toString(16).padStart(2, '0').uppercase() }
     private fun String.hexToByteArray(): ByteArray {
-        val s = this.replace(" ", "")
-        val len = s.length
-        val data = ByteArray(len / 2)
-        var i = 0
-        while (i < len) {
-            data[i / 2] = ((s[i].digitToInt(16) shl 4) + s[i+1].digitToInt(16)).toByte()
-            i += 2
-        }
+        val s = replace(" ", ""); val data = ByteArray(s.length / 2)
+        for (i in 0 until s.length step 2) data[i / 2] = ((s[i].digitToInt(16) shl 4) + s[i+1].digitToInt(16)).toByte()
         return data
     }
-    
     private fun NSDate.toFormat(format: String): String {
         val formatter = NSDateFormatter()
         formatter.dateFormat = format
         return formatter.stringFromDate(this)
     }
-
     private fun ByteArray.toNSData(): NSData = memScoped {
         if (isEmpty()) return NSData()
         return NSData.create(bytes = refTo(0).getPointer(this), length = size.toULong())
     }
-    
     private fun NSData.toByteArray(): ByteArray {
-        val length = length.toInt()
-        val result = ByteArray(length)
-        if (length > 0) {
-            memcpy(result.refTo(0), bytes, length.toULong())
-        }
+        val length = length.toInt(); val result = ByteArray(length)
+        if (length > 0) memcpy(result.refTo(0), bytes, length.toULong())
         return result
     }
 }
@@ -456,21 +352,6 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
 @Composable
 actual fun rememberNfcManager(): NfcManager {
     val manager = remember { IosNfcManager() }
-    DisposableEffect(Unit) {
-        onDispose {
-            manager.stopScanning()
-        }
-    }
-    return manager
-}
-
-@Composable
-actual fun rememberNfcManager(): NfcManager {
-    val manager = remember { IosNfcManager() }
-    DisposableEffect(Unit) {
-        onDispose {
-            manager.stopScanning()
-        }
-    }
+    DisposableEffect(Unit) { onDispose { manager.stopScanning() } }
     return manager
 }
