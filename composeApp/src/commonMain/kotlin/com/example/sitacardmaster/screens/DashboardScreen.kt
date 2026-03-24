@@ -98,12 +98,12 @@ fun DashboardScreen(
                                      if (matchingCard != null) {
                                          // Use cardTotal from matchingCard if available, otherwise from response root, otherwise currentTotal
                                          val displayTotal = if (matchingCard.cardTotal > 0) matchingCard.cardTotal else if (response.cardTotal > 0) response.cardTotal else response.currentTotal
-                                         currentAmount = "₹$displayTotal"
-                                         globalAmount = "₹${response.globalTotal}" // Global Total
+                                         currentAmount = formatAmount(displayTotal)
+                                         globalAmount = formatAmount(response.globalTotal)
                                          platformLog("Dashboard", "Card-specific balance: $displayTotal (from cards list or fallback)")
                                      } else {
-                                         currentAmount = "₹${response.globalTotal}"
-                                         globalAmount = "₹${response.currentTotal}"
+                                         currentAmount = formatAmount(response.globalTotal)
+                                         globalAmount = formatAmount(response.currentTotal)
                                          platformLog("Dashboard", "No matching card. Fallback to global totals.")
                                      }
                                  },
@@ -489,6 +489,33 @@ fun DashboardScreen(
     }
 }
 
+
+fun formatAmount(amount: Any?): String {
+    if (amount == null) return "0.00"
+    
+    val doubleValue = when (amount) {
+        is Double -> amount
+        is Int -> amount.toDouble()
+        is Long -> amount.toDouble()
+        is String -> amount.toDoubleOrNull() ?: 0.0
+        else -> 0.0
+    }
+    
+    val rounded = ((doubleValue * 100.0).toLong() / 100.0)
+    val parts = rounded.toString().split(".")
+    val integerPart = parts[0]
+    var decimalPart = if (parts.size > 1) parts[1] else "00"
+    
+    // Ensure two decimal places
+    if (decimalPart.length < 2) decimalPart += "0"
+    else if (decimalPart.length > 2) decimalPart = decimalPart.substring(0, 2)
+    
+    // Add commas for thousands
+    val regex = "(\\d)(?=(\\d{3})+(?!\\d))".toRegex()
+    val formattedInteger = integerPart.replace(regex, "$1,")
+    
+    return "₹$formattedInteger.$decimalPart"
+}
 
 
 @Composable

@@ -353,7 +353,8 @@ class DashboardActivity : AppCompatActivity() {
         displayMemberId.text = data["memberId"] ?: "N/A"
         displayCompany.text = data["companyName"] ?: "N/A"
         displayValidUpto.text = formatDate(data["validUpto"])
-        displayTotalBuy.text = "₹${data["totalBuy"] ?: "0.00"}"
+        val amountFormatter = java.text.DecimalFormat("#,###.00")
+        displayTotalBuy.text = "₹${amountFormatter.format((data["totalBuy"] ?: "0.00").toDoubleOrNull() ?: 0.0)}"
         displayAmount.text = "Loading..." // Restored
         
         // Hide extra details while loading
@@ -392,12 +393,12 @@ class DashboardActivity : AppCompatActivity() {
                         if (matchingCard != null) {
                             logAction("Found Matching Card: $scannedMfid. Using card-specific data.")
                             val displayTotal = if (matchingCard.cardTotal > 0) matchingCard.cardTotal else if (response.cardTotal > 0) response.cardTotal else response.currentTotal
-                            displayTotalBuy.text = "₹$displayTotal" 
-                            displayAmount.text = "₹${response.globalTotal}" // Global Total
+                            displayTotalBuy.text = "₹${amountFormatter.format(displayTotal)}" 
+                            displayAmount.text = "₹${amountFormatter.format(response.globalTotal)}" // Global Total
                         } else {
                             logAction("No matching card found in member's cards list ($scannedMfid).")
-                            displayTotalBuy.text = "₹${response.currentTotal}" 
-                            displayAmount.text = "₹${response.globalTotal}" 
+                            displayTotalBuy.text = "₹${amountFormatter.format(response.currentTotal)}" 
+                            displayAmount.text = "₹${amountFormatter.format(response.globalTotal)}" 
                         }
                         displayValidUpto.text = formatDate(response.validity)
                         
@@ -455,12 +456,12 @@ class DashboardActivity : AppCompatActivity() {
                                      if (matchingCard != null) {
                                          logAction("Fallback: Found Matching Card: $scannedMfid.")
                                          val displayTotal = if (matchingCard.cardTotal > 0) matchingCard.cardTotal else if (response.cardTotal > 0) response.cardTotal else response.currentTotal
-                                         displayTotalBuy.text = "₹$displayTotal" 
-                                         displayAmount.text = "₹${response.globalTotal}" // Global Total
+                                         displayTotalBuy.text = "₹${amountFormatter.format(displayTotal)}" 
+                                         displayAmount.text = "₹${amountFormatter.format(response.globalTotal)}" // Global Total
                                      } else {
                                          logAction("Fallback: No matching card found for $scannedMfid.")
-                                         displayTotalBuy.text = "₹${response.currentTotal}"
-                                         displayAmount.text = "₹${response.globalTotal}"
+                                         displayTotalBuy.text = "₹${amountFormatter.format(response.currentTotal)}"
+                                         displayAmount.text = "₹${amountFormatter.format(response.globalTotal)}"
                                      }
                                      displayValidUpto.text = formatDate(response.validity)
 

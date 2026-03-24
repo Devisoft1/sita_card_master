@@ -43,6 +43,7 @@ class IssueCardActivity : AppCompatActivity() {
     private lateinit var cancelScanButton: Button
     private val apiClient = com.example.sitacardmaster.network.MemberApiClient()
     private val coroutineScope = kotlinx.coroutines.MainScope()
+    private var scanTimeoutJob: kotlinx.coroutines.Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -267,6 +268,24 @@ class IssueCardActivity : AppCompatActivity() {
         logAction("Scanning started for Member: ${memberIdText.text}")
         hideKeyboard()
         nfcManager.startScanning()
+        
+        // Timeout Job
+        scanTimeoutJob?.cancel()
+        scanTimeoutJob = coroutineScope.launch {
+            delay(60000)
+            if (isScanning) {
+                runOnUiThread {
+                    stopScanning()
+                    statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+                    statusMessage.text = "Timeout: No card detected"
+                    com.google.android.material.snackbar.Snackbar.make(
+                        findViewById(android.R.id.content),
+                        "Scanning timed out (60s)",
+                        com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
     }
 
     private fun hideKeyboard() {
@@ -286,11 +305,14 @@ class IssueCardActivity : AppCompatActivity() {
         startScanButton.visibility = View.VISIBLE
         cancelScanButton.visibility = View.GONE
         nfcManager.stopScanning()
+        scanTimeoutJob?.cancel()
+        scanTimeoutJob = null
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (isScanning) {
+            scanTimeoutJob?.cancel()
             nfcManager.onNewIntent(intent)
             val tag = intent.getParcelableExtra<Tag>(NfcAdapter.EXTRA_TAG)
             if (tag != null) {
