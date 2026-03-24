@@ -70,6 +70,9 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
     var statusMessage by remember { mutableStateOf("Ready to write") }
     var scanningMode by remember { mutableStateOf<ScanMode>(ScanMode.None) }
     
+    var showCardAlreadyIssuedDialog by remember { mutableStateOf(false) }
+    var cardAlreadyIssuedErrorMessage by remember { mutableStateOf("") }
+    
     val brandBlue = Color(0xFF2D2F91)
     val surfaceGray = Color(0xFFF5F7FA)
     val white = Color.White
@@ -150,9 +153,21 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                         )
                     } else {
                         val error = result.exceptionOrNull()?.message ?: "Verification Failed"
-                        statusMessage = "Error: $error"
-                        scanningMode = ScanMode.None
-                        nfcManager.stopScanning()
+                        
+                        // Check for already registered card (Matching Android logic)
+                        if (error.contains("already registered", ignoreCase = true) || 
+                            error.contains("different member", ignoreCase = true)) {
+                            
+                            scanningMode = ScanMode.None
+                            statusMessage = error
+                            showCardAlreadyIssuedDialog = true
+                            cardAlreadyIssuedErrorMessage = error
+                            nfcManager.stopScanning()
+                        } else {
+                            statusMessage = "Error: $error"
+                            scanningMode = ScanMode.None
+                            nfcManager.stopScanning()
+                        }
                     }
                 }
             } else if (scanningMode == ScanMode.Clearing) {
@@ -214,6 +229,36 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
         containerColor = surfaceGray,
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
+        // AlertDialog for Card Already Issued
+        if (showCardAlreadyIssuedDialog) {
+            AlertDialog(
+                onDismissRequest = { showCardAlreadyIssuedDialog = false },
+                title = { 
+                    Text(
+                        "Card Already Issued", 
+                        style = MaterialTheme.typography.titleLarge,
+                        color = errorRed,
+                        fontWeight = FontWeight.Bold
+                    ) 
+                },
+                text = { 
+                    Text(
+                        cardAlreadyIssuedErrorMessage,
+                        style = MaterialTheme.typography.bodyLarge
+                    ) 
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showCardAlreadyIssuedDialog = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = errorRed)
+                    ) {
+                        Text("OK")
+                    }
+                },
+                containerColor = white
+            )
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()

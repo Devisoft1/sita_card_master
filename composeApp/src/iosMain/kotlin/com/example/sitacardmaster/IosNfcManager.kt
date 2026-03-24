@@ -10,7 +10,7 @@ import platform.posix.memcpy
 
 @OptIn(ExperimentalForeignApi::class)
 class IosNfcManager : NfcManager {
-    private var session: NFCNDEFReaderSession? = null
+    private var session: NFCTagReaderSession? = null
     // Hold a strong reference to the delegate so it isn't garbage collected
     private val delegate = IosNfcDelegate(this)
     
@@ -27,7 +27,6 @@ class IosNfcManager : NfcManager {
     internal var pendingWriteData: Map<String, String>? = null
 
     override fun startScanning() {
-        // Just generic scanning, no specific action pending
         cleanup()
         startSession()
     }
@@ -38,10 +37,11 @@ class IosNfcManager : NfcManager {
     }
     
     private fun startSession() {
-        session = NFCNDEFReaderSession(
+        // Use NFCTagReaderSession instead of NFCNDEFReaderSession
+        session = NFCTagReaderSession(
+            pollingOption = NFCPollingISO14443 or NFCPollingISO15693,
             delegate = delegate,
-            queue = null,
-            invalidateAfterFirstRead = false
+            queue = null
         )
         session?.alertMessage = "Hold your iPhone near the card."
         session?.beginSession()
@@ -72,10 +72,8 @@ class IosNfcManager : NfcManager {
             "password" to password,
             "validUpto" to validUpto,
             "totalBuy" to totalBuy,
-            "cardType" to cardType,
-            "lastBuyDate" to "" // Optional or computed
+            "cardType" to cardType
         )
-        // Re-start session if needed to ensure we capture a tag for writing
         startSession()
     }
 
@@ -94,190 +92,376 @@ class IosNfcManager : NfcManager {
     override fun deleteCardData(onResult: (Boolean, String) -> Unit) {
         cleanup()
         onDeleteResult = onResult
-        // On iOS, we could potentially just clear the NDEF records
-        // For now, let's just trigger a session
         startSession()
     }
 }
 
 @OptIn(ExperimentalForeignApi::class)
-private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), NFCNDEFReaderSessionDelegateProtocol {
+private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), NFCTagReaderSessionDelegateProtocol {
     val detectedTag: MutableState<Any?> = mutableStateOf(null)
     val detectedTagId: MutableState<String?> = mutableStateOf(null)
 
-    // Handle session invalidation
-    override fun readerSession(session: NFCNDEFReaderSession, didInvalidateWithError: NSError) {
+    // Common Keys from Android implementation
+    private val commonKeys = listOf(
+        byteArrayOf(0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte()), // DEFAULT
+        byteArrayOf(0xD3.toByte(), 0xF7.toByte(), 0xD3.toByte(), 0xF7.toByte(), 0xD3.toByte(), 0xF7.toByte()), // NFC FORUM
+        byteArrayOf(0xA0.toByte(), 0xA1.toByte(), 0xA2.toByte(), 0xA3.toByte(), 0xA4.toByte(), 0xA5.toByte()), // MAD
+        byteArrayOf(0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte()), // ZERO
+        byteArrayOf(0xB0.toByte(), 0xB1.toByte(), 0xB2.toByte(), 0xB3.toByte(), 0xB4.toByte(), 0xB5.toByte()),
+        byteArrayOf(0x4D.toByte(), 0x31.toByte(), 0x30.toByte(), 0x31.toByte(), 0x32.toByte(), 0x33.toByte()),
+        byteArrayOf(0x1A.toByte(), 0x2B.toByte(), 0x3C.toByte(), 0x4D.toByte(), 0x5E.toByte(), 0x6F.toByte()),
+        byteArrayOf(0xA0.toByte(), 0xB0.toByte(), 0xC0.toByte(), 0xD0.toByte(), 0xE0.toByte(), 0xF0.toByte()),
+        byteArrayOf(0x11.toByte(), 0x22.toByte(), 0x33.toByte(), 0x44.toByte(), 0x55.toByte(), 0x66.toByte()),
+        byteArrayOf(0x88.toByte(), 0x88.toByte(), 0x88.toByte(), 0x88.toByte(), 0x88.toByte(), 0x88.toByte())
+    )
+
+    override fun tagReaderSession(session: NFCTagReaderSession, didInvalidateWithError: NSError) {
         val errorMessage = didInvalidateWithError.localizedDescription
-        
-        // NFCReaderErrorReaderSessionInvalidationErrorUserCanceled = 200
         if (didInvalidateWithError.code != 200L && didInvalidateWithError.code != 201L) {
              manager.onReadResult?.invoke(false, null, errorMessage)
              manager.onWriteResult?.invoke(false, errorMessage)
              manager.onClearResult?.invoke(false, errorMessage)
+             manager.onDeleteResult?.invoke(false, errorMessage)
         }
-        
         detectedTag.value = null
         detectedTagId.value = null
     }
 
-    // Resolve conflicting overloads with @ObjCSignatureOverride
-    // Note: In some KMP versions, @Override might be strict.
-    @ObjCSignatureOverride
-    override fun readerSession(session: NFCNDEFReaderSession, didDetectNDEFs: List<*>) {
-        val message = didDetectNDEFs.firstOrNull() as? NFCNDEFMessage
-        if (message != null) {
-            processRead(message)
-        }
-    }
-    
-    @ObjCSignatureOverride
-    override fun readerSession(session: NFCNDEFReaderSession, didDetectTags: List<*>) {
-        val tag = didDetectTags.firstOrNull() as? NFCNDEFTagProtocol ?: return
+    override fun tagReaderSession(session: NFCTagReaderSession, didDetectTags: List<*>) {
+        val tag = didDetectTags.firstOrNull() as? NFCTagProtocol ?: return
         
         session.connectToTag(tag) { error: NSError? ->
             if (error != null) {
-                session.alertMessage = "Unable to connect to tag."
-                session.invalidateSession()
+                session.invalidateSessionWithErrorMessage("Connect failed: ${error.localizedDescription}")
                 return@connectToTag
             }
             
-            tag.queryNDEFStatusWithCompletionHandler { status: NFCNDEFStatus, capacity: ULong, error: NSError? ->
-                if (error != null) {
-                     session.invalidateSessionWithErrorMessage("Error querying NDEF status.")
-                     return@queryNDEFStatusWithCompletionHandler
+            val mifareTag = tag as? NFCMifareTagProtocol
+            if (mifareTag == null) {
+                session.invalidateSessionWithErrorMessage("Not a Mifare Classic card.")
+                return@connectToTag
+            }
+            
+            // Extract Tag ID (MFID)
+            val tagId = mifareTag.identifier.toByteArray().toHex()
+            detectedTagId.value = tagId
+            detectedTag.value = mifareTag
+            
+            if (manager.onWriteResult != null) {
+                processWrite(session, mifareTag)
+            } else if (manager.onReadResult != null) {
+                processRead(session, mifareTag)
+            } else if (manager.onClearResult != null) {
+                processClear(session, mifareTag)
+            } else if (manager.onDeleteResult != null) {
+                processDelete(session, mifareTag)
+            } else {
+                session.invalidateSession()
+            }
+        }
+    }
+
+    private fun processRead(session: NFCTagReaderSession, tag: NFCMifareTagProtocol) {
+        val results = mutableMapOf<String, String>()
+        results["card_mfid"] = detectedTagId.value ?: ""
+
+        // Sector 3
+        authenticateAndReadSector(tag, 3) { success3, sector3Data ->
+            if (!success3) {
+                manager.onReadResult?.invoke(false, null, "Sector 3 Authentication Failed")
+                session.invalidateSession()
+                return@authenticateAndReadSector
+            }
+            
+            val block12 = sector3Data[12] ?: ""
+            if (block12.all { it == '0' || it == ' ' }) {
+                manager.onReadResult?.invoke(true, null, "Blank card")
+                session.invalidateSession()
+                return@authenticateAndReadSector
+            }
+            
+            results["memberId"] = smartDecode(block12)
+            results["companyName"] = hexToString(sector3Data[13] ?: "").trimNulls()
+            results["validUpto"] = formatHexDate(sector3Data[14] ?: "")
+
+            // Sector 4
+            authenticateAndReadSector(tag, 4) { success4, sector4Data ->
+                if (success4) {
+                    results["totalBuy"] = hexToString(sector4Data[16] ?: "").trimNulls()
+                    results["lastBuyDate"] = formatHexDate(sector4Data[17] ?: "")
+                    results["password"] = hexToString(sector4Data[18] ?: "").trimNulls()
+                }
+
+                // Sector 5
+                authenticateAndReadSector(tag, 5) { success5, sector5Data ->
+                    if (success5) {
+                        results["cardType"] = hexToString(sector5Data[20] ?: "").trimNulls()
+                    }
+                    
+                    manager.onReadResult?.invoke(true, results, "Read Success")
+                    session.invalidateSession()
+                }
+            }
+        }
+    }
+
+    private fun processWrite(session: NFCTagReaderSession, tag: NFCMifareTagProtocol) {
+        val data = manager.pendingWriteData ?: return
+        
+        // Write Sector 3
+        val sector3Blocks = mapOf(
+            12 to stringToHex(data["memberId"] ?: ""),
+            13 to stringToHex(data["companyName"] ?: ""),
+            14 to (data["validUpto"] ?: "").replace("-", "").replace("/", "")
+        )
+        
+        authenticateAndWriteSector(tag, 3, sector3Blocks) { success3 ->
+            if (!success3) {
+                manager.onWriteResult?.invoke(false, "Sector 3 Write Failed")
+                session.invalidateSession()
+                return@authenticateAndWriteSector
+            }
+            
+            // Sector 4
+            val today = NSDate().toFormat("ddMMyyyy")
+            val sector4Blocks = mapOf(
+                16 to stringToHex(data["totalBuy"] ?: "0"),
+                17 to today,
+                18 to stringToHex(data["password"] ?: "")
+            )
+            
+            authenticateAndWriteSector(tag, 4, sector4Blocks) { success4 ->
+                if (!success4) {
+                    manager.onWriteResult?.invoke(false, "Sector 4 Write Failed")
+                    session.invalidateSession()
+                    return@authenticateAndWriteSector
                 }
                 
-                when (status) {
-                    NFCNDEFStatusNotSupported -> {
-                        session.invalidateSessionWithErrorMessage("Tag is not NDEF compliant.")
+                // Sector 5
+                val sector5Blocks = mapOf(
+                    20 to stringToHex(data["cardType"] ?: "")
+                )
+                
+                authenticateAndWriteSector(tag, 5, sector5Blocks) { success5 ->
+                    if (!success5) {
+                        manager.onWriteResult?.invoke(false, "Sector 5 Write Failed")
+                    } else {
+                        manager.onWriteResult?.invoke(true, "Write Success")
                     }
-                    NFCNDEFStatusReadOnly -> {
-                        if (manager.onWriteResult != null || manager.onClearResult != null) {
-                             session.invalidateSessionWithErrorMessage("Tag is read-only.")
-                        } else {
-                            readTag(tag)
-                        }
-                    }
-                    NFCNDEFStatusReadWrite -> {
-                        if (manager.onWriteResult != null) {
-                            writeTag(session, tag, manager.pendingWriteData ?: emptyMap())
-                        } else if (manager.onClearResult != null) {
-                            clearTag(session, tag)
-                        } else {
-                            readTag(tag)
-                        }
-                    }
-                    else -> session.invalidateSessionWithErrorMessage("Unknown NDEF status.")
+                    session.invalidateSession()
                 }
             }
         }
     }
-    
-    private fun readTag(tag: NFCNDEFTagProtocol) {
-        tag.readNDEFWithCompletionHandler { message: NFCNDEFMessage?, error: NSError? ->
-            if (error != null || message == null) {
-                manager.onReadResult?.invoke(false, null, "Read failed: ${error?.localizedDescription}")
-                return@readNDEFWithCompletionHandler
+
+    private fun processClear(session: NFCTagReaderSession, tag: NFCMifareTagProtocol) {
+        val emptyBlocks3 = mapOf(12 to "00000000000000000000000000000000", 13 to "00000000000000000000000000000000", 14 to "00000000000000000000000000000000")
+        authenticateAndWriteSector(tag, 3, emptyBlocks3) { success3 ->
+            val emptyBlocks4 = mapOf(16 to "00000000000000000000000000000000", 17 to "00000000000000000000000000000000", 18 to "00000000000000000000000000000000")
+            authenticateAndWriteSector(tag, 4, emptyBlocks4) { success4 ->
+                val emptyBlocks5 = mapOf(20 to "00000000000000000000000000000000")
+                authenticateAndWriteSector(tag, 5, emptyBlocks5) { success5 ->
+                    manager.onClearResult?.invoke(true, "Card Cleared")
+                    session.invalidateSession()
+                }
             }
-            processRead(message)
-        }
-    }
-    
-    private fun processRead(message: NFCNDEFMessage) {
-        val data = mutableMapOf<String, String>()
-        
-        message.records.forEach { record ->
-             record as NFCNDEFPayload
-             val text = parseTextRecord(record)
-             val parts = text.split(":", limit = 2)
-             if (parts.size == 2) {
-                 data[parts[0]] = parts[1]
-             }
-        }
-
-        detectedTag.value = message 
-        manager.onReadResult?.invoke(true, data, "Read Success")
-    }
-    
-    private fun writeTag(session: NFCNDEFReaderSession, tag: NFCNDEFTagProtocol, dataMap: Map<String, String>) {
-         val records = dataMap.map { (key, value) ->
-             createTextRecord("$key:$value")
-         }
-         
-         val message = NFCNDEFMessage(nDEFRecords = records)
-         
-         tag.writeNDEF(message) { error: NSError? ->
-             if (error != null) {
-                 manager.onWriteResult?.invoke(false, "Write failed: ${error.localizedDescription}")
-             } else {
-                 manager.onWriteResult?.invoke(true, "Write Success")
-                 session.alertMessage = "Write Success"
-                 session.invalidateSession()
-             }
-         }
-    }
-    
-    private fun clearTag(session: NFCNDEFReaderSession, tag: NFCNDEFTagProtocol) {
-         val emptyMessage = NFCNDEFMessage(nDEFRecords = emptyList<NFCNDEFPayload>())
-         tag.writeNDEF(emptyMessage) { error: NSError? ->
-             if (error != null) {
-                 manager.onClearResult?.invoke(false, "Clear failed: ${error.localizedDescription}")
-             } else {
-                 manager.onClearResult?.invoke(true, "Cleared Successfully")
-                 session.alertMessage = "Cleared"
-                 session.invalidateSession()
-             }
-         }
-    }
-
-    private fun parseTextRecord(payload: NFCNDEFPayload): String {
-        val data = payload.payload.toByteArray()
-        if (data.isEmpty()) return ""
-        
-        val status = data[0].toInt()
-        val langLength = status and 0x3F
-        
-        return if (data.size > 1 + langLength) {
-             val textBytes = data.copyOfRange(1 + langLength, data.size)
-             textBytes.decodeToString() 
-        } else {
-            ""
         }
     }
 
-    private fun createTextRecord(text: String): NFCNDEFPayload {
-        val lang = "en"
-        val langBytes = lang.encodeToByteArray()
-        val textBytes = text.encodeToByteArray()
-        
-        val payloadData = ByteArray(1 + langBytes.size + textBytes.size)
-        payloadData[0] = langBytes.size.toByte() 
-        
-        langBytes.copyInto(payloadData, 1)
-        textBytes.copyInto(payloadData, 1 + langBytes.size)
-        
-        val nsData = payloadData.toNSData()
+    private fun processDelete(session: NFCTagReaderSession, tag: NFCMifareTagProtocol) = processClear(session, tag)
 
-        return NFCNDEFPayload(
-            format = NFCTypeNameFormatNFCWellKnown,
-            type = "T".encodeToByteArray().toNSData(),
-            identifier = ByteArray(0).toNSData(),
-            payload = nsData
-        )
+    private fun authenticateAndReadSector(tag: NFCMifareTagProtocol, sector: Int, onResult: (Boolean, Map<Int, String>) -> Unit) {
+        rotateAuthenticate(tag, sector, 0) { success ->
+            if (!success) {
+                onResult(false, emptyMap())
+                return@rotateAuthenticate
+            }
+            
+            val data = mutableMapOf<Int, String>()
+            val blocks = when(sector) {
+                3 -> listOf(12, 13, 14)
+                4 -> listOf(16, 17, 18)
+                5 -> listOf(20)
+                else -> emptyList()
+            }
+            
+            readMultipleBlocks(tag, blocks, 0, data) {
+                onResult(true, data)
+            }
+        }
+    }
+
+    private fun authenticateAndWriteSector(tag: NFCMifareTagProtocol, sector: Int, blockData: Map<Int, String>, onResult: (Boolean) -> Unit) {
+        rotateAuthenticate(tag, sector, 0) { success ->
+            if (!success) {
+                onResult(false)
+                return@rotateAuthenticate
+            }
+            
+            writeMultipleBlocks(tag, blockData.toList(), 0) {
+                onResult(true)
+            }
+        }
+    }
+
+    private fun rotateAuthenticate(tag: NFCMifareTagProtocol, sector: Int, keyIndex: Int, onResult: (Boolean) -> Unit) {
+        if (keyIndex >= commonKeys.size) {
+            onResult(false)
+            return
+        }
+        
+        val keyData = commonKeys[keyIndex].toNSData()
+        tag.mifareClassicAuthenticateWithSector(sector.toLong(), NFCMifareKeyTypeA, keyData) { error: NSError? ->
+            if (error == null) {
+                onResult(true)
+            } else {
+                // Try Key B
+                tag.mifareClassicAuthenticateWithSector(sector.toLong(), NFCMifareKeyTypeB, keyData) { errorB: NSError? ->
+                    if (errorB == null) {
+                        onResult(true)
+                    } else {
+                        rotateAuthenticate(tag, sector, keyIndex + 1, onResult)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun readMultipleBlocks(tag: NFCMifareTagProtocol, blocks: List<Int>, index: Int, results: MutableMap<Int, String>, onComplete: () -> Unit) {
+        if (index >= blocks.size) {
+            onComplete()
+            return
+        }
+        
+        val blockIndex = blocks[index]
+        tag.mifareClassicReadBlockAtIndex(blockIndex.toLong()) { data: NSData?, error: NSError? ->
+            if (error == null && data != null) {
+                results[blockIndex] = data.toByteArray().toHexWithSpaces()
+            } else {
+                results[blockIndex] = ""
+            }
+            readMultipleBlocks(tag, blocks, index + 1, results, onComplete)
+        }
+    }
+
+    private fun writeMultipleBlocks(tag: NFCMifareTagProtocol, blocks: List<Pair<Int, String>>, index: Int, onComplete: () -> Unit) {
+        if (index >= blocks.size) {
+            onComplete()
+            return
+        }
+        
+        val (blockIndex, hexData) = blocks[index]
+        val bytes = ByteArray(16)
+        val dataBytes = hexData.hexToByteArray()
+        dataBytes.copyInto(bytes, 0, 0, minOf(dataBytes.size, 16))
+        
+        tag.mifareClassicWriteBlockAtIndex(blockIndex.toLong(), bytes.toNSData()) { error: NSError? ->
+            writeMultipleBlocks(tag, blocks, index + 1, onComplete)
+        }
+    }
+
+    // Helper conversion methods
+    private fun smartDecode(hexStr: String): String {
+        val ascii = hexToString(hexStr.replace(" ", ""))
+        val cleanAscii = ascii.trimNulls()
+        
+        val hasControlChars = cleanAscii.any { it.code < 32 && it.code != 0 }
+        val rawInput = hexStr.replace(" ", "").replace("00", "")
+        
+        if (hasControlChars || (rawInput.isNotEmpty() && cleanAscii.isEmpty())) {
+             val sb = StringBuilder()
+             val parts = hexStr.trim().split(" ")
+             for (p in parts) {
+                 if (p == "00") break
+                 sb.append(p)
+             }
+             return sb.toString()
+        }
+        return cleanAscii
+    }
+
+    private fun hexToString(hex: String): String {
+        val cleanHex = hex.replace(" ", "")
+        val result = StringBuilder()
+        var i = 0
+        while (i < cleanHex.length - 1) {
+            val str = cleanHex.substring(i, i + 2)
+            try {
+                val charCode = str.toInt(16)
+                if (charCode != 0) result.append(charCode.toChar())
+            } catch (e: Exception) {}
+            i += 2
+        }
+        return result.toString()
+    }
+
+    private fun stringToHex(input: String): String = 
+        input.encodeToByteArray().toHex()
+
+    private fun formatHexDate(hex: String): String {
+        val clean = hex.replace(" ", "")
+        if (clean.length >= 8) {
+            val d = clean.substring(0, 2)
+            val m = clean.substring(2, 4)
+            val y = clean.substring(4, 8)
+             if (d.all { it.isDigit() } && m.all { it.isDigit() } && y.all { it.isDigit() }) {
+                 return "$d-$m-$y"
+             }
+        }
+        return ""
+    }
+
+    private fun String.trimNulls(): String = 
+        this.filter { it != '\u0000' }.trim()
+
+    private fun ByteArray.toHex(): String = 
+        joinToString("") { it.toUByte().toString(16).padStart(2, '0').uppercase() }
+
+    private fun ByteArray.toHexWithSpaces(): String = 
+        joinToString(" ") { it.toUByte().toString(16).padStart(2, '0').uppercase() }
+
+    private fun String.hexToByteArray(): ByteArray {
+        val s = this.replace(" ", "")
+        val len = s.length
+        val data = ByteArray(len / 2)
+        var i = 0
+        while (i < len) {
+            data[i / 2] = ((s[i].digitToInt(16) shl 4) + s[i+1].digitToInt(16)).toByte()
+            i += 2
+        }
+        return data
     }
     
+    private fun NSDate.toFormat(format: String): String {
+        val formatter = NSDateFormatter()
+        formatter.dateFormat = format
+        return formatter.stringFromDate(this)
+    }
+
     private fun ByteArray.toNSData(): NSData = memScoped {
-        if (this@toNSData.isEmpty()) return NSData()
-        return NSData.create(bytes = this@toNSData.refTo(0).getPointer(this), length = this@toNSData.size.toULong())
+        if (isEmpty()) return NSData()
+        return NSData.create(bytes = refTo(0).getPointer(this), length = size.toULong())
     }
     
-    private fun NSData.toByteArray(): ByteArray = ByteArray(this.length.toInt()).apply {
-        if (this@toByteArray.length > 0u) {
-            usePinned {
-               memcpy(it.addressOf(0), this@toByteArray.bytes, this@toByteArray.length)
-            }
+    private fun NSData.toByteArray(): ByteArray {
+        val length = length.toInt()
+        val result = ByteArray(length)
+        if (length > 0) {
+            memcpy(result.refTo(0), bytes, length.toULong())
+        }
+        return result
+    }
+}
+
+@Composable
+actual fun rememberNfcManager(): NfcManager {
+    val manager = remember { IosNfcManager() }
+    DisposableEffect(Unit) {
+        onDispose {
+            manager.stopScanning()
         }
     }
+    return manager
 }
 
 @Composable
