@@ -216,7 +216,7 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
                 if (writeError != null) {
                     manager.onWriteResult?.invoke(false, "NDEF Write Failed: ${writeError.localizedDescription}")
                 } else {
-                    manager.onWriteResult?.invoke(true, "Logo URL written successfully via NDEF!")
+                    manager.onWriteResult?.invoke(true, "Logo URL written successfully!")
                 }
                 session.invalidateSession()
             }

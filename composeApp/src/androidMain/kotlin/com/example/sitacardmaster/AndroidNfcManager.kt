@@ -296,7 +296,7 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                         } else {
                             ndef.writeNdefMessage(message)
                             success = true
-                            resultMessage = "Logo URL written successfully via NDEF!"
+                            resultMessage = "Logo URL written successfully!"
                             platformLog("SITACardMaster", "✅ NDEF Write Success")
                         }
                     }
