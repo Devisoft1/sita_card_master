@@ -17,6 +17,7 @@ interface NfcManager {
         cardType: String,
         onResult: (Boolean, String) -> Unit
     )
+    fun writeLogoUrl(url: String, onResult: (Boolean, String) -> Unit)
     fun readCard(onResult: (Boolean, Map<String, String>?, String) -> Unit)
     fun clearCard(onResult: (Boolean, String) -> Unit)
     fun deleteCardData(onResult: (Boolean, String) -> Unit)

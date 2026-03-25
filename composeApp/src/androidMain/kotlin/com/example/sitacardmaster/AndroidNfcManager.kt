@@ -6,7 +6,10 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.nfc.NfcAdapter
 import android.nfc.Tag
+import android.nfc.NdefMessage
+import android.nfc.NdefRecord
 import android.nfc.tech.MifareClassic
+import android.nfc.tech.Ndef
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -264,6 +267,78 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
             // Callback AFTER closing connection
             onResult(success, resultMessage)
         }.start()
+    }
+
+    override fun writeLogoUrl(url: String, onResult: (Boolean, String) -> Unit) {
+        val tag = detectedTag.value
+        if (tag == null) {
+            onResult(false, "No card detected. Please tap a card.")
+            return
+        }
+
+        // Try NDEF first
+        val ndef = Ndef.get(tag)
+        if (ndef != null) {
+            Thread {
+                var success = false
+                var resultMessage = ""
+                try {
+                    platformLog("SITACardMaster", "🔗 Preparing to write URL via NDEF: '$url'")
+                    ndef.connect()
+                    if (!ndef.isWritable) {
+                        resultMessage = "Tag is read-only"
+                    } else {
+                        val uriRecord = NdefRecord.createUri(url)
+                        val message = NdefMessage(arrayOf(uriRecord))
+                        
+                        if (ndef.maxSize < message.byteArrayLength) {
+                            resultMessage = "Data too large for tag (Max: ${ndef.maxSize}b, Data: ${message.byteArrayLength}b)"
+                        } else {
+                            ndef.writeNdefMessage(message)
+                            success = true
+                            resultMessage = "Logo URL written successfully via NDEF!"
+                            platformLog("SITACardMaster", "✅ NDEF Write Success")
+                        }
+                    }
+                } catch (e: Exception) {
+                    platformLog("SITACardMaster", "❌ NDEF Write Error: ${e.message}")
+                    resultMessage = "NDEF Error: ${e.message}"
+                } finally {
+                    try { if (ndef.isConnected) ndef.close() } catch (e: Exception) {}
+                }
+                onResult(success, resultMessage)
+            }.start()
+            return
+        }
+
+        // Fallback to Mifare Classic Block 21 if it's a Mifare Classic tag but not NDEF formatted
+        val mifare = MifareClassic.get(tag as Tag)
+        if (mifare != null) {
+            Thread {
+                var success = false
+                var resultMessage = ""
+                try {
+                    platformLog("SITACardMaster", "⚠️ NDEF not supported, falling back to Mifare Classic Block 21")
+                    mifare.connect()
+                    if (authenticateSector(mifare, 5)) {
+                        platformLog("SITACardMaster", "Writing Logo URL (Hex) to Block 21: $url")
+                        writeHexBlock(mifare, 21, stringToHex(url))
+                        success = true
+                        resultMessage = "Logo URL written to Block 21 (Legacy)!"
+                    } else {
+                        resultMessage = "Authentication failed for Sector 5."
+                    }
+                } catch (e: Exception) {
+                    platformLog("SITACardMaster", "Write Logo URL Error: ${e.message}")
+                    resultMessage = "Error: ${e.message}"
+                } finally {
+                    try { if (mifare.isConnected) mifare.close() } catch (e: Exception) {}
+                }
+                onResult(success, resultMessage)
+            }.start()
+        } else {
+            onResult(false, "This tag does not support NDEF or Mifare Classic.")
+        }
     }
 
     override fun readCard(onResult: (Boolean, Map<String, String>?, String) -> Unit) {

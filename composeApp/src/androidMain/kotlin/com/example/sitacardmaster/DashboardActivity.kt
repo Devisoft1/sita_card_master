@@ -15,22 +15,23 @@ import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.constraintlayout.widget.ConstraintLayout
 import com.google.android.material.card.MaterialCardView
 import com.example.sitacardmaster.R
 import com.google.android.material.snackbar.Snackbar
 import com.example.sitacardmaster.network.MemberApiClient
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.EditText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-
 class DashboardActivity : AppCompatActivity() {
 
     private lateinit var nfcManager: AndroidNfcManager
     private var isScanning = false
-    private var isDeleteMode = false // Added
+    private var isDeleteMode = false 
     private val scope = CoroutineScope(Dispatchers.Main)
     private val memberApiClient = MemberApiClient()
 
@@ -43,7 +44,7 @@ class DashboardActivity : AppCompatActivity() {
     private lateinit var displayCompany: TextView
     private lateinit var displayValidUpto: TextView
     private lateinit var displayTotalBuy: TextView
-    private lateinit var displayAmount: TextView // Restored
+    private lateinit var displayAmount: TextView 
     private lateinit var displayAddress: TextView
     private lateinit var displayPhone: TextView
     private lateinit var displayEmail: TextView
@@ -52,12 +53,12 @@ class DashboardActivity : AppCompatActivity() {
     private lateinit var premiumMemberLabel: TextView
     private lateinit var newCardButton: Button
     private lateinit var clearButton: Button
-    private lateinit var deleteCardButton: Button // Added
+    private lateinit var deleteCardButton: Button 
     private lateinit var stopScanButton: Button
-    private lateinit var scanStatus: TextView // Added
+    private lateinit var writeLogoUrlButton: Button
+    private lateinit var scanStatus: TextView 
     private lateinit var dashboardScroll: ScrollView
     
-    // Error Views
     private lateinit var errorContainer: LinearLayout
     private lateinit var errorText: TextView
     
@@ -68,7 +69,6 @@ class DashboardActivity : AppCompatActivity() {
             statusSnackbar("No card detected")
         }
     }
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,9 +94,10 @@ class DashboardActivity : AppCompatActivity() {
         premiumMemberLabel = findViewById(R.id.premiumMemberLabel)
         newCardButton = findViewById(R.id.newCardButton)
         clearButton = findViewById(R.id.clearButton)
-        deleteCardButton = findViewById(R.id.deleteCardButton) // Added
+        deleteCardButton = findViewById(R.id.deleteCardButton) 
+        writeLogoUrlButton = findViewById(R.id.writeLogoUrlButton)
         stopScanButton = findViewById(R.id.stopScanButton)
-        scanStatus = findViewById(R.id.scanStatus) // Added
+        scanStatus = findViewById(R.id.scanStatus) 
         dashboardScroll = findViewById(R.id.dashboardScroll)
         
         errorContainer = findViewById(R.id.errorContainer)
@@ -106,44 +107,27 @@ class DashboardActivity : AppCompatActivity() {
         val backButton = findViewById<ImageButton>(R.id.backButton)
         val titleText = findViewById<TextView>(R.id.appBarTitle)
 
-        // Hide back button on dashboard
         backButton.visibility = View.GONE
 
         val sharedPref = getSharedPreferences("login_prefs", Context.MODE_PRIVATE)
         val adminId = sharedPref.getString("adminId", "Admin")
-        val authToken = sharedPref.getString("authToken", "")
         val logoUrl = sharedPref.getString("logoUrl", null)
         titleText.text = adminId ?: "Admin"
         
-        // LOG: Retrieved logo URL from SharedPreferences
-        logAction("Dashboard - Retrieved Logo URL from SharedPreferences: $logoUrl")
+        logAction("Dashboard - Retrieved Logo URL: $logoUrl")
 
-        // Load shop logo from URL if available
         if (!logoUrl.isNullOrEmpty()) {
-            // Convert relative path to full URL
-            val fullLogoUrl = if (logoUrl.startsWith("http")) {
-                logoUrl
-            } else {
-                "https://apisita.shanti-pos.com$logoUrl"
-            }
-            
-            logAction("Dashboard - Attempting to load logo from URL: $fullLogoUrl")
+            val fullLogoUrl = if (logoUrl.startsWith("http")) logoUrl else "https://apisita.shanti-pos.com$logoUrl"
             try {
-                val imageLoader = coil.ImageLoader.Builder(this)
-                    .build()
+                val imageLoader = coil.ImageLoader.Builder(this).build()
                 val request = coil.request.ImageRequest.Builder(this)
                     .data(fullLogoUrl)
                     .target(
-                        onStart = {
-                            logAction("Dashboard - Logo loading started")
-                        },
                         onSuccess = { result ->
                             logoCard.setImageDrawable(result)
-                            logAction("Dashboard - Logo loaded successfully from: $fullLogoUrl")
                         },
-                        onError = { error ->
+                        onError = {
                             logoCard.setImageResource(R.drawable.logo)
-                            logAction("Dashboard - Logo loading failed: ${error?.toString()}, using default logo")
                         }
                     )
                     .placeholder(R.drawable.logo)
@@ -151,79 +135,52 @@ class DashboardActivity : AppCompatActivity() {
                     .build()
                 imageLoader.enqueue(request)
             } catch (e: Exception) {
-                // Fallback to default logo on error
-                logAction("Dashboard - Exception loading logo: ${e.message}, using default logo")
                 logoCard.setImageResource(R.drawable.logo)
             }
         } else {
-            // Use default logo if no URL available
-            logAction("Dashboard - No logo URL available, using default logo")
             logoCard.setImageResource(R.drawable.logo)
         }
 
-        // Verify/Fetch latest profile
-        // Removed as per request - relying on stored session
-        // if (!authToken.isNullOrEmpty()) { ... }
-
-        // Removed backButton.setOnClickListener logic as the button is hidden in the dashboard
-
-        logoCard.setOnClickListener {
-            startScanMode()
-        }
-
-        stopScanButton.setOnClickListener {
-            stopScanMode()
-        }
-
+        logoCard.setOnClickListener { startScanMode() }
+        stopScanButton.setOnClickListener { stopScanMode() }
         newCardButton.setOnClickListener {
             val intent = Intent(this, IssueCardActivity::class.java)
             startActivity(intent)
         }
-
-        clearButton.setOnClickListener {
-            resetUI()
-        }
-
-        deleteCardButton.setOnClickListener {
-            startDeleteMode()
+        clearButton.setOnClickListener { resetUI() }
+        deleteCardButton.setOnClickListener { startDeleteMode() }
+        writeLogoUrlButton.setOnClickListener {
+            val intent = Intent(this, WriteUrlActivity::class.java)
+            startActivity(intent)
         }
 
         logoutButton.setOnClickListener {
             val sharedPref = getSharedPreferences("login_prefs", Context.MODE_PRIVATE)
             sharedPref.edit().putBoolean("isLoggedIn", false).apply()
-            
             val intent = Intent(this, LoginActivity::class.java)
             startActivity(intent)
             finish()
         }
         
-        // Click listeners for contact fields
         displayAddress.setOnClickListener {
             val address = displayAddress.text.toString()
-            if (address.isNotBlank() && address != "N/A") {
-                openLocationInMaps(address)
-            }
+            if (address.isNotBlank() && address != "N/A") openLocationInMaps(address)
         }
         
         displayPhone.setOnClickListener {
             val phone = displayPhone.text.toString()
-            if (phone.isNotBlank() && phone != "N/A") {
-                openDialer(phone)
-            }
+            if (phone.isNotBlank() && phone != "N/A") openDialer(phone)
         }
         
         displayEmail.setOnClickListener {
             val email = displayEmail.text.toString()
-            if (email.isNotBlank() && email != "N/A") {
-                openEmailApp(email)
-            }
+            if (email.isNotBlank() && email != "N/A") openEmailApp(email)
         }
 
         findViewById<View>(R.id.llPoweredBy).setOnClickListener {
             val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://devisoft.co.in"))
             startActivity(intent)
         }
-        
     }
 
     private fun startScanMode() {
@@ -234,36 +191,32 @@ class DashboardActivity : AppCompatActivity() {
         stopScanButton.visibility = View.VISIBLE
         detailsContainer.visibility = View.GONE
         newCardButton.visibility = View.GONE
+        writeLogoUrlButton.visibility = View.GONE
         clearButton.visibility = View.GONE
-        deleteCardButton.visibility = View.GONE // Added
+        deleteCardButton.visibility = View.GONE 
         errorContainer.visibility = View.GONE
-        scanStatus.visibility = View.GONE // Reset
+        scanStatus.visibility = View.GONE 
         
         logAction("Scanning started")
-        
-        // Auto-stop after 1 minute
         scanTimeoutHandler.postDelayed(scanTimeoutRunnable, 60000)
-        
         nfcManager.startScanning()
     }
 
     private fun startDeleteMode() {
         isScanning = true
         isDeleteMode = true
-        scanInstruction.text = "TAP CARD TO DELETE DATA..." // Different instruction
+        scanInstruction.text = "TAP CARD TO DELETE DATA..." 
         scanProgress.visibility = View.VISIBLE
         stopScanButton.visibility = View.VISIBLE
         detailsContainer.visibility = View.GONE
         newCardButton.visibility = View.GONE
+        writeLogoUrlButton.visibility = View.GONE
         clearButton.visibility = View.GONE
         deleteCardButton.visibility = View.GONE
         errorContainer.visibility = View.GONE
         
         logAction("Delete mode started")
-        
-        // Auto-stop after 1 minute
         scanTimeoutHandler.postDelayed(scanTimeoutRunnable, 60000)
-        
         nfcManager.startScanning()
     }
 
@@ -273,17 +226,11 @@ class DashboardActivity : AppCompatActivity() {
         scanProgress.visibility = View.GONE
         stopScanButton.visibility = View.GONE
         newCardButton.visibility = View.VISIBLE
+        writeLogoUrlButton.visibility = View.VISIBLE
         clearButton.visibility = View.VISIBLE
-        deleteCardButton.visibility = View.VISIBLE // Added
-        // Notice: We don't hide scanStatus here automatically if we want to show a message
-        
+        deleteCardButton.visibility = View.VISIBLE
         logAction("Scanning stopped")
-        
-
-        
-        // Clear timeout
         scanTimeoutHandler.removeCallbacks(scanTimeoutRunnable)
-        
         nfcManager.stopScanning()
     }
 
@@ -292,18 +239,12 @@ class DashboardActivity : AppCompatActivity() {
         if (isScanning) {
             nfcManager.onNewIntent(intent)
             val tag = intent.getParcelableExtra<Tag>(NfcAdapter.EXTRA_TAG)
-            if (tag != null) {
-                processCard()
-            }
+            if (tag != null) processCard()
         }
     }
 
     private fun processCard() {
-        if (isDeleteMode) {
-            processDelete()
-        } else {
-            processRead()
-        }
+        if (isDeleteMode) processDelete() else processRead()
     }
 
     private fun processRead() {
@@ -313,21 +254,18 @@ class DashboardActivity : AppCompatActivity() {
             runOnUiThread {
                 stopScanMode()
                 if (success && data != null) {
-                    // Member exists
                     logAction("Card read success: ${data["memberId"]}")
                     showCardDetails(data)
                 } else if (success && data == null) {
-                    // Blank card
                     logAction("Card read success: Blank card")
                     scanStatus.text = "Blank card - No data found"
                     scanStatus.visibility = View.VISIBLE
-                    scanStatus.setTextColor(getColor(R.color.error_red)) // Changed to red
+                    scanStatus.setTextColor(getColor(R.color.error_red))
                 } else {
-                    // Error
                     logAction("Card read error: $message")
                     scanStatus.text = message
                     scanStatus.visibility = View.VISIBLE
-                    scanStatus.setTextColor(getColor(R.color.error_red)) // Error color
+                    scanStatus.setTextColor(getColor(R.color.error_red))
                 }
             }
         }
@@ -342,15 +280,13 @@ class DashboardActivity : AppCompatActivity() {
                 logAction("Card delete $message")
                 scanStatus.text = message
                 scanStatus.visibility = View.VISIBLE
-                scanStatus.setTextColor(getColor(R.color.error_red)) // Always red as requested
+                scanStatus.setTextColor(getColor(R.color.error_red))
                 resetUI()
             }
         }
     }
 
     private fun showCardDetails(data: Map<String, String>) {
-
-
         detailsContainer.visibility = View.VISIBLE
         val cardType = data["cardType"] ?: "Membership"
         premiumMemberLabel.text = cardType.uppercase()
@@ -360,9 +296,8 @@ class DashboardActivity : AppCompatActivity() {
         displayValidUpto.text = formatDate(data["validUpto"])
         val amountFormatter = java.text.DecimalFormat("#,###.00")
         displayTotalBuy.text = "₹${amountFormatter.format((data["totalBuy"] ?: "0.00").toDoubleOrNull() ?: 0.0)}"
-        displayAmount.text = "Loading..." // Restored
+        displayAmount.text = "Loading..." 
         
-        // Hide extra details while loading
         displayAddress.visibility = View.GONE
         displayPhone.visibility = View.GONE
         displayEmail.visibility = View.GONE
@@ -372,8 +307,7 @@ class DashboardActivity : AppCompatActivity() {
         scope.launch {
             val memberId = data["memberId"] ?: ""
             val companyName = data["companyName"] ?: ""
-            
-            logAction("API Request - Verifying Member: ID='$memberId', Company='$companyName'")
+            logAction("API Request - Verifying Member: ID='$memberId'")
             
             if (memberId.isNotBlank()) {
                 val cardMfid = data["card_mfid"] ?: ""
@@ -381,41 +315,25 @@ class DashboardActivity : AppCompatActivity() {
                 val password = data["password"] ?: ""
 
                 val result = withContext(Dispatchers.IO) {
-                    memberApiClient.verifyMember(
-                        memberId = memberId, 
-                        companyName = companyName,
-                        password = password,
-                        cardMfid = cardMfid,
-                        cardValidity = cardValidity
-                    )
+                    memberApiClient.verifyMember(memberId, companyName, password, cardMfid, cardValidity)
                 }
                 result.fold(
                     onSuccess = { response ->
-                        // Prioritize Card-Specific Data from the cards list
                         val scannedMfid = data["card_mfid"] ?: ""
                         val matchingCard = response.cards?.find { it.card_mfid.equals(scannedMfid, ignoreCase = true) }
                         
                         if (matchingCard != null) {
-                            logAction("Found Matching Card: $scannedMfid. Using card-specific data.")
                             val displayTotal = if (matchingCard.cardTotal > 0) matchingCard.cardTotal else if (response.cardTotal > 0) response.cardTotal else response.currentTotal
                             displayTotalBuy.text = "₹${amountFormatter.format(displayTotal)}" 
-                            displayAmount.text = "₹${amountFormatter.format(response.globalTotal)}" // Global Total
+                            displayAmount.text = "₹${amountFormatter.format(response.globalTotal)}"
                         } else {
-                            logAction("No matching card found in member's cards list ($scannedMfid).")
                             displayTotalBuy.text = "₹${amountFormatter.format(response.currentTotal)}" 
                             displayAmount.text = "₹${amountFormatter.format(response.globalTotal)}" 
                         }
                         displayValidUpto.text = formatDate(response.validity)
+                        if (!response.companyName.isNullOrBlank()) displayCompany.text = response.companyName
+                        if (!response.memberId.isNullOrBlank()) displayMemberId.text = response.memberId
                         
-                        // Ensure Company Name is updated from API (fixes garbage data issue)
-                        if (!response.companyName.isNullOrBlank()) {
-                            displayCompany.text = response.companyName
-                        }
-                        if (!response.memberId.isNullOrBlank()) {
-                            displayMemberId.text = response.memberId
-                        }
-                        
-                        // Bind Contact Info
                         bindValue(displayAddress, response.companyAddress)
                         bindValue(displayPhone, response.phoneNumber)
                         bindValue(displayEmail, response.email)
@@ -424,120 +342,68 @@ class DashboardActivity : AppCompatActivity() {
                     },
                     onFailure = { error ->
                         val errorMessage = error.message ?: "Verification failed"
-                        
-                        // CRITICAL: If the error is about a duplicate card, STOP and do NOT proceed to fallback.
-                        if (errorMessage.contains("already registered", ignoreCase = true) || 
-                            errorMessage.contains("different member", ignoreCase = true)) {
-                            
-                            logAction("API Blocked: $errorMessage")
+                        if (errorMessage.contains("already registered", ignoreCase = true) || errorMessage.contains("different member", ignoreCase = true)) {
                             runOnUiThread {
                                 com.google.android.material.dialog.MaterialAlertDialogBuilder(this@DashboardActivity)
-                                    .setTitle("Card Error")
-                                    .setMessage(errorMessage)
-                                    .setPositiveButton("OK", null)
-                                    .show()
+                                    .setTitle("Card Error").setMessage(errorMessage).setPositiveButton("OK", null).show()
                                 displayAmount.text = "BLOCKED: $errorMessage"
                                 displayAmount.setTextColor(resources.getColor(R.color.error_red, theme))
                             }
-                            return@fold
-                        }
-
-                        // Fallback: If strict verification failed (e.g., 404 or data mismatch), try fetching by ID only.
-                        logAction("Verification using card data was not possible: $errorMessage. Attempting fallback lookup by ID: $memberId")
-                        
-                        scope.launch {
-                             val fallbackResult = withContext(Dispatchers.IO) {
-                                 memberApiClient.getMemberById(memberId)
-                             }
-                             
-                             fallbackResult.fold(
-                                 onSuccess = { response ->
-                                     logAction("Fallback Success! Member found by ID.")
-                                     
-                                     // Prioritize Card-Specific Data (Fallback)
-                                     val scannedMfid = data["card_mfid"] ?: ""
-                                     val matchingCard = response.cards?.find { it.card_mfid.equals(scannedMfid, ignoreCase = true) }
-                                     
-                                     if (matchingCard != null) {
-                                         logAction("Fallback: Found Matching Card: $scannedMfid.")
-                                         val displayTotal = if (matchingCard.cardTotal > 0) matchingCard.cardTotal else if (response.cardTotal > 0) response.cardTotal else response.currentTotal
-                                         displayTotalBuy.text = "₹${amountFormatter.format(displayTotal)}" 
-                                         displayAmount.text = "₹${amountFormatter.format(response.globalTotal)}" // Global Total
-                                     } else {
-                                         logAction("Fallback: No matching card found for $scannedMfid.")
-                                         displayTotalBuy.text = "₹${amountFormatter.format(response.currentTotal)}"
-                                         displayAmount.text = "₹${amountFormatter.format(response.globalTotal)}"
-                                     }
-                                     displayValidUpto.text = formatDate(response.validity)
-
-                                     // Ensure Company Name is updated from API (Critical for fallback)
-                                     if (!response.companyName.isNullOrBlank()) {
-                                         displayCompany.text = response.companyName
-                                     }
-                                     if (!response.memberId.isNullOrBlank()) {
-                                         displayMemberId.text = response.memberId
-                                     }
-                                     
-                                     bindValue(displayAddress, response.companyAddress)
-                                     bindValue(displayPhone, response.phoneNumber)
-                                     bindValue(displayEmail, response.email)
-                                     bindValue(displayWebsite, response.website)
-                                     bindValue(displayWhatsapp, response.whatsapp)
-                                     
-                                     // Ensure error is hidden if fallback works
-                                     errorContainer.visibility = View.GONE
-                                 },
-                                 onFailure = { fallbackError ->
-                                     logAction("Fallback Failed: ${fallbackError.message}")
-                                     runOnUiThread {
-                                         showError(errorMessage) // Show the original verification error
-                                     }
-                                 }
-                             )
+                        } else {
+                            scope.launch {
+                                val fallbackResult = withContext(Dispatchers.IO) { memberApiClient.getMemberById(memberId) }
+                                fallbackResult.fold(
+                                    onSuccess = { response ->
+                                        val scannedMfid = data["card_mfid"] ?: ""
+                                        val matchingCard = response.cards?.find { it.card_mfid.equals(scannedMfid, ignoreCase = true) }
+                                        if (matchingCard != null) {
+                                            val displayTotal = if (matchingCard.cardTotal > 0) matchingCard.cardTotal else if (response.cardTotal > 0) response.cardTotal else response.currentTotal
+                                            displayTotalBuy.text = "₹${amountFormatter.format(displayTotal)}" 
+                                            displayAmount.text = "₹${amountFormatter.format(response.globalTotal)}"
+                                        } else {
+                                            displayTotalBuy.text = "₹${amountFormatter.format(response.currentTotal)}"
+                                            displayAmount.text = "₹${amountFormatter.format(response.globalTotal)}"
+                                        }
+                                        displayValidUpto.text = formatDate(response.validity)
+                                        if (!response.companyName.isNullOrBlank()) displayCompany.text = response.companyName
+                                        if (!response.memberId.isNullOrBlank()) displayMemberId.text = response.memberId
+                                        bindValue(displayAddress, response.companyAddress)
+                                        bindValue(displayPhone, response.phoneNumber)
+                                        bindValue(displayEmail, response.email)
+                                        bindValue(displayWebsite, response.website)
+                                        bindValue(displayWhatsapp, response.whatsapp)
+                                        errorContainer.visibility = View.GONE
+                                    },
+                                    onFailure = { runOnUiThread { showError(errorMessage) } }
+                                )
+                            }
                         }
                     }
                 )
             } else {
-                logAction("API Skipped: Member ID is blank")
                 displayTotalBuy.text = "N/A"
-                displayAmount.text = "N/A" // Restored
+                displayAmount.text = "N/A" 
                 displayValidUpto.text = "N/A"
             }
         }
 
-
-
-        // Auto-scroll to details
-        dashboardScroll.post {
-            dashboardScroll.smoothScrollTo(0, detailsContainer.top)
-        }
+        dashboardScroll.post { dashboardScroll.smoothScrollTo(0, detailsContainer.top) }
     }
     
     private fun showError(message: String) {
-
-
         detailsContainer.visibility = View.VISIBLE
         errorContainer.visibility = View.VISIBLE
         errorText.text = message
-        
-        // Auto-scroll to details so user sees the data
-        dashboardScroll.post {
-            dashboardScroll.smoothScrollTo(0, detailsContainer.top)
-        }
+        dashboardScroll.post { dashboardScroll.smoothScrollTo(0, detailsContainer.top) }
     }
     
     private fun resetUI() {
-         // Reset UI to initial state
         detailsContainer.visibility = View.GONE
         errorContainer.visibility = View.GONE
-
-
-
         scanInstruction.text = "Tap logo to scan card"
     }
 
     private fun statusSnackbar(message: String) {
-        logAction("Showing Snackbar: $message")
         Snackbar.make(findViewById(android.R.id.content), message, Snackbar.LENGTH_LONG)
             .setBackgroundTint(resources.getColor(R.color.brand_blue, theme))
             .setTextColor(resources.getColor(R.color.white, theme))
@@ -555,21 +421,17 @@ class DashboardActivity : AppCompatActivity() {
 
     private fun formatDate(dateStr: String?): String {
         if (dateStr.isNullOrBlank()) return "N/A"
-        
         val inputFormats = arrayOf("yyyy-MM-dd", "dd-MM-yyyy", "dd/MM/yyyy")
         val outputFormat = java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault())
-        
         for (format in inputFormats) {
             try {
                 val sdf = java.text.SimpleDateFormat(format, java.util.Locale.getDefault())
                 sdf.isLenient = false
                 val date = sdf.parse(dateStr)
                 if (date != null) return outputFormat.format(date)
-            } catch (e: Exception) {
-                // Try next format
-            }
+            } catch (e: Exception) { }
         }
-        return dateStr // Return original if all parsing fails
+        return dateStr 
     }
 
     private fun openLocationInMaps(address: String) {
@@ -577,20 +439,9 @@ class DashboardActivity : AppCompatActivity() {
             val geoUri = Uri.parse("geo:0,0?q=${Uri.encode(address)}")
             val intent = Intent(Intent.ACTION_VIEW, geoUri)
             intent.setPackage("com.google.android.apps.maps")
-            
-            if (intent.resolveActivity(packageManager) != null) {
-                startActivity(intent)
-                logAction("Opened location in Maps: $address")
-            } else {
-                // Fallback to browser if Maps app not available
-                val browserIntent = Intent(Intent.ACTION_VIEW, geoUri)
-                startActivity(browserIntent)
-                logAction("Opened location in browser: $address")
-            }
-        } catch (e: Exception) {
-            logAction("Error opening maps: ${e.message}")
-            statusSnackbar("Could not open maps")
-        }
+            if (intent.resolveActivity(packageManager) != null) startActivity(intent)
+            else startActivity(Intent(Intent.ACTION_VIEW, geoUri))
+        } catch (e: Exception) { statusSnackbar("Could not open maps") }
     }
     
     private fun openDialer(phoneNumber: String) {
@@ -598,11 +449,7 @@ class DashboardActivity : AppCompatActivity() {
             val intent = Intent(Intent.ACTION_DIAL)
             intent.data = Uri.parse("tel:$phoneNumber")
             startActivity(intent)
-            logAction("Opened dialer for: $phoneNumber")
-        } catch (e: Exception) {
-            logAction("Error opening dialer: ${e.message}")
-            statusSnackbar("Could not open dialer")
-        }
+        } catch (e: Exception) { statusSnackbar("Could not open dialer") }
     }
     
     private fun openEmailApp(email: String) {
@@ -610,29 +457,20 @@ class DashboardActivity : AppCompatActivity() {
             val intent = Intent(Intent.ACTION_SENDTO)
             intent.data = Uri.parse("mailto:$email")
             startActivity(intent)
-            logAction("Opened email app for: $email")
-        } catch (e: Exception) {
-            logAction("Error opening email app: ${e.message}")
-            statusSnackbar("Could not open email app")
-        }
+        } catch (e: Exception) { statusSnackbar("Could not open email app") }
     }
     
     private fun logAction(action: String) {
         platformLog("SITACardMaster", "Dashboard: $action")
-        android.util.Log.i("SITACardMaster_Verbose", "Dashboard: $action") // Duplicate to Info log in case Debug is filtered
     }
 
     override fun onResume() {
         super.onResume()
-        if (isScanning) {
-            nfcManager.startScanning()
-        }
+        if (isScanning) nfcManager.startScanning()
     }
 
     override fun onPause() {
         super.onPause()
-        // Do NOT set isScanning = false here.
-        // Just disable NFC foreground dispatch when app is not in foreground.
         nfcManager.stopScanning()
     }
 }

@@ -50,7 +50,6 @@ class IosNfcManager : NfcManager {
         onDeleteResult = null
         pendingWriteData = null
     }
-
     override fun writeCard(
         memberId: String,
         companyName: String,
@@ -70,6 +69,13 @@ class IosNfcManager : NfcManager {
             "totalBuy" to totalBuy,
             "cardType" to cardType
         )
+        startSession()
+    }
+
+    override fun writeLogoUrl(url: String, onResult: (Boolean, String) -> Unit) {
+        cleanup()
+        onWriteResult = onResult
+        pendingWriteData = mapOf("logoUrl" to url)
         startSession()
     }
 
@@ -132,23 +138,88 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
             }
             
             // Re-interpret the tag through the NFCTag wrapper safely
-            val nfcTag = (tag as? NFCTag) ?: (tag as? NSObject)?.let { NFCTag.mifareTag(it as NFCMifareTagProtocol) }
+            val nfcTag = (tag as? NFCTag) ?: (tag as? NSObject)?.let { 
+                if (it.conformsToProtocol(NFCMifareTagProtocol)) {
+                    NFCTag.mifareTag(it as NFCMifareTagProtocol)
+                } else if (it.conformsToProtocol(NFCNDEFTagProtocol)) {
+                    // This is trickier in Kotlin/Native, we might need to handle NDEF tags specifically
+                    null
+                } else null
+            }
+
             val mifareTag = nfcTag?.asNFCMifareTag()
-            
-            if (mifareTag == null) {
-                session.invalidateSessionWithErrorMessage("Not a Mifare card.")
+            val ndefTag = nfcTag?.asNFCNDEFTag() ?: (tag as? NFCNDEFTagProtocol)
+
+            if (mifareTag == null && ndefTag == null) {
+                session.invalidateSessionWithErrorMessage("Tag not supported (Mifare/NDEF required).")
                 return@connectToTag
             }
             
-            val tagId = mifareTag.identifier().toByteArray().toHex()
+            val tagId = mifareTag?.identifier()?.toByteArray()?.toHex() 
+                        ?: (ndefTag as? NFCTagProtocol)?.let { it.description } // Fallback for NDEF tag ID if possible
+                        ?: "NDEF-TAG"
+
             detectedTagId.value = tagId
-            detectedTag.value = mifareTag
+            detectedTag.value = mifareTag ?: ndefTag
             
-            if (manager.onWriteResult != null) processWrite(session, mifareTag)
-            else if (manager.onReadResult != null) processRead(session, mifareTag)
-            else if (manager.onClearResult != null) processClear(session, mifareTag)
-            else if (manager.onDeleteResult != null) processDelete(session, mifareTag)
+            if (manager.onWriteResult != null) {
+                if (manager.pendingWriteData?.containsKey("logoUrl") == true && ndefTag != null) {
+                    processNdefWrite(session, ndefTag)
+                } else if (mifareTag != null) {
+                    processWrite(session, mifareTag)
+                } else {
+                    session.invalidateSessionWithErrorMessage("Mifare tag required for this operation.")
+                }
+            }
+            else if (manager.onReadResult != null) {
+                if (mifareTag != null) processRead(session, mifareTag)
+                else session.invalidateSessionWithErrorMessage("Mifare tag required for reading.")
+            }
+            else if (manager.onClearResult != null) {
+                if (mifareTag != null) processClear(session, mifareTag)
+                else session.invalidateSessionWithErrorMessage("Mifare tag required for clearing.")
+            }
+            else if (manager.onDeleteResult != null) {
+                if (mifareTag != null) processDelete(session, mifareTag)
+                else session.invalidateSessionWithErrorMessage("Mifare tag required for deleting.")
+            }
             else session.invalidateSession()
+        }
+    }
+
+    private fun processNdefWrite(session: NFCTagReaderSession, tag: NFCNDEFTagProtocol) {
+        val data = manager.pendingWriteData ?: return
+        val url = data["logoUrl"] ?: ""
+        
+        tag.queryNDEFStatusWithCompletionHandler { status, capacity, error ->
+            if (error != null) {
+                manager.onWriteResult?.invoke(false, "NDEF Query Failed: ${error.localizedDescription}")
+                session.invalidateSession()
+                return@queryNDEFStatusWithCompletionHandler
+            }
+            
+            if (status == NFCNdefStatusReadOnly) {
+                manager.onWriteResult?.invoke(false, "Tag is read-only")
+                session.invalidateSession()
+                return@queryNDEFStatusWithCompletionHandler
+            }
+            
+            val uriRecord = NFCNdefPayload.wellKnownTypeURIPayloadWithString(url)
+            if (uriRecord == null) {
+                manager.onWriteResult?.invoke(false, "Failed to create URI payload")
+                session.invalidateSession()
+                return@queryNDEFStatusWithCompletionHandler
+            }
+            
+            val message = NFCNdefMessage(listOf(uriRecord))
+            tag.writeNDEF(message) { writeError ->
+                if (writeError != null) {
+                    manager.onWriteResult?.invoke(false, "NDEF Write Failed: ${writeError.localizedDescription}")
+                } else {
+                    manager.onWriteResult?.invoke(true, "Logo URL written successfully via NDEF!")
+                }
+                session.invalidateSession()
+            }
         }
     }
 
@@ -184,6 +255,7 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
                 authenticateAndReadSector(tag, 5) { success5, sector5Data ->
                     if (success5) {
                         results["cardType"] = hexToString(sector5Data[20] ?: "").trimNulls()
+                        results["logoUrl"] = hexToString(sector5Data[21] ?: "").trimNulls()
                     }
                     manager.onReadResult?.invoke(true, results, "Read Success")
                     session.invalidateSession()
@@ -194,6 +266,18 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
 
     private fun processWrite(session: NFCTagReaderSession, tag: NFCMifareTagProtocol) {
         val data = manager.pendingWriteData ?: return
+        
+        if (data.containsKey("logoUrl")) {
+            val url = data["logoUrl"] ?: ""
+            val sector5Blocks = mapOf(21 to stringToHex(url))
+            authenticateAndWriteSector(tag, 5, sector5Blocks) { success ->
+                if (!success) manager.onWriteResult?.invoke(false, "Logo URL Write Failed")
+                else manager.onWriteResult?.invoke(true, "Logo URL Written Successfully")
+                session.invalidateSession()
+            }
+            return
+        }
+
         val sector3Blocks = mapOf(
             12 to stringToHex(data["memberId"] ?: ""),
             13 to stringToHex(data["companyName"] ?: ""),
@@ -248,7 +332,7 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
             val blocks = when(sector) {
                 3 -> listOf(12, 13, 14)
                 4 -> listOf(16, 17, 18)
-                5 -> listOf(20)
+                5 -> listOf(20, 21)
                 else -> emptyList()
             }
             readMultipleBlocks(tag, blocks, 0, data) { onResult(true, data) }

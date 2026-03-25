@@ -39,6 +39,9 @@ fun DashboardScreen(
     var isDeleteMode by remember { mutableStateOf(false) }
     var cardData by remember { mutableStateOf<Map<String, String>?>(null) }
     var scanStatus by remember { mutableStateOf("") }
+    var isUrlWriteMode by remember { mutableStateOf(false) }
+    var logoUrlInput by remember { mutableStateOf("") }
+    var showUrlInputDialog by remember { mutableStateOf(false) }
     
     // API Integration
     val apiClient = remember { MemberApiClient() }
@@ -67,6 +70,23 @@ fun DashboardScreen(
                     }
                     isScanning = false
                     isDeleteMode = false // Reset mode
+                }
+                return@LaunchedEffect
+            }
+
+            if (isUrlWriteMode) {
+                platformLog("Dashboard", "Writing Logo URL: $logoUrlInput")
+                scanStatus = "Writing Logo URL..."
+                nfcManager.writeLogoUrl(logoUrlInput) { success, message ->
+                    if (success) {
+                        scanStatus = "Logo URL written successfully"
+                        platformLog("Dashboard", "Logo URL write success")
+                    } else {
+                        scanStatus = "Write Failed: $message"
+                        platformLog("Dashboard", "Logo URL write failed: $message")
+                    }
+                    isScanning = false
+                    isUrlWriteMode = false
                 }
                 return@LaunchedEffect
             }
@@ -219,12 +239,60 @@ fun DashboardScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
-                        onClick = { isScanning = false; nfcManager.stopScanning() },
+                        onClick = { 
+                            isScanning = false
+                            isDeleteMode = false
+                            isUrlWriteMode = false
+                            nfcManager.stopScanning() 
+                        },
                         colors = ButtonDefaults.buttonColors(containerColor = grayText)
                     ) {
                         Text("Stop Scanning")
                     }
                 }
+            }
+            
+            if (showUrlInputDialog) {
+                AlertDialog(
+                    onDismissRequest = { showUrlInputDialog = false },
+                    title = { Text("Enter Logo URL", fontWeight = FontWeight.Bold, color = brandBlue) },
+                    text = {
+                        Column {
+                            Text("Enter the URL for the logo record.", style = MaterialTheme.typography.bodySmall, color = grayText)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            OutlinedTextField(
+                                value = logoUrlInput,
+                                onValueChange = { logoUrlInput = it },
+                                label = { Text("URL") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp),
+                                singleLine = true
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = { 
+                                if (logoUrlInput.isNotEmpty()) {
+                                    showUrlInputDialog = false
+                                    isScanning = true
+                                    isUrlWriteMode = true
+                                    scanStatus = "READY TO WRITE URL... TAP CARD"
+                                    nfcManager.startScanning()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = brandBlue)
+                        ) {
+                            Text("ENTER")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showUrlInputDialog = false }) {
+                            Text("Cancel")
+                        }
+                    },
+                    containerColor = Color.White
+                )
             }
 
             // Error Display Section
@@ -431,6 +499,23 @@ fun DashboardScreen(
             ) {
                 Text(
                     text = "ISSUE NEW CARD",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+
+            Button(
+                onClick = { showUrlInputDialog = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .padding(bottom = 8.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)) // Greenish for distinction
+            ) {
+                Text(
+                    text = "WRITE LOGO URL",
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                     style = MaterialTheme.typography.labelSmall

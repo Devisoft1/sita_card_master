@@ -26,6 +26,10 @@ class IosNfcManager : NfcManager {
         onResult(false, "NFC not supported on Simulator")
     }
 
+    override fun writeLogoUrl(url: String, onResult: (Boolean, String) -> Unit) {
+        onResult(false, "NFC not supported on Simulator")
+    }
+
     override fun readCard(onResult: (Boolean, Map<String, String>?, String) -> Unit) {
         onResult(false, null, "NFC not supported on Simulator")
     }

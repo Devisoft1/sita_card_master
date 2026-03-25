@@ -23,6 +23,7 @@
 
         <activity android:name=".DashboardActivity" />
         <activity android:name=".IssueCardActivity" />
+        <activity android:name=".WriteUrlActivity" />
     </application>
 
 </manifest>
