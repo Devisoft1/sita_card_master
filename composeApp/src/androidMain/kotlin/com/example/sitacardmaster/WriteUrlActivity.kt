@@ -25,7 +25,29 @@ class WriteUrlActivity : AppCompatActivity() {
     private lateinit var stopScanButton: Button
     private lateinit var scanProgress: ProgressBar
     private lateinit var statusMessage: TextView
+    private lateinit var timerText: TextView
     private lateinit var tapCardHint: TextView
+    
+    private var secondsElapsed = 0
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val timeoutRunnable = Runnable {
+        if (isScanning) {
+            logAction("Scan timeout reached (60s)")
+            stopScanMode()
+            statusMessage.text = "No card detected"
+            statusMessage.setTextColor(getColor(R.color.error_red))
+        }
+    }
+    private val timerRunnable = object : Runnable {
+        override fun run() {
+            if (isScanning) {
+                secondsElapsed++
+                val remaining = 60 - secondsElapsed
+                timerText.text = "Time Elapsed:${remaining}s"
+                handler.postDelayed(this, 1000)
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,6 +60,7 @@ class WriteUrlActivity : AppCompatActivity() {
         stopScanButton = findViewById(R.id.stopScanButton)
         scanProgress = findViewById(R.id.scanProgress)
         statusMessage = findViewById(R.id.statusMessage)
+        timerText = findViewById(R.id.timerText)
         tapCardHint = findViewById(R.id.tapCardHint)
 
         val backButton = findViewById<ImageButton>(R.id.backButton)
@@ -82,19 +105,31 @@ class WriteUrlActivity : AppCompatActivity() {
         stopScanButton.visibility = View.VISIBLE
         scanProgress.visibility = View.VISIBLE
         tapCardHint.visibility = View.VISIBLE
-        statusMessage.text = "READY TO WRITE... TAP CARD"
+        statusMessage.text = "Ready to write"
         statusMessage.setTextColor(getColor(R.color.brand_blue))
+        timerText.text = "Time Elapsed: 60s"
+        timerText.visibility = View.VISIBLE
+        secondsElapsed = 0
         urlInput.isEnabled = false
         nfcManager.startScanning()
-        logAction("NFC scan mode started")
+        
+        handler.postDelayed(timeoutRunnable, 60000)
+        handler.postDelayed(timerRunnable, 1000)
+        
+        logAction("NFC scan mode started with 60s timeout")
     }
 
     private fun stopScanMode() {
         isScanning = false
+        handler.removeCallbacks(timeoutRunnable)
+        handler.removeCallbacks(timerRunnable)
+        
         startScanButton.visibility = View.VISIBLE
         stopScanButton.visibility = View.GONE
         scanProgress.visibility = View.GONE
         tapCardHint.visibility = View.GONE
+        timerText.visibility = View.GONE
+        
         statusMessage.text = "Ready to write"
         statusMessage.setTextColor(getColor(R.color.gray_text))
         urlInput.isEnabled = true

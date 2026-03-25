@@ -22,6 +22,9 @@ class IosNfcManager : NfcManager {
     internal var onDeleteResult: ((Boolean, String) -> Unit)? = null
     
     internal var pendingWriteData: Map<String, String>? = null
+    
+    private var scanTimer: NSTimer? = null
+    private var secondsElapsed = 0
 
     override fun startScanning() {
         cleanup()
@@ -30,17 +33,43 @@ class IosNfcManager : NfcManager {
 
     override fun stopScanning() {
         session?.invalidateSession()
+        stopTimer()
         cleanup()
     }
     
     private fun startSession() {
+        secondsElapsed = 0
         session = NFCTagReaderSession(
             pollingOption = NFCPollingISO14443 or NFCPollingISO15693,
             delegate = delegate,
             queue = null
         )
-        session?.alertMessage = "Hold your iPhone near the card."
+        session?.alertMessage = "Hold your iPhone near the card. (Time Elapsed: 60s)"
         session?.beginSession()
+        
+        startTimer()
+    }
+
+    private fun startTimer() {
+        stopTimer()
+        scanTimer = NSTimer.scheduledTimerWithTimeInterval(1.0, true) {
+            secondsElapsed++
+            val remaining = 60 - secondsElapsed
+            val timeStr = "Time Elapsed: ${remaining}s"
+            
+            if (secondsElapsed >= 60) {
+                session?.invalidateSessionWithErrorMessage("No card detected (60s timeout)")
+                stopTimer()
+                manager.onWriteResult?.invoke(false, "No card detected")
+            } else {
+                session?.alertMessage = "Hold your iPhone near the card. ($timeStr)"
+            }
+        }
+    }
+
+    private fun stopTimer() {
+        scanTimer?.invalidate()
+        scanTimer = null
     }
 
     private fun cleanup() {
@@ -126,6 +155,7 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
         }
         detectedTag.value = null
         detectedTagId.value = null
+        manager.stopTimer()
     }
 
     override fun tagReaderSession(session: NFCTagReaderSession, didDetectTags: List<*>) {
@@ -136,6 +166,8 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
                 session.invalidateSessionWithErrorMessage("Connect failed: ${error.localizedDescription}")
                 return@connectToTag
             }
+            
+            manager.stopTimer()
             
             // Re-interpret the tag through the NFCTag wrapper safely
             val nfcTag = (tag as? NFCTag) ?: (tag as? NSObject)?.let { 

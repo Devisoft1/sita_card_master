@@ -99,6 +99,18 @@
                             android:textColor="@color/gray_text"
                             android:textSize="@dimen/_12ssp"
                             android:gravity="center"
+                            android:layout_marginBottom="@dimen/_4sdp" />
+
+                        <TextView
+                            android:id="@+id/timerText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="00:00"
+                            android:textColor="@color/brand_blue"
+                            android:textSize="@dimen/_14ssp"
+                            android:textStyle="bold"
+                            android:gravity="center"
+                            android:visibility="gone"
                             android:layout_marginBottom="@dimen/_12sdp" />
 
                         <ProgressBar
