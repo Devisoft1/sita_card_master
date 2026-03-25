@@ -42,6 +42,12 @@ class LoginActivity : AppCompatActivity() {
         val loginButton = findViewById<Button>(R.id.loginButton)
         val errorText = findViewById<TextView>(R.id.errorText)
         val rememberMe = findViewById<CheckBox>(R.id.rememberMe)
+        val llPoweredBy = findViewById<View>(R.id.llPoweredBy)
+
+        llPoweredBy.setOnClickListener {
+            val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://devisoft.co.in"))
+            startActivity(intent)
+        }
 
         // Pre-fill saved credentials
         val savedAdminId = sharedPref.getString("adminId", "")

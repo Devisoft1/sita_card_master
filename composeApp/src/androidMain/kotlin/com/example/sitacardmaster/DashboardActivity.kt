@@ -218,6 +218,11 @@ class DashboardActivity : AppCompatActivity() {
                 openEmailApp(email)
             }
         }
+
+        findViewById<View>(R.id.llPoweredBy).setOnClickListener {
+            val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://devisoft.co.in"))
+            startActivity(intent)
+        }
         
     }
 
