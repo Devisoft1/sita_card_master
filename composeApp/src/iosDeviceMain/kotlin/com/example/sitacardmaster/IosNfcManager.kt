@@ -261,7 +261,7 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
 
         authenticateAndReadSector(tag, 3) { success3, sector3Data ->
             if (!success3) {
-                manager.onReadResult?.invoke(false, null, "Sector 3 Authentication Failed")
+                manager.onReadResult?.invoke(false, null, "Card Authentication Failed")
                 session.invalidateSession()
                 return@authenticateAndReadSector
             }
@@ -318,7 +318,7 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
         
         authenticateAndWriteSector(tag, 3, sector3Blocks) { success3 ->
             if (!success3) {
-                manager.onWriteResult?.invoke(false, "Sector 3 Write Failed")
+                manager.onWriteResult?.invoke(false, "Card Write Failed")
                 session.invalidateSession()
                 return@authenticateAndWriteSector
             }
@@ -332,14 +332,14 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
             
             authenticateAndWriteSector(tag, 4, sector4Blocks) { success4 ->
                 if (!success4) {
-                    manager.onWriteResult?.invoke(false, "Sector 4 Write Failed")
+                    manager.onWriteResult?.invoke(false, "Card Write Failed")
                     session.invalidateSession()
                     return@authenticateAndWriteSector
                 }
                 
                 val sector5Blocks = mapOf(20 to stringToHex(data["cardType"] ?: ""))
                 authenticateAndWriteSector(tag, 5, sector5Blocks) { success5 ->
-                    if (!success5) manager.onWriteResult?.invoke(false, "Sector 5 Write Failed")
+                    if (!success5) manager.onWriteResult?.invoke(false, "Card Write Failed")
                     else manager.onWriteResult?.invoke(true, "Write Success")
                     session.invalidateSession()
                 }

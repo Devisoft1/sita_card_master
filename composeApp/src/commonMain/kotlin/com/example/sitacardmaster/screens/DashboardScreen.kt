@@ -15,6 +15,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Message
+import androidx.compose.ui.platform.LocalUriHandler
 import com.example.sitacardmaster.NfcManager
 import com.example.sitacardmaster.network.MemberApiClient
 import com.example.sitacardmaster.platformLog
@@ -42,21 +49,28 @@ fun DashboardScreen(
     var isUrlWriteMode by remember { mutableStateOf(false) }
     var logoUrlInput by remember { mutableStateOf("") }
     var showUrlInputDialog by remember { mutableStateOf(false) }
-    
+
     // API Integration
     val apiClient = remember { MemberApiClient() }
     val scope = rememberCoroutineScope()
     var currentAmount by remember { mutableStateOf<String?>("Loading...") }
     var globalAmount by remember { mutableStateOf<String?>("0.00") }
 
+    val uriHandler = LocalUriHandler.current
+    var apiResponse by remember {
+        mutableStateOf<com.example.sitacardmaster.network.models.VerifyMemberResponse?>(
+            null
+        )
+    }
+
     // Verified Member State
     var verificationError by remember { mutableStateOf<String?>(null) }
-    
+
     // Logic to handle scan results
     val detectedTag by nfcManager.detectedTag
     LaunchedEffect(detectedTag) {
         if (isScanning && detectedTag != null) {
-            
+
             if (isDeleteMode) {
                 platformLog("Dashboard", "Processing card deletion...")
                 scanStatus = "Deleting data..."
@@ -95,45 +109,64 @@ fun DashboardScreen(
             nfcManager.readCard { success, data, message ->
                 if (success) {
                     cardData = data
-                    scanStatus = if (data == null) "No data in the card" else "Card read successfully"
+                    scanStatus =
+                        if (data == null) "No data in the card" else "Card read successfully"
                     platformLog("Dashboard", "Card read success: ${data?.get("memberId")}")
-                    
+
                     // Fetch Amount from API
                     if (data != null) {
                         val memberId = data["memberId"] ?: ""
                         val companyName = data["companyName"] ?: ""
-                        platformLog("Dashboard", "Fetching Amount for ID: $memberId, Company: $companyName")
-                        
+                        platformLog(
+                            "Dashboard",
+                            "Fetching Amount for ID: $memberId, Company: $companyName"
+                        )
+
                         currentAmount = "Loading..."
                         verificationError = null // Reset error before new request
-                        
+
                         val password = data["password"] ?: ""
                         scope.launch {
-                             val result = apiClient.verifyMember(memberId, companyName, password)
-                             result.fold(
-                                 onSuccess = { response ->
-                                     val scannedMfid = data["card_mfid"] ?: ""
-                                     val matchingCard = response.cards?.find { it.card_mfid.equals(scannedMfid, ignoreCase = true) }
-                                     
-                                     if (matchingCard != null) {
-                                         // Use cardTotal from matchingCard if available, otherwise from response root, otherwise currentTotal
-                                         val displayTotal = if (matchingCard.cardTotal > 0) matchingCard.cardTotal else if (response.cardTotal > 0) response.cardTotal else response.currentTotal
-                                         currentAmount = formatAmount(displayTotal)
-                                         globalAmount = formatAmount(response.globalTotal)
-                                         platformLog("Dashboard", "Card-specific balance: $displayTotal (from cards list or fallback)")
-                                     } else {
-                                         currentAmount = formatAmount(response.globalTotal)
-                                         globalAmount = formatAmount(response.currentTotal)
-                                         platformLog("Dashboard", "No matching card. Fallback to global totals.")
-                                     }
-                                 },
-                                 onFailure = { error ->
-                                     currentAmount = "N/A"
-                                     globalAmount = "N/A"
-                                     verificationError = error.message ?: "Member verification failed"
-                                     platformLog("Dashboard", "Amount fetch error: ${error.message}")
-                                 }
-                             )
+                            val result = apiClient.verifyMember(memberId, companyName, password)
+                            result.fold(
+                                onSuccess = { response ->
+                                    apiResponse = response
+                                    val scannedMfid = data["card_mfid"] ?: ""
+                                    val matchingCard = response.cards?.find {
+                                        it.card_mfid.equals(
+                                            scannedMfid,
+                                            ignoreCase = true
+                                        )
+                                    }
+
+                                    if (matchingCard != null) {
+                                        // Use cardTotal from matchingCard if available, otherwise from response root, otherwise currentTotal
+                                        val displayTotal =
+                                            if (matchingCard.cardTotal > 0) matchingCard.cardTotal else if (response.cardTotal > 0) response.cardTotal else response.currentTotal
+                                        currentAmount = formatAmount(displayTotal)
+                                        globalAmount = formatAmount(response.globalTotal)
+                                        platformLog(
+                                            "Dashboard",
+                                            "Card-specific balance: $displayTotal (from cards list or fallback)"
+                                        )
+                                    } else {
+                                        currentAmount = formatAmount(response.globalTotal)
+                                        globalAmount = formatAmount(response.currentTotal)
+                                        platformLog(
+                                            "Dashboard",
+                                            "No matching card. Fallback to global totals."
+                                        )
+                                    }
+                                },
+                                onFailure = { error ->
+                                    apiResponse = null
+                                    currentAmount = "N/A"
+                                    globalAmount = "N/A"
+                                    verificationError =
+                                        error.message ?: "Member verification failed"
+                                    platformLog("Dashboard", "Amount fetch error: ${error.message}")
+                                }
+                            )
                         }
                     }
                 } else {
@@ -144,6 +177,7 @@ fun DashboardScreen(
             }
         }
     }
+
 
     // 1-minute auto-timeout
     LaunchedEffect(isScanning) {
@@ -327,6 +361,7 @@ fun DashboardScreen(
                             onClick = {
                                 // Reset all states
                                 cardData = null
+                                apiResponse = null
                                 verificationError = null
                                 currentAmount = "Loading..."
                                 scanStatus = ""
@@ -475,6 +510,55 @@ fun DashboardScreen(
                                          )
                                      }
                                 }
+                                
+                                if (apiResponse != null) {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Surface(
+                                        color = Color.White.copy(alpha = 0.1f),
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(modifier = Modifier.padding(16.dp)) {
+                                            apiResponse?.companyAddress?.let { address ->
+                                                if (address.isNotBlank()) {
+                                                    DashboardInfoRow(Icons.Default.LocationOn, address) {
+                                                        try { uriHandler.openUri("geo:0,0?q=$address") } catch (e: Exception) { }
+                                                    }
+                                                }
+                                            }
+                                            apiResponse?.phoneNumber?.let { phone ->
+                                                if (phone.isNotBlank()) {
+                                                    DashboardInfoRow(Icons.Default.Phone, phone) {
+                                                        try { uriHandler.openUri("tel:$phone") } catch (e: Exception) { }
+                                                    }
+                                                }
+                                            }
+                                            apiResponse?.email?.let { email ->
+                                                if (email.isNotBlank()) {
+                                                    DashboardInfoRow(Icons.Default.Email, email) {
+                                                        try { uriHandler.openUri("mailto:$email") } catch (e: Exception) { }
+                                                    }
+                                                }
+                                            }
+                                            apiResponse?.website?.let { website ->
+                                                if (website.isNotBlank()) {
+                                                    DashboardInfoRow(Icons.Default.Language, website) {
+                                                        val url = if (website.startsWith("http")) website else "https://$website"
+                                                        try { uriHandler.openUri(url) } catch (e: Exception) { }
+                                                    }
+                                                }
+                                            }
+                                            apiResponse?.whatsapp?.let { whatsapp ->
+                                                if (whatsapp.isNotBlank()) {
+                                                    DashboardInfoRow(Icons.Default.Message, whatsapp) {
+                                                        val cleanWhatsapp = whatsapp.replace(Regex("[^0-9]"), "")
+                                                        try { uriHandler.openUri("https://wa.me/$cleanWhatsapp") } catch (e: Exception) { }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -550,6 +634,7 @@ fun DashboardScreen(
                 Button(
                     onClick = {
                         cardData = null
+                        apiResponse = null
                         verificationError = null
                         currentAmount = "Loading..."
                         globalAmount = "0.00"
@@ -576,7 +661,7 @@ fun DashboardScreen(
 
 
 fun formatAmount(amount: Any?): String {
-    if (amount == null) return "0.00"
+    if (amount == null) return "₹0.00"
     
     val doubleValue = when (amount) {
         is Double -> amount
@@ -608,5 +693,33 @@ fun DetailRow(label: String, value: String, valueColor: Color) {
     Column {
         Text(label, color = Color(0xFF666666), style = MaterialTheme.typography.bodySmall)
         Text(value, color = valueColor, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+fun DashboardInfoRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    text: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = Color(0xFFFFD700),
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = text,
+            color = Color.White,
+            style = MaterialTheme.typography.bodyMedium
+        )
     }
 }

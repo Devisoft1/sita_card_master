@@ -164,9 +164,40 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                             cardAlreadyIssuedErrorMessage = error
                             nfcManager.stopScanning()
                         } else {
-                            statusMessage = "Error: $error"
-                            scanningMode = ScanMode.None
-                            nfcManager.stopScanning()
+                            platformLog("IssueCardScreen", "Verification using card data was not possible: $error. Attempting fallback lookup by ID: $memberId")
+                            val fallbackResult = apiClient.getMemberById(memberId)
+                            
+                            if (fallbackResult.isSuccess) {
+                                platformLog("IssueCardScreen", "Fallback Success! Member found by ID.")
+                                statusMessage = "Fallback Verified! Writing to Card..."
+                                nfcManager.writeCard(
+                                    memberId = memberId,
+                                    companyName = selectedCompanyName,
+                                    password = password,
+                                    validUpto = validUpto,
+                                    totalBuy = totalBuy,
+                                    cardType = cardType,
+                                    onResult = { success, message ->
+                                        statusMessage = message
+                                        scanningMode = ScanMode.None
+                                        if (success) {
+                                            companySearchQuery = ""
+                                            selectedCompanyName = ""
+                                            password = ""
+                                            memberId = ""
+                                            validUpto = ""
+                                            showMemberInfoCard = false
+                                            statusMessage = "Card Issued Successfully. Ready for next."
+                                            nfcManager.stopScanning()
+                                        }
+                                    }
+                                )
+                            } else {
+                                platformLog("IssueCardScreen", "Fallback Failed: ${fallbackResult.exceptionOrNull()?.message}")
+                                statusMessage = "Error: $error"
+                                scanningMode = ScanMode.None
+                                nfcManager.stopScanning()
+                            }
                         }
                     }
                 }

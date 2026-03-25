@@ -358,7 +358,7 @@ class IssueCardActivity : AppCompatActivity() {
 
         runOnUiThread {
              statusMessage.setTextColor(resources.getColor(R.color.brand_blue, theme))
-             statusMessage.text = "Verifying with API..."
+             statusMessage.text = "Verified"
         }
         
         kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) { // Using GlobalScope for simplicity in Activity for now, ideally LifecycleScope

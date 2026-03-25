@@ -640,37 +640,35 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                 platformLog("SITACardMaster", "Connecting to clear card...")
                 mifare.connect()
 
-                if (authenticateSector(mifare, 3)) {
-                    platformLog("SITACardMaster", "Clearing Sector 3...")
-                    writeBlock(mifare, 12, "")
-                    writeBlock(mifare, 13, "")
-                    writeBlock(mifare, 14, "")
+                    if (authenticateSector(mifare, 3)) {
+                        platformLog("SITACardMaster", "Clearing card data...")
+                        writeBlock(mifare, 12, "")
+                        writeBlock(mifare, 13, "")
+                        writeBlock(mifare, 14, "")
 
-                    if (authenticateSector(mifare, 4)) {
-                        platformLog("SITACardMaster", "Clearing Sector 4...")
-                        writeBlock(mifare, 16, "")
-                        writeBlock(mifare, 17, "")
-                        writeBlock(mifare, 18, "") // Also clear password block
-                        
-                        if (authenticateSector(mifare, 5)) {
-                            platformLog("SITACardMaster", "Clearing Sector 5...")
-                            writeBlock(mifare, 20, "")
-                            success = true
-                            resultMessage = "Card cleared successfully."
+                        if (authenticateSector(mifare, 4)) {
+                            platformLog("SITACardMaster", "Clearing card data...")
+                            writeBlock(mifare, 16, "")
+                            writeBlock(mifare, 17, "")
+                            writeBlock(mifare, 18, "") // Also clear password block
+                            
+                            if (authenticateSector(mifare, 5)) {
+                                platformLog("SITACardMaster", "Clearing card data...")
+                                writeBlock(mifare, 20, "")
+                                success = true
+                                resultMessage = "Card cleared successfully."
+                            } else {
+                                success = false
+                                resultMessage = "Failed to auth card."
+                            }
                         } else {
-                            // Sector 5 auth failed but others succeeded, still good enough for a clear?
-                            // Let's be strict for now.
                             success = false
-                            resultMessage = "Failed to auth Sector 5."
+                            resultMessage = "Failed to auth card."
                         }
                     } else {
                         success = false
-                        resultMessage = "Failed to auth Sector 4."
+                        resultMessage = "Failed to auth card."
                     }
-                } else {
-                    success = false
-                    resultMessage = "Failed to auth Sector 3."
-                }
             } catch (e: Exception) {
                 platformLog("SITACardMaster", "Clear Error: ${e.message}")
                 success = false
@@ -711,7 +709,7 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
 
                 for (sector in sectorsToWipe) {
                     if (authenticateSector(mifare, sector)) {
-                        platformLog("SITACardMaster", "Wiping Sector $sector...")
+                        platformLog("SITACardMaster", "Wiping card data...")
                         val firstBlock = mifare.sectorToBlock(sector)
                         val numBlocks = mifare.getBlockCountInSector(sector)
                         
@@ -729,10 +727,10 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
 
                 if (sectorsWiped > 0) {
                     success = true
-                    resultMessage = "Card data deleted successfully ($sectorsWiped sectors wiped)."
+                    resultMessage = "Card data deleted successfully."
                 } else {
                     success = false
-                    resultMessage = "Failed to authenticate any sectors for deletion."
+                    resultMessage = "Failed to authenticate card for deletion."
                 }
 
             } catch (e: Exception) {
