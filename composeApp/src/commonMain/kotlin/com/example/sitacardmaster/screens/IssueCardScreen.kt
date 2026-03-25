@@ -504,7 +504,7 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                                         return@Button
                                     }
                                     scanningMode = ScanMode.Writing
-                                    statusMessage = "Scanning... Tap Card"
+                                    statusMessage = "Scanning..."
                                     nfcManager.startScanning()
                                 },
                                 modifier = Modifier
@@ -521,7 +521,7 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                             Button(
                                 onClick = {
                                     scanningMode = ScanMode.Clearing
-                                    statusMessage = "Tap Card to Clear Data..."
+                                    statusMessage = "Clearing Data..."
                                     nfcManager.startScanning()
                                 },
                                 modifier = Modifier

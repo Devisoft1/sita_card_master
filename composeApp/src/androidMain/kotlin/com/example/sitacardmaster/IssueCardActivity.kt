@@ -265,7 +265,7 @@ class IssueCardActivity : AppCompatActivity() {
     private fun startScanning() {
         isScanning = true
         statusMessage.setTextColor(resources.getColor(R.color.brand_blue, theme))
-        statusMessage.text = "Scanning... Tap Card"
+        statusMessage.text = "Scanning..."
         scanProgress.visibility = View.VISIBLE
         tapCardHint.visibility = View.VISIBLE
         startScanButton.visibility = View.GONE
