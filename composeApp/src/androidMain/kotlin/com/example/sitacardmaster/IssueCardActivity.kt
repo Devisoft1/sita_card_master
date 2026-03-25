@@ -323,10 +323,10 @@ class IssueCardActivity : AppCompatActivity() {
                 runOnUiThread {
                     stopScanning()
                     statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
-                    statusMessage.text = "Multiple cards detected! Please tap only one card."
+                    statusMessage.text = "Multiple cards detected! Please hold one card only."
                     com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-                        .setTitle("Multiple Cards")
-                        .setMessage("It looks like multiple cards are near the reader. Please hold only one card and try again.")
+                        .setTitle("Multiple Cards Detected")
+                        .setMessage("Multiple cards detected! Please hold one card only.")
                         .setPositiveButton("OK", null)
                         .show()
                 }

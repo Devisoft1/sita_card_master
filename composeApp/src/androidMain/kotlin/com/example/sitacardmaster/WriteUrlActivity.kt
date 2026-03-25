@@ -146,11 +146,11 @@ class WriteUrlActivity : AppCompatActivity() {
             if (nfcManager.isMultipleTagsDetected.value) {
                 runOnUiThread {
                     stopScanMode()
-                    statusMessage.text = "Multiple cards detected!"
+                    statusMessage.text = "Multiple cards detected! Please hold one card only."
                     statusMessage.setTextColor(getColor(R.color.error_red))
                     com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-                        .setTitle("Multiple Cards")
-                        .setMessage("It looks like multiple cards are near the reader. Please hold only one card and try again.")
+                        .setTitle("Multiple Cards Detected")
+                        .setMessage("Multiple cards detected! Please hold one card only.")
                         .setPositiveButton("OK", null)
                         .show()
                 }

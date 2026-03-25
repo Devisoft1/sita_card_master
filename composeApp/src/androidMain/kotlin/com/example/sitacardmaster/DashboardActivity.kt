@@ -243,8 +243,8 @@ class DashboardActivity : AppCompatActivity() {
                 runOnUiThread {
                     stopScanMode()
                     com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-                        .setTitle("Multiple Cards")
-                        .setMessage("It looks like multiple cards are near the reader. Please hold only one card and try again.")
+                        .setTitle("Multiple Cards Detected")
+                        .setMessage("Multiple cards detected! Please hold one card only.")
                         .setPositiveButton("OK", null)
                         .show()
                 }
