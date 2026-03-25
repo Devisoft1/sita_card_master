@@ -28,10 +28,17 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
 
     override val detectedTag: State<Tag?> = mutableStateOf(null)
     override val detectedTagId: State<String?> = mutableStateOf(null)
+    override val isMultipleTagsDetected: State<Boolean> = mutableStateOf(false)
+
+    private var lastTagId: String? = null
+    private var lastTagTimestamp: Long = 0
 
     override fun startScanning() {
         (detectedTag as MutableState<Tag?>).value = null
         (detectedTagId as MutableState<String?>).value = null
+        (isMultipleTagsDetected as MutableState<Boolean>).value = false
+        lastTagId = null
+        lastTagTimestamp = 0
         try {
             nfcAdapter?.enableForegroundDispatch(activity, pendingIntent, intentFilters, null)
         } catch (e: IllegalStateException) {
@@ -52,10 +59,36 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
             NfcAdapter.ACTION_TECH_DISCOVERED == intent.action ||
             NfcAdapter.ACTION_NDEF_DISCOVERED == intent.action
         ) {
+            platformLog("SITACardMaster", "MULTIPLE_CARD_CHECK: New Intent Received - Action: ${intent.action}")
+
             val tag = intent.getParcelableExtra<Tag>(NfcAdapter.EXTRA_TAG)
             var currentTagId: String? = null
             tag?.let {
                 val tagId = it.id.joinToString("") { byte -> "%02X".format(byte) }
+                
+                // Heuristic 1: Duplicate Techs (Key indicator seen in user logs)
+                val techs = it.techList
+                platformLog("SITACardMaster", "MULTIPLE_CARD_CHECK: Tag ID: $tagId, Techs: ${techs.joinToString(", ")}")
+                val uniqueTechs = techs.distinct()
+                if (techs.size != uniqueTechs.size) {
+                    platformLog("SITACardMaster", "MULTIPLE_CARD_CHECK: FAILED - Duplicate technologies detected in techList!")
+                    (isMultipleTagsDetected as MutableState<Boolean>).value = true
+                }
+
+                // Heuristic 2: Rapid ID change
+                val currentTime = System.currentTimeMillis()
+                if (lastTagId != null && lastTagId != tagId && (currentTime - lastTagTimestamp) < 4000) {
+                    platformLog("SITACardMaster", "MULTIPLE_CARD_CHECK: FAILED - Rapid ID change detected (Last: $lastTagId, Current: $tagId, Delta: ${currentTime - lastTagTimestamp}ms)")
+                    (isMultipleTagsDetected as MutableState<Boolean>).value = true
+                }
+                
+                if (!(isMultipleTagsDetected as MutableState<Boolean>).value) {
+                    platformLog("SITACardMaster", "MULTIPLE_CARD_CHECK: PASSED - No multiple cards detected.")
+                }
+                
+                lastTagId = tagId
+                lastTagTimestamp = currentTime
+                
                 currentTagId = tagId
                 val logTagId = it.id.joinToString(":") { byte -> "%02X".format(byte) }
                 platformLog("SITACardMaster", "NFC Tag Detected! ID: $logTagId")
@@ -180,11 +213,11 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
     ) {
         val tag = detectedTag.value
         if (tag == null) {
-            onResult(false, "No card detected. Please tap a card.")
+            onResult(false, "No card detected (or multiple cards present). Please tap only one card.")
             return
         }
 
-        val mifare = MifareClassic.get(tag)
+        val mifare = MifareClassic.get(tag as Tag)
         if (mifare == null) {
             onResult(false, "Not a Mifare Classic card.")
             return
@@ -272,12 +305,12 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
     override fun writeLogoUrl(url: String, onResult: (Boolean, String) -> Unit) {
         val tag = detectedTag.value
         if (tag == null) {
-            onResult(false, "No card detected. Please tap a card.")
+            onResult(false, "No card detected (or multiple cards present). Please tap only one card.")
             return
         }
 
         // Try NDEF first
-        val ndef = Ndef.get(tag)
+        val ndef = Ndef.get(tag as Tag)
         if (ndef != null) {
             Thread {
                 var success = false
@@ -345,7 +378,7 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
         val tag = detectedTag.value
         if (tag == null) {
             platformLog("SITACardMaster", "Read failed: No tag in state")
-            onResult(false, null, "No card detected.")
+            onResult(false, null, "No card detected (or multiple cards present).")
             return
         }
 

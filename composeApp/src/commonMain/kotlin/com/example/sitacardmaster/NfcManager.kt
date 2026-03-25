@@ -8,6 +8,7 @@ interface NfcManager {
     fun stopScanning()
     val detectedTag: State<Any?>
     val detectedTagId: State<String?>
+    val isMultipleTagsDetected: State<Boolean>
     fun writeCard(
         memberId: String,
         companyName: String,

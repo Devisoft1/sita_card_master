@@ -5,6 +5,7 @@ import androidx.compose.runtime.*
 class IosNfcManager : NfcManager {
     override val detectedTag: State<Any?> = mutableStateOf(null)
     override val detectedTagId: State<String?> = mutableStateOf(null)
+    override val isMultipleTagsDetected: State<Boolean> = mutableStateOf(false)
 
     override fun startScanning() {
         println("NFC Scanning not supported on Simulator")

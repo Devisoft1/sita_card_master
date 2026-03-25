@@ -238,6 +238,19 @@ class DashboardActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         if (isScanning) {
             nfcManager.onNewIntent(intent)
+            
+            if (nfcManager.isMultipleTagsDetected.value) {
+                runOnUiThread {
+                    stopScanMode()
+                    com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                        .setTitle("Multiple Cards")
+                        .setMessage("It looks like multiple cards are near the reader. Please hold only one card and try again.")
+                        .setPositiveButton("OK", null)
+                        .show()
+                }
+                return
+            }
+
             val tag = intent.getParcelableExtra<Tag>(NfcAdapter.EXTRA_TAG)
             if (tag != null) processCard()
         }

@@ -33,8 +33,9 @@ class WriteUrlActivity : AppCompatActivity() {
     private val timeoutRunnable = Runnable {
         if (isScanning) {
             logAction("Scan timeout reached (60s)")
+        
             stopScanMode()
-            statusMessage.text = "No card detected"
+            statusMessage.text = "No card detected (or multiple cards present)"
             statusMessage.setTextColor(getColor(R.color.error_red))
         }
     }
@@ -43,7 +44,7 @@ class WriteUrlActivity : AppCompatActivity() {
             if (isScanning) {
                 secondsElapsed++
                 val remaining = 60 - secondsElapsed
-                timerText.text = "Time Elapsed:${remaining}s"
+                timerText.text = "Time Elapsed : ${remaining}s"
                 handler.postDelayed(this, 1000)
             }
         }
@@ -141,6 +142,21 @@ class WriteUrlActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         if (isScanning) {
             nfcManager.onNewIntent(intent)
+            
+            if (nfcManager.isMultipleTagsDetected.value) {
+                runOnUiThread {
+                    stopScanMode()
+                    statusMessage.text = "Multiple cards detected!"
+                    statusMessage.setTextColor(getColor(R.color.error_red))
+                    com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                        .setTitle("Multiple Cards")
+                        .setMessage("It looks like multiple cards are near the reader. Please hold only one card and try again.")
+                        .setPositiveButton("OK", null)
+                        .show()
+                }
+                return
+            }
+
             val tag = intent.getParcelableExtra<Tag>(NfcAdapter.EXTRA_TAG)
             if (tag != null) {
                 logAction("NFC Tag detected, starting write process")

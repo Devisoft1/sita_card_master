@@ -282,7 +282,7 @@ class IssueCardActivity : AppCompatActivity() {
                 runOnUiThread {
                     stopScanning()
                     statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
-                    statusMessage.text = "Timeout: No card detected"
+                    statusMessage.text = "Timeout: No card detected (or multiple cards present)"
                     com.google.android.material.snackbar.Snackbar.make(
                         findViewById(android.R.id.content),
                         "Scanning timed out (60s)",
@@ -317,8 +317,23 @@ class IssueCardActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (isScanning) {
-            scanTimeoutJob?.cancel()
             nfcManager.onNewIntent(intent)
+            
+            if (nfcManager.isMultipleTagsDetected.value) {
+                runOnUiThread {
+                    stopScanning()
+                    statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+                    statusMessage.text = "Multiple cards detected! Please tap only one card."
+                    com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                        .setTitle("Multiple Cards")
+                        .setMessage("It looks like multiple cards are near the reader. Please hold only one card and try again.")
+                        .setPositiveButton("OK", null)
+                        .show()
+                }
+                return
+            }
+
+            scanTimeoutJob?.cancel()
             val tag = intent.getParcelableExtra<Tag>(NfcAdapter.EXTRA_TAG)
             if (tag != null) {
                 // Start Verification Process
