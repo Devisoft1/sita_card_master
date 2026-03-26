@@ -76,6 +76,7 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
     val brandBlue = Color(0xFF2D2F91)
     val surfaceGray = Color(0xFFF5F7FA)
     val white = Color.White
+    val successGreen = Color(0xFF4CAF50)
     val errorRed = Color(0xFFD32F2F)
     val grayText = Color(0xFF757575)
 
@@ -483,7 +484,11 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                         Text(
                             text = statusMessage,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = if (statusMessage.contains("Error") || statusMessage.contains("failed") || statusMessage.contains("Failed")) errorRed else grayText,
+                            color = when {
+                                statusMessage.contains("successfully", ignoreCase = true) || statusMessage.contains("Success", ignoreCase = true) -> successGreen
+                                statusMessage.contains("Error") || statusMessage.contains("failed") || statusMessage.contains("Failed") || statusMessage.contains("not detected", ignoreCase = true) -> errorRed
+                                else -> grayText
+                            },
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(bottom = 12.dp)
                         )

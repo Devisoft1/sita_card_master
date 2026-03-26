@@ -41,6 +41,7 @@ fun DashboardScreen(
     val surfaceGray = Color(0xFFF5F7FA)
     val grayText = Color(0xFF666666)
     val errorRed = Color(0xFFE53935)
+    val successGreen = Color(0xFF4CAF50)
 
     var isScanning by remember { mutableStateOf(false) }
     var isDeleteMode by remember { mutableStateOf(false) }
@@ -566,7 +567,13 @@ fun DashboardScreen(
             } else if (scanStatus.isNotEmpty() && !isScanning) {
                 Text(
                     text = scanStatus,
-                    color = grayText,
+                    color = when {
+                        scanStatus.contains("successfully", ignoreCase = true) -> successGreen
+                        scanStatus.contains("error", ignoreCase = true) || 
+                        scanStatus.contains("failed", ignoreCase = true) ||
+                        scanStatus.contains("not detected", ignoreCase = true) -> errorRed
+                        else -> grayText
+                    },
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
             }
