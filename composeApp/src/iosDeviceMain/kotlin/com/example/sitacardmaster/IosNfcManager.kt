@@ -133,6 +133,15 @@ class IosNfcManager : NfcManager {
         delegate.detectedTagId.value = null
         delegate.isMultipleTagsDetected.value = false
     }
+
+    override fun extractUrl(tag: Any?): String? {
+        val ndefTag = (tag as? NFCNDEFTagProtocol) ?: return null
+        // On iOS, we need to have read the NDEF message already or do it async.
+        // For sync extractUrl, we rely on the delegate having pre-read it or 
+        // we'd need to change the architecture. 
+        // Given the current structure, we'll return the pre-extracted URL from the delegate.
+        return delegate.detectedUrl.value
+    }
 }
 
 @OptIn(ExperimentalForeignApi::class)
@@ -140,6 +149,7 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
     val detectedTag: MutableState<Any?> = mutableStateOf(null)
     val detectedTagId: MutableState<String?> = mutableStateOf(null)
     val isMultipleTagsDetected: MutableState<Boolean> = mutableStateOf(false)
+    val detectedUrl: MutableState<String?> = mutableStateOf(null)
 
     private val commonKeys = listOf(
         byteArrayOf(0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte()),
@@ -172,6 +182,10 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
     }
 
     override fun tagReaderSession(session: NFCTagReaderSession, didDetectTags: List<*>) {
+        if (didDetectTags.size > 1) {
+            isMultipleTagsDetected.value = true
+        }
+        
         val tag = didDetectTags.firstOrNull() as? NFCTagProtocol ?: return
         
         session.connectToTag(tag) { error: NSError? ->
@@ -206,6 +220,20 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
 
             detectedTagId.value = tagId
             detectedTag.value = mifareTag ?: ndefTag
+            detectedUrl.value = null
+            
+            if (ndefTag != null) {
+                ndefTag.readNDEFWithCompletionHandler { message, error ->
+                    if (error == null && message != null) {
+                        val record = message.records.firstOrNull() as? NFCNdefPayload
+                        if (record != null && record.typeNameFormat == NFCNdefTypeNameFormatWellKnown) {
+                            // Extract URL from Well Known URI record
+                            val url = record.wellKnownTypeURIPayload()?.absoluteString
+                            detectedUrl.value = url
+                        }
+                    }
+                }
+            }
             
             if (manager.onWriteResult != null) {
                 if (manager.pendingWriteData?.containsKey("logoUrl") == true && ndefTag != null) {

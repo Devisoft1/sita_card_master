@@ -58,6 +58,7 @@ class DashboardActivity : AppCompatActivity() {
     private lateinit var writeLogoUrlButton: Button
     private lateinit var scanStatus: TextView 
     private lateinit var dashboardScroll: ScrollView
+    private lateinit var timerText: TextView
     
     private lateinit var errorContainer: LinearLayout
     private lateinit var errorText: TextView
@@ -67,6 +68,17 @@ class DashboardActivity : AppCompatActivity() {
         if (isScanning) {
             stopScanMode()
             statusSnackbar("No card detected")
+        }
+    }
+    private var secondsElapsed = 0
+    private val timerRunnable = object : Runnable {
+        override fun run() {
+            if (isScanning) {
+                secondsElapsed++
+                val remaining = 60 - secondsElapsed
+                timerText.text = "Time Elapsed : ${remaining}s"
+                scanTimeoutHandler.postDelayed(this, 1000)
+            }
         }
     }
 
@@ -97,6 +109,7 @@ class DashboardActivity : AppCompatActivity() {
         deleteCardButton = findViewById(R.id.deleteCardButton) 
         writeLogoUrlButton = findViewById(R.id.writeLogoUrlButton)
         stopScanButton = findViewById(R.id.stopScanButton)
+        timerText = findViewById(R.id.timerText)
         scanStatus = findViewById(R.id.scanStatus) 
         dashboardScroll = findViewById(R.id.dashboardScroll)
         
@@ -198,7 +211,11 @@ class DashboardActivity : AppCompatActivity() {
         scanStatus.visibility = View.GONE 
         
         logAction("Scanning started")
+        timerText.text = "Time Elapsed: 60s"
+        timerText.visibility = View.VISIBLE
+        secondsElapsed = 0
         scanTimeoutHandler.postDelayed(scanTimeoutRunnable, 60000)
+        scanTimeoutHandler.postDelayed(timerRunnable, 1000)
         nfcManager.startScanning()
     }
 
@@ -216,7 +233,11 @@ class DashboardActivity : AppCompatActivity() {
         errorContainer.visibility = View.GONE
         
         logAction("Delete mode started")
+        timerText.text = "Time Elapsed: 60s"
+        timerText.visibility = View.VISIBLE
+        secondsElapsed = 0
         scanTimeoutHandler.postDelayed(scanTimeoutRunnable, 60000)
+        scanTimeoutHandler.postDelayed(timerRunnable, 1000)
         nfcManager.startScanning()
     }
 
@@ -230,7 +251,9 @@ class DashboardActivity : AppCompatActivity() {
         clearButton.visibility = View.VISIBLE
         deleteCardButton.visibility = View.VISIBLE
         logAction("Scanning stopped")
+        timerText.visibility = View.GONE
         scanTimeoutHandler.removeCallbacks(scanTimeoutRunnable)
+        scanTimeoutHandler.removeCallbacks(timerRunnable)
         nfcManager.stopScanning()
     }
 
@@ -252,7 +275,24 @@ class DashboardActivity : AppCompatActivity() {
             }
 
             val tag = intent.getParcelableExtra<Tag>(NfcAdapter.EXTRA_TAG)
-            if (tag != null) processCard()
+            if (tag != null) {
+                val url = nfcManager.extractUrl(tag)
+                if (url != null) {
+                    logAction("URL detected on card: $url")
+                    runOnUiThread {
+                        try {
+                            stopScanMode()
+                            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                            startActivity(browserIntent)
+                        } catch (e: Exception) {
+                            logAction("Failed to open URL: ${e.message}")
+                            statusSnackbar("Failed to open URL")
+                        }
+                    }
+                    return
+                }
+                processCard()
+            }
         }
     }
 

@@ -336,6 +336,17 @@
                             android:indeterminateTint="@color/brand_blue" />
 
                         <TextView
+                            android:id="@+id/timerText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center_horizontal"
+                            android:layout_marginBottom="@dimen/_8sdp"
+                            android:text="Time Elapsed: 60s"
+                            android:textColor="@color/brand_blue"
+                            android:textSize="@dimen/_12ssp"
+                            android:visibility="gone" />
+
+                        <TextView
                             android:id="@+id/tapCardHint"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"

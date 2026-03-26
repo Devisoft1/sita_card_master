@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.sitacardmaster.R
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.cancel
@@ -43,7 +44,32 @@ class IssueCardActivity : AppCompatActivity() {
     private lateinit var cancelScanButton: Button
     private val apiClient = com.example.sitacardmaster.network.MemberApiClient()
     private val coroutineScope = kotlinx.coroutines.MainScope()
-    private var scanTimeoutJob: kotlinx.coroutines.Job? = null
+    private lateinit var timerText: TextView
+    private var secondsElapsed = 0
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val timeoutRunnable = Runnable {
+        if (isScanning) {
+            logAction("Scan timeout reached (60s)")
+            stopScanning()
+            statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+            statusMessage.text = "Timeout: No card detected"
+            com.google.android.material.snackbar.Snackbar.make(
+                findViewById(android.R.id.content),
+                "Scanning timed out (60s)",
+                com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
+            ).show()
+        }
+    }
+    private val timerRunnable = object : Runnable {
+        override fun run() {
+            if (isScanning) {
+                secondsElapsed++
+                val remaining = 60 - secondsElapsed
+                timerText.text = "Time Elapsed : ${remaining}s"
+                handler.postDelayed(this, 1000)
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,6 +94,7 @@ class IssueCardActivity : AppCompatActivity() {
         tapCardHint = findViewById(R.id.tapCardHint)
         startScanButton = findViewById(R.id.startScanButton)
         cancelScanButton = findViewById(R.id.cancelScanButton)
+        timerText = findViewById(R.id.timerText)
         val backButton = findViewById<ImageButton>(R.id.backButton)
         findViewById<TextView>(R.id.appBarTitle).text = "Issue New Card"
         findViewById<Button>(R.id.logoutButton)?.visibility = View.GONE
@@ -161,9 +188,11 @@ class IssueCardActivity : AppCompatActivity() {
             if (hasFocus) {
                 val query = companyNameInput.text.toString()
                 android.util.Log.d("IssueCardActivity", "Focused: query=$query, selected=$selectedCompanyName")
-                // Only show suggestions if text doesn't match the previously selected company
                 if (query != selectedCompanyName || query.isEmpty()) {
-                    fetchSuggestions(query)
+                    searchJob?.cancel()
+                    searchJob = coroutineScope.launch {
+                        fetchSuggestions(query)
+                    }
                 }
             }
         }
@@ -171,14 +200,16 @@ class IssueCardActivity : AppCompatActivity() {
         companyNameInput.setOnClickListener {
             val query = companyNameInput.text.toString()
             if (!companyNameInput.isPopupShowing && (query != selectedCompanyName || query.isEmpty())) {
-                fetchSuggestions(query)
+                searchJob?.cancel()
+                searchJob = coroutineScope.launch {
+                    fetchSuggestions(query)
+                }
             }
         }
 
         companyNameInput.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                searchJob?.cancel()
                 val query = s?.toString() ?: ""
                 android.util.Log.d("IssueCardActivity", "onTextChanged: query=$query")
                 
@@ -192,6 +223,7 @@ class IssueCardActivity : AppCompatActivity() {
                     if (selectedCompanyName.isNotEmpty()) {
                         selectedCompanyName = ""
                     }
+                    searchJob?.cancel()
                     searchJob = coroutineScope.launch {
                         delay(300)
                         fetchSuggestions(query)
@@ -202,13 +234,26 @@ class IssueCardActivity : AppCompatActivity() {
         })
     }
 
-    private fun fetchSuggestions(query: String) {
+    private suspend fun fetchSuggestions(query: String) {
         android.util.Log.d("IssueCardActivity", "Fetching suggestions for: $query")
-        coroutineScope.launch {
-            val result = apiClient.getApprovedMembers(query)
-            if (result.isSuccess) {
-                val members = result.getOrNull() ?: emptyList()
-                android.util.Log.d("IssueCardActivity", "Success: found ${members.size} members")
+        // Double check if query already matches selected to avoid double-opening
+        if (query.isNotEmpty() && query == selectedCompanyName) {
+            android.util.Log.d("IssueCardActivity", "Query matches selected, skipping fetch")
+            return
+        }
+
+        val result = apiClient.getApprovedMembers(query)
+        if (result.isSuccess) {
+            val members = result.getOrNull() ?: emptyList()
+            android.util.Log.d("IssueCardActivity", "Success: found ${members.size} members")
+            
+            withContext(Dispatchers.Main) {
+                // Final check before showing dropdown
+                val currentText = companyNameInput.text.toString()
+                if (currentText == selectedCompanyName && selectedCompanyName.isNotEmpty()) {
+                    return@withContext
+                }
+
                 val adapter = object : ArrayAdapter<com.example.sitacardmaster.network.models.VerifyMemberResponse>(
                     this@IssueCardActivity,
                     android.R.layout.simple_dropdown_item_1line,
@@ -243,9 +288,9 @@ class IssueCardActivity : AppCompatActivity() {
                 if (members.isNotEmpty() && companyNameInput.hasFocus()) {
                     companyNameInput.showDropDown()
                 }
-            } else {
-                android.util.Log.e("IssueCardActivity", "API Error: ${result.exceptionOrNull()?.message}")
             }
+        } else {
+            android.util.Log.e("IssueCardActivity", "API Error: ${result.exceptionOrNull()?.message}")
         }
     }
 
@@ -274,23 +319,12 @@ class IssueCardActivity : AppCompatActivity() {
         hideKeyboard()
         nfcManager.startScanning()
         
-        // Timeout Job
-        scanTimeoutJob?.cancel()
-        scanTimeoutJob = coroutineScope.launch {
-            delay(60000)
-            if (isScanning) {
-                runOnUiThread {
-                    stopScanning()
-                    statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
-                    statusMessage.text = "Timeout: No card detected (or multiple cards present)"
-                    com.google.android.material.snackbar.Snackbar.make(
-                        findViewById(android.R.id.content),
-                        "Scanning timed out (60s)",
-                        com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
-                    ).show()
-                }
-            }
-        }
+        // Timer Setup
+        timerText.text = "Time Elapsed: 60s"
+        timerText.visibility = View.VISIBLE
+        secondsElapsed = 0
+        handler.postDelayed(timeoutRunnable, 60000)
+        handler.postDelayed(timerRunnable, 1000)
     }
 
     private fun hideKeyboard() {
@@ -310,8 +344,9 @@ class IssueCardActivity : AppCompatActivity() {
         startScanButton.visibility = View.VISIBLE
         cancelScanButton.visibility = View.GONE
         nfcManager.stopScanning()
-        scanTimeoutJob?.cancel()
-        scanTimeoutJob = null
+        timerText.visibility = View.GONE
+        handler.removeCallbacks(timeoutRunnable)
+        handler.removeCallbacks(timerRunnable)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -333,7 +368,6 @@ class IssueCardActivity : AppCompatActivity() {
                 return
             }
 
-            scanTimeoutJob?.cancel()
             val tag = intent.getParcelableExtra<Tag>(NfcAdapter.EXTRA_TAG)
             if (tag != null) {
                 // Start Verification Process

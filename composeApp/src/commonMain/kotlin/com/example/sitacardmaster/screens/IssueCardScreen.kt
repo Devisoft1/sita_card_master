@@ -38,13 +38,18 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import org.jetbrains.compose.resources.painterResource
+import com.example.sitacardmaster.SettingsStorage
 import sitacardmaster.composeapp.generated.resources.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.Serializable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
     val apiClient = remember { MemberApiClient() }
+    
+    val settingsStorage = remember { SettingsStorage() }
     
     DisposableEffect(Unit) {
         onDispose {
@@ -76,8 +81,9 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
     var statusMessage by remember { mutableStateOf("Ready to write") }
     var scanningMode by remember { mutableStateOf<ScanMode>(ScanMode.None) }
     
-    var showCardAlreadyIssuedDialog by remember { mutableStateOf(false) }
     var cardAlreadyIssuedErrorMessage by remember { mutableStateOf("") }
+    
+    var remainingSeconds by remember { mutableStateOf(60) }
     
     val brandBlue = Color(0xFF2D2F91)
     val surfaceGray = Color(0xFFF5F7FA)
@@ -106,11 +112,15 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
         }
     }
 
-    // 1-minute auto-timeout
+    // 1-minute auto-timeout with visible countdown
     LaunchedEffect(scanningMode) {
         if (scanningMode != ScanMode.None) {
-            delay(60000)
-            if (scanningMode != ScanMode.None) {
+            remainingSeconds = 60
+            while (remainingSeconds > 0 && scanningMode != ScanMode.None) {
+                delay(1000)
+                remainingSeconds--
+            }
+            if (scanningMode != ScanMode.None && remainingSeconds <= 0) {
                 scanningMode = ScanMode.None
                 nfcManager.stopScanning()
                 statusMessage = "No card detected"
@@ -148,13 +158,25 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                                 scanningMode = ScanMode.None
                                 if (success) {
                                     companySearchQuery = ""
+                                    showMemberInfoCard = false
+                                    statusMessage = "Card Issued Successfully. Ready for next."
+                                    nfcManager.stopScanning()
+                                    
+                                    // Save to local storage for persistence (Matching Android DatabaseHelper)
+                                    val issuedCard = IssuedCard(
+                                        memberId = memberId,
+                                        company = selectedCompanyName,
+                                        validUpto = validUpto,
+                                        totalBuy = totalBuy,
+                                        timestamp = platformNow()
+                                    )
+                                    saveIssuedCardLocally(settingsStorage, issuedCard)
+                                    
+                                    companySearchQuery = ""
                                     selectedCompanyName = ""
                                     password = ""
                                     memberId = ""
                                     validUpto = ""
-                                    showMemberInfoCard = false
-                                    statusMessage = "Card Issued Successfully. Ready for next."
-                                    nfcManager.stopScanning()
                                 }
                             }
                         )
@@ -503,8 +525,14 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                             CircularProgressIndicator(
                                 modifier = Modifier
                                     .size(40.dp)
-                                    .padding(bottom = 12.dp),
+                                    .padding(bottom = 8.dp),
                                 color = brandBlue
+                            )
+                            Text(
+                                text = "Time Elapsed : ${remainingSeconds}s",
+                                color = grayText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(bottom = 8.dp)
                             )
                             Text(
                                 text = if(scanningMode == ScanMode.Clearing) "TAP CARD TO CLEAR..." else "TAP CARD NOW...",
@@ -572,7 +600,31 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                                 colors = ButtonDefaults.buttonColors(containerColor = grayText),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
-                                Text("Clear Card", fontWeight = FontWeight.Bold)
+                                Text("Clear Card (NFC)", fontWeight = FontWeight.Bold)
+                            }
+                            
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            Button(
+                                onClick = {
+                                    memberId = ""
+                                    selectedCompanyName = ""
+                                    companySearchQuery = ""
+                                    password = ""
+                                    validUpto = ""
+                                    totalBuy = ""
+                                    showMemberInfoCard = false
+                                    statusMessage = "Ready to write"
+                                    scanningMode = ScanMode.None
+                                    nfcManager.stopScanning()
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9E9E9E)),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("CLEAR PAGE", fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -627,4 +679,31 @@ fun formatDate(dateStr: String?): String {
         // Fallback to returning original string
     }
     return dateStr
+}
+
+@Serializable
+data class IssuedCard(
+    val memberId: String,
+    val company: String,
+    val validUpto: String,
+    val totalBuy: String,
+    val timestamp: String
+)
+
+private fun saveIssuedCardLocally(settings: SettingsStorage, card: IssuedCard) {
+    try {
+        val existingJson = settings.getString("issued_cards", "[]")
+        val existingList = Json.decodeFromString<MutableList<IssuedCard>>(existingJson)
+        existingList.add(card)
+        settings.putString("issued_cards", Json.encodeToString(existingList))
+        platformLog("IssueCard", "Saved issued card locally: ${card.memberId}")
+    } catch (e: Exception) {
+        platformLog("IssueCard", "Error saving issued card locally: ${e.message}")
+    }
+}
+
+private fun platformNow(): String {
+    val now = kotlinx.datetime.Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+    return "${now.year}-${now.monthNumber.toString().padStart(2, '0')}-${now.dayOfMonth.toString().padStart(2, '0')} " +
+           "${now.hour.toString().padStart(2, '0')}:${now.minute.toString().padStart(2, '0')}:${now.second.toString().padStart(2, '0')}"
 }

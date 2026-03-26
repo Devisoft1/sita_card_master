@@ -48,6 +48,8 @@ class IosNfcManager : NfcManager {
         (detectedTagId as MutableState<String?>).value = null
         (isMultipleTagsDetected as MutableState<Boolean>).value = false
     }
+
+    override fun extractUrl(tag: Any?): String? = null
 }
 
 @Composable

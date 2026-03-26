@@ -57,6 +57,8 @@ fun DashboardScreen(
     var logoUrlInput by remember { mutableStateOf("") }
     var showUrlInputDialog by remember { mutableStateOf(false) }
 
+    var remainingSeconds by remember { mutableStateOf(60) }
+
     // API Integration
     val apiClient = remember { MemberApiClient() }
     val scope = rememberCoroutineScope()
@@ -77,6 +79,20 @@ fun DashboardScreen(
     val detectedTag by nfcManager.detectedTag
     LaunchedEffect(detectedTag) {
         if (isScanning && detectedTag != null) {
+            // New Feature: URL Detection (Matching Android logic)
+            val url = nfcManager.extractUrl(detectedTag)
+            if (url != null) {
+                platformLog("Dashboard", "URL detected on card: $url")
+                isScanning = false
+                nfcManager.stopScanning()
+                try {
+                    uriHandler.openUri(url)
+                } catch (e: Exception) {
+                    platformLog("Dashboard", "Failed to open URL: ${e.message}")
+                    scanStatus = "Failed to open URL"
+                }
+                return@LaunchedEffect
+            }
 
             if (isDeleteMode) {
                 platformLog("Dashboard", "Processing card deletion...")
@@ -186,11 +202,15 @@ fun DashboardScreen(
     }
 
 
-    // 1-minute auto-timeout
+    // 1-minute auto-timeout with visible countdown
     LaunchedEffect(isScanning) {
         if (isScanning) {
-            kotlinx.coroutines.delay(60000)
-            if (isScanning) {
+            remainingSeconds = 60
+            while (remainingSeconds > 0 && isScanning) {
+                delay(1000)
+                remainingSeconds--
+            }
+            if (isScanning && remainingSeconds <= 0) {
                 isScanning = false
                 isDeleteMode = false
                 nfcManager.stopScanning()
@@ -264,14 +284,21 @@ fun DashboardScreen(
                 
                 Text(
                     text = if (isScanning) {
-                        if (isDeleteMode) "TAP CARD TO DELETE DATA..." else "Scanning... Tap card"
+                        if (isDeleteMode) "TAP CARD TO DELETE DATA..." else "TAP CARD NOW..."
                     } else "Tap logo to scan card",
                     color = brandBlue,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
                 )
                 
                 if (isScanning) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Time Elapsed : ${remainingSeconds}s",
+                        color = grayText,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                     Spacer(modifier = Modifier.height(12.dp))
                     CircularProgressIndicator(
                         modifier = Modifier.size(32.dp),

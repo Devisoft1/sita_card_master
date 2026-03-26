@@ -780,6 +780,34 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
             onResult(success, resultMessage)
         }.start()
     }
+
+    override fun extractUrl(tag: Any?): String? {
+        val nfcTag = tag as? Tag ?: return null
+        try {
+            val ndef = Ndef.get(nfcTag)
+            if (ndef != null) {
+                ndef.connect()
+                val msg = ndef.ndefMessage
+                if (msg != null) {
+                    for (record in msg.records) {
+                        if (record.tnf == NdefRecord.TNF_WELL_KNOWN && 
+                            java.util.Arrays.equals(record.type, NdefRecord.RTD_URI)) {
+                            val uri = record.toUri()
+                            if (uri != null) {
+                                ndef.close()
+                                platformLog("SITACardMaster", "Extracted URL from NFC: ${uri.toString()}")
+                                return uri.toString()
+                            }
+                        }
+                    }
+                }
+                ndef.close()
+            }
+        } catch (e: Exception) {
+            platformLog("SITACardMaster", "URL Extraction Error: ${e.message}")
+        }
+        return null
+    }
 }
 
 @Composable
