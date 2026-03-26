@@ -48,6 +48,24 @@
                         android:textStyle="bold"
                         android:textColor="@color/brand_blue"
                         android:layout_marginBottom="@dimen/_16sdp" />
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/_12sdp"
+                        android:hint="Company Name"
+                        app:startIconDrawable="@drawable/ic_business"
+                        app:startIconTint="@color/brand_blue"
+                        app:endIconMode="clear_text"
+                        app:endIconTint="@color/gray_text"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/companyName"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textSize="@dimen/_13ssp"
+                            android:inputType="textCapWords" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/urlInputLayout"
@@ -56,6 +74,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="@dimen/_12sdp"
                         android:hint="https://example.com"
+                        android:visibility="gone"
                         app:startIconDrawable="@drawable/ic_business"
                         app:startIconTint="@color/brand_blue"
                         app:boxStrokeColor="@color/brand_blue"
@@ -73,7 +92,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="@dimen/_16sdp"
-                        android:text="Enter the URL and Tap Logo to write."
+                        android:text="Select member to add url in logo and  Tap Logo to write."
                         android:textColor="@color/gray_text"
                         android:textSize="@dimen/_10ssp" />
 

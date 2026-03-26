@@ -22,13 +22,18 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.focus.onFocusChanged
 import com.example.sitacardmaster.NfcManager
 import com.example.sitacardmaster.network.MemberApiClient
+import com.example.sitacardmaster.PoweredBySection
 import com.example.sitacardmaster.platformLog
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import sitacardmaster.composeapp.generated.resources.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     nfcManager: NfcManager,
@@ -42,7 +47,7 @@ fun DashboardScreen(
     val grayText = Color(0xFF666666)
     val errorRed = Color(0xFFE53935)
     val successGreen = Color(0xFF4CAF50)
- 
+
     DisposableEffect(Unit) {
         onDispose {
             nfcManager.clearScanData()
@@ -57,10 +62,29 @@ fun DashboardScreen(
     var logoUrlInput by remember { mutableStateOf("") }
     var showUrlInputDialog by remember { mutableStateOf(false) }
 
+    // Write URL member dropdown state
+    var urlWriteMemberQuery by remember { mutableStateOf("") }
+    var urlWriteSelectedMember by remember { mutableStateOf("") }
+    var urlWriteSuggestions by remember { mutableStateOf<List<com.example.sitacardmaster.network.models.VerifyMemberResponse>>(emptyList()) }
+    var urlWriteDropdownExpanded by remember { mutableStateOf(false) }
+    var urlWriteIsFocused by remember { mutableStateOf(false) }
+
     var remainingSeconds by remember { mutableStateOf(60) }
 
     // API Integration
     val apiClient = remember { MemberApiClient() }
+
+    // Fetch suggestions for Write URL dropdown
+    LaunchedEffect(urlWriteMemberQuery, urlWriteIsFocused) {
+        if (!urlWriteIsFocused) return@LaunchedEffect
+        kotlinx.coroutines.delay(300)
+        val query = if (urlWriteMemberQuery == urlWriteSelectedMember) "" else urlWriteMemberQuery
+        val result = apiClient.getApprovedMembers(query)
+        if (result.isSuccess) {
+            urlWriteSuggestions = result.getOrNull() ?: emptyList()
+            urlWriteDropdownExpanded = urlWriteSuggestions.isNotEmpty() && urlWriteIsFocused
+        }
+    }
     val scope = rememberCoroutineScope()
     var currentAmount by remember { mutableStateOf<String?>("Loading...") }
     var globalAmount by remember { mutableStateOf<String?>("0.00") }
@@ -118,6 +142,10 @@ fun DashboardScreen(
                     if (success) {
                         scanStatus = "Logo URL written successfully"
                         platformLog("Dashboard", "Logo URL write success")
+                        // Reset for next write
+                        logoUrlInput = ""
+                        urlWriteMemberQuery = ""
+                        urlWriteSelectedMember = ""
                     } else {
                         scanStatus = "Write Failed: $message"
                         platformLog("Dashboard", "Logo URL write failed: $message")
@@ -240,14 +268,22 @@ fun DashboardScreen(
                         color = brandBlue,
                         modifier = Modifier.padding(start = 8.dp).weight(1f)
                     )
-                    
+
                     TextButton(onClick = onLogout) {
                         Text("Logout", color = errorRed, fontWeight = FontWeight.Bold)
                     }
                 }
             }
         },
-        containerColor = surfaceGray
+        containerColor = surfaceGray,
+
+                bottomBar = {
+            PoweredBySection(
+                modifier = Modifier
+                    .background(Color.White)
+                    .padding(bottom = 16.dp)
+            )
+        }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -262,7 +298,7 @@ fun DashboardScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 32.dp),
+                    .padding(vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Image(
@@ -279,9 +315,9 @@ fun DashboardScreen(
                         },
                     contentScale = ContentScale.Fit
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Text(
                     text = if (isScanning) {
                         if (isDeleteMode) "TAP CARD TO DELETE DATA..." else "TAP CARD NOW..."
@@ -291,7 +327,7 @@ fun DashboardScreen(
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
-                
+
                 if (isScanning) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
@@ -307,11 +343,11 @@ fun DashboardScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
-                        onClick = { 
+                        onClick = {
                             isScanning = false
                             isDeleteMode = false
                             isUrlWriteMode = false
-                            nfcManager.stopScanning() 
+                            nfcManager.stopScanning()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = grayText)
                     ) {
@@ -319,43 +355,105 @@ fun DashboardScreen(
                     }
                 }
             }
-            
+
             if (showUrlInputDialog) {
                 AlertDialog(
-                    onDismissRequest = { showUrlInputDialog = false },
-                    title = { Text("Enter Logo URL", fontWeight = FontWeight.Bold, color = brandBlue) },
+                    onDismissRequest = {
+                        showUrlInputDialog = false
+                        urlWriteMemberQuery = ""
+                        urlWriteSelectedMember = ""
+                        urlWriteDropdownExpanded = false
+                    },
+                    title = {
+                        Text(
+                            "Write Logo URL",
+                            fontWeight = FontWeight.Bold,
+                            color = brandBlue
+                        )
+                    },
                     text = {
                         Column {
-                            Text("Enter the URL for the logo record.", style = MaterialTheme.typography.bodySmall, color = grayText)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            OutlinedTextField(
-                                value = logoUrlInput,
-                                onValueChange = { logoUrlInput = it },
-                                label = { Text("URL") },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(8.dp),
-                                singleLine = true
+                            Text(
+                                "Select a member to auto-fill their website URL.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = grayText
                             )
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Member search dropdown
+                            ExposedDropdownMenuBox(
+                                expanded = urlWriteDropdownExpanded,
+                                onExpandedChange = { urlWriteDropdownExpanded = it }
+                            ) {
+                                OutlinedTextField(
+                                    value = urlWriteMemberQuery,
+                                    onValueChange = {
+                                        urlWriteMemberQuery = it
+                                        if (it != urlWriteSelectedMember) {
+                                            urlWriteSelectedMember = ""
+                                            logoUrlInput = ""
+                                        }
+                                    },
+                                    label = { Text("Company Name") },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .menuAnchor()
+                                        .onFocusChanged { fs ->
+                                            urlWriteIsFocused = fs.isFocused
+                                        },
+                                    shape = RoundedCornerShape(8.dp),
+                                    singleLine = true
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = urlWriteDropdownExpanded,
+                                    onDismissRequest = { urlWriteDropdownExpanded = false }
+                                ) {
+                                    urlWriteSuggestions.forEach { member ->
+                                        DropdownMenuItem(
+                                            text = { Text("${member.companyName} (${member.memberId})") },
+                                            onClick = {
+                                                urlWriteSelectedMember = member.companyName ?: ""
+                                                urlWriteMemberQuery = urlWriteSelectedMember
+                                                // Auto-fill SITA member card URL
+                                                val memberId = member.memberId ?: ""
+                                                logoUrlInput = if (memberId.isNotBlank()) {
+                                                    "https://sita.shanti-pos.com/member-card/$memberId"
+                                                } else ""
+                                                urlWriteDropdownExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
                         }
                     },
                     confirmButton = {
                         Button(
-                            onClick = { 
+                            onClick = {
+                                if (urlWriteSelectedMember.isEmpty()) return@Button
                                 if (logoUrlInput.isNotEmpty()) {
                                     showUrlInputDialog = false
+                                    urlWriteMemberQuery = ""
+                                    urlWriteSelectedMember = ""
                                     isScanning = true
                                     isUrlWriteMode = true
                                     scanStatus = "READY TO WRITE URL... TAP CARD"
                                     nfcManager.startScanning()
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = brandBlue)
+                            colors = ButtonDefaults.buttonColors(containerColor = brandBlue),
+                            enabled = urlWriteSelectedMember.isNotEmpty() && logoUrlInput.isNotEmpty()
                         ) {
-                            Text("ENTER")
+                            Text("WRITE")
                         }
                     },
                     dismissButton = {
-                        TextButton(onClick = { showUrlInputDialog = false }) {
+                        TextButton(onClick = {
+                            showUrlInputDialog = false
+                            urlWriteMemberQuery = ""
+                            urlWriteSelectedMember = ""
+                        }) {
                             Text("Cancel")
                         }
                     },
@@ -390,7 +488,7 @@ fun DashboardScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        
+
                         Button(
                             onClick = {
                                 // Reset all states
@@ -407,7 +505,7 @@ fun DashboardScreen(
                         }
                     }
                 }
-            } 
+            }
             // Member Details Card (Only show if no error)
             else if (cardData != null) {
                 Surface(
@@ -448,9 +546,9 @@ fun DashboardScreen(
                                     modifier = Modifier.size(40.dp)
                                 )
                             }
-                            
-                            Spacer(modifier = Modifier.height(24.dp))
-                            
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
                             Row(modifier = Modifier.fillMaxWidth()) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
@@ -480,33 +578,33 @@ fun DashboardScreen(
                                     )
                                 }
                             }
-                            
-                            Spacer(modifier = Modifier.height(24.dp))
-                            
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
                             Surface(
                                 color = Color.White.copy(alpha = 0.1f),
                                 shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Column(modifier = Modifier.padding(16.dp)) {
+                                Column(modifier = Modifier.padding(12.dp)) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                         Column {
-                                             Text(
-                                                 "Current Total",
-                                                 color = Color.White.copy(alpha = 0.7f),
-                                                 style = MaterialTheme.typography.bodySmall
-                                             )
-                                             Text(
-                                                 currentAmount ?: "₹0.00",
-                                                 color = Color(0xFFFFD700),
-                                                 style = MaterialTheme.typography.headlineSmall,
-                                                 fontWeight = FontWeight.Bold
-                                             )
-                                         }
+                                        Column {
+                                            Text(
+                                                "Current Total",
+                                                color = Color.White.copy(alpha = 0.7f),
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                            Text(
+                                                currentAmount ?: "₹0.00",
+                                                color = Color(0xFFFFD700),
+                                                style = MaterialTheme.typography.headlineSmall,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
                                         Column(horizontalAlignment = Alignment.End) {
                                             Text(
                                                 "Valid Upto",
@@ -522,29 +620,29 @@ fun DashboardScreen(
                                         }
                                     }
                                 }
-                                
+
                                 Spacer(modifier = Modifier.height(16.dp))
-                                
+
                                 Surface(
                                     color = Color.White.copy(alpha = 0.1f),
                                     shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                     Column(modifier = Modifier.padding(16.dp)) {
-                                          Text(
-                                             "Global Total",
-                                             color = Color.White.copy(alpha = 0.7f),
-                                             style = MaterialTheme.typography.bodySmall
-                                         )
-                                         Text(
-                                             globalAmount ?: "N/A",
-                                             color = Color(0xFF4CAF50),
-                                             style = MaterialTheme.typography.headlineMedium,
-                                             fontWeight = FontWeight.Bold
-                                         )
-                                     }
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Text(
+                                            "Global Total",
+                                            color = Color.White.copy(alpha = 0.7f),
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                        Text(
+                                            globalAmount ?: "N/A",
+                                            color = Color(0xFF4CAF50),
+                                            style = MaterialTheme.typography.headlineMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
-                                
+
                                 if (apiResponse != null) {
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Surface(
@@ -555,38 +653,64 @@ fun DashboardScreen(
                                         Column(modifier = Modifier.padding(16.dp)) {
                                             apiResponse?.companyAddress?.let { address ->
                                                 if (address.isNotBlank()) {
-                                                    DashboardInfoRow(Icons.Default.LocationOn, address) {
-                                                        try { uriHandler.openUri("geo:0,0?q=$address") } catch (e: Exception) { }
+                                                    DashboardInfoRow(
+                                                        Icons.Default.LocationOn,
+                                                        address
+                                                    ) {
+                                                        try {
+                                                            uriHandler.openUri("geo:0,0?q=$address")
+                                                        } catch (e: Exception) {
+                                                        }
                                                     }
                                                 }
                                             }
                                             apiResponse?.phoneNumber?.let { phone ->
                                                 if (phone.isNotBlank()) {
                                                     DashboardInfoRow(Icons.Default.Phone, phone) {
-                                                        try { uriHandler.openUri("tel:$phone") } catch (e: Exception) { }
+                                                        try {
+                                                            uriHandler.openUri("tel:$phone")
+                                                        } catch (e: Exception) {
+                                                        }
                                                     }
                                                 }
                                             }
                                             apiResponse?.email?.let { email ->
                                                 if (email.isNotBlank()) {
                                                     DashboardInfoRow(Icons.Default.Email, email) {
-                                                        try { uriHandler.openUri("mailto:$email") } catch (e: Exception) { }
+                                                        try {
+                                                            uriHandler.openUri("mailto:$email")
+                                                        } catch (e: Exception) {
+                                                        }
                                                     }
                                                 }
                                             }
                                             apiResponse?.website?.let { website ->
                                                 if (website.isNotBlank()) {
-                                                    DashboardInfoRow(Icons.Default.Language, website) {
-                                                        val url = if (website.startsWith("http")) website else "https://$website"
-                                                        try { uriHandler.openUri(url) } catch (e: Exception) { }
+                                                    DashboardInfoRow(
+                                                        Icons.Default.Language,
+                                                        website
+                                                    ) {
+                                                        val url =
+                                                            if (website.startsWith("http")) website else "https://$website"
+                                                        try {
+                                                            uriHandler.openUri(url)
+                                                        } catch (e: Exception) {
+                                                        }
                                                     }
                                                 }
                                             }
                                             apiResponse?.whatsapp?.let { whatsapp ->
                                                 if (whatsapp.isNotBlank()) {
-                                                    DashboardInfoRow(Icons.Default.Message, whatsapp) {
-                                                        val cleanWhatsapp = whatsapp.replace(Regex("[^0-9]"), "")
-                                                        try { uriHandler.openUri("https://wa.me/$cleanWhatsapp") } catch (e: Exception) { }
+                                                    DashboardInfoRow(
+                                                        Icons.Default.Message,
+                                                        whatsapp
+                                                    ) {
+                                                        val cleanWhatsapp =
+                                                            whatsapp.replace(Regex("[^0-9]"), "")
+                                                        try {
+                                                            uriHandler.openUri("https://wa.me/$cleanWhatsapp")
+                                                        } catch (e: Exception) {
+                                                        }
                                                     }
                                                 }
                                             }
@@ -601,8 +725,15 @@ fun DashboardScreen(
                 Text(
                     text = scanStatus,
                     color = when {
-                        scanStatus.contains("successfully", ignoreCase = true) || scanStatus.contains("Success", ignoreCase = true) -> successGreen
-                        scanStatus.contains("Error") || scanStatus.contains("failed") || scanStatus.contains("Failed") || scanStatus.contains("not detected", ignoreCase = true) -> errorRed
+                        scanStatus.contains(
+                            "successfully",
+                            ignoreCase = true
+                        ) || scanStatus.contains("Success", ignoreCase = true) -> successGreen
+
+                        scanStatus.contains("Error") || scanStatus.contains("failed") || scanStatus.contains(
+                            "Failed"
+                        ) || scanStatus.contains("not detected", ignoreCase = true) -> errorRed
+
                         else -> grayText
                     },
                     modifier = Modifier.padding(bottom = 16.dp)
@@ -643,7 +774,7 @@ fun DashboardScreen(
                     style = MaterialTheme.typography.labelSmall
                 )
             }
-            
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -692,8 +823,7 @@ fun DashboardScreen(
                     )
                 }
             }
-
-        }
+            }
     }
 }
 

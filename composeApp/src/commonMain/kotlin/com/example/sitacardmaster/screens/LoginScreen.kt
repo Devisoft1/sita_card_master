@@ -31,6 +31,7 @@ import sitacardmaster.composeapp.generated.resources.Res
 import sitacardmaster.composeapp.generated.resources.logo
 import com.example.sitacardmaster.SettingsStorage
 import com.example.sitacardmaster.logAction
+import com.example.sitacardmaster.PoweredBySection
 import kotlinx.coroutines.launch
 
 @Composable
@@ -269,22 +270,16 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                             )
                         }
                     }
+
+                    // Powered By
+                    PoweredBySection(
+                        modifier = Modifier.padding(top = 8.dp),
+                        textColor = Color(0xFF666666)
+                    )
                 }
             }
 
-            // Footer
-            Spacer(modifier = Modifier.weight(1f))
-            val uriHandler = LocalUriHandler.current
-            Text(
-                text = "Powered by DeviSoft",
-                color = Color.White,
-                fontSize = 11.sp,
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .alpha(0.7f)
-                    .padding(top = 24.dp, bottom = 24.dp)
-                    .clickable { uriHandler.openUri("https://devisoft.co.in") }
-            )
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

@@ -5,14 +5,25 @@ import android.net.Uri
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.os.Bundle
+import android.text.TextWatcher
 import android.view.View
+import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.Filter
+import android.widget.Filter.FilterResults
 import android.widget.ImageButton
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.textfield.TextInputEditText
 import com.example.sitacardmaster.R
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class WriteUrlActivity : AppCompatActivity() {
 
@@ -27,7 +38,16 @@ class WriteUrlActivity : AppCompatActivity() {
     private lateinit var statusMessage: TextView
     private lateinit var timerText: TextView
     private lateinit var tapCardHint: TextView
-    
+
+    private lateinit var companyNameInput: com.google.android.material.textfield.MaterialAutoCompleteTextView
+    private val apiClient = com.example.sitacardmaster.network.MemberApiClient()
+    private val coroutineScope = MainScope()
+    private var searchJob: Job? = null
+
+    private var selectedCompanyName: String = ""
+    private var selectedMemberWebsite: String = ""
+
+
     private var secondsElapsed = 0
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
     private val timeoutRunnable = Runnable {
@@ -39,6 +59,111 @@ class WriteUrlActivity : AppCompatActivity() {
             statusMessage.setTextColor(getColor(R.color.error_red))
         }
     }
+    private fun setupAutoComplete() {
+        companyNameInput.threshold = 0
+
+        companyNameInput.setOnItemClickListener { parent, _, position, _ ->
+            val member = parent.getItemAtPosition(position) as? com.example.sitacardmaster.network.models.VerifyMemberResponse
+            member?.let {
+                selectedCompanyName = it.companyName ?: ""
+                selectedMemberWebsite = it.website ?: ""
+                companyNameInput.setText(selectedCompanyName, false)
+                // Auto-fill URL with SITA member card URL
+                val memberId = it.memberId ?: ""
+                if (memberId.isNotBlank()) {
+                    urlInput.setText("https://sita.shanti-pos.com/member-card/$memberId")
+                }
+                companyNameInput.dismissDropDown()
+            }
+        }
+
+        companyNameInput.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                val query = companyNameInput.text.toString()
+                if (query != selectedCompanyName || query.isEmpty()) {
+                    searchJob?.cancel()
+                    searchJob = coroutineScope.launch { fetchSuggestions(query) }
+                }
+            }
+        }
+
+        companyNameInput.setOnClickListener {
+            val query = companyNameInput.text.toString()
+            if (!companyNameInput.isPopupShowing && (query != selectedCompanyName || query.isEmpty())) {
+                searchJob?.cancel()
+                searchJob = coroutineScope.launch { fetchSuggestions(query) }
+            }
+        }
+
+        companyNameInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val query = s?.toString() ?: ""
+                if (query.isEmpty()) {
+                    selectedCompanyName = ""
+                    selectedMemberWebsite = ""
+                    urlInput.setText("")
+                }
+                if (query != selectedCompanyName) {
+                    if (selectedCompanyName.isNotEmpty()) selectedCompanyName = ""
+                    searchJob?.cancel()
+                    searchJob = coroutineScope.launch {
+                        delay(300)
+                        fetchSuggestions(query)
+                    }
+                }
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+    }
+
+    private suspend fun fetchSuggestions(query: String) {
+        if (query.isNotEmpty() && query == selectedCompanyName) return
+
+        val result = apiClient.getApprovedMembers(query)
+        if (result.isSuccess) {
+            val members = result.getOrNull() ?: emptyList()
+            withContext(Dispatchers.Main) {
+                val currentText = companyNameInput.text.toString()
+                if (currentText == selectedCompanyName && selectedCompanyName.isNotEmpty()) return@withContext
+
+                val adapter = object : ArrayAdapter<com.example.sitacardmaster.network.models.VerifyMemberResponse>(
+                    this@WriteUrlActivity,
+                    android.R.layout.simple_dropdown_item_1line,
+                    members
+                ) {
+                    override fun getView(position: Int, convertView: View?, parent: android.view.ViewGroup): View {
+                        val view = super.getView(position, convertView, parent) as TextView
+                        val member = getItem(position)
+                        view.text = "${member?.companyName} (${member?.memberId})"
+                        return view
+                    }
+                    override fun getFilter(): Filter {
+                        return object : Filter() {
+                            override fun performFiltering(constraint: CharSequence?): FilterResults {
+                                val results = FilterResults()
+                                results.values = members
+                                results.count = members.size
+                                return results
+                            }
+                            override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
+                                notifyDataSetChanged()
+                            }
+                            override fun convertResultToString(resultValue: Any?): CharSequence {
+                                return (resultValue as? com.example.sitacardmaster.network.models.VerifyMemberResponse)?.companyName ?: ""
+                            }
+                        }
+                    }
+                }
+                companyNameInput.setAdapter(adapter)
+                adapter.notifyDataSetChanged()
+                if (members.isNotEmpty() && companyNameInput.hasFocus()) {
+                    companyNameInput.showDropDown()
+                }
+            }
+        }
+    }
+
     private val timerRunnable = object : Runnable {
         override fun run() {
             if (isScanning) {
@@ -56,6 +181,7 @@ class WriteUrlActivity : AppCompatActivity() {
 
         nfcManager = AndroidNfcManager(this)
 
+        companyNameInput = findViewById(R.id.companyName)
         urlInput = findViewById(R.id.urlInput)
         startScanButton = findViewById(R.id.startScanButton)
         stopScanButton = findViewById(R.id.stopScanButton)
@@ -83,6 +209,13 @@ class WriteUrlActivity : AppCompatActivity() {
                 logAction("Start scan failed: URL is empty")
                 return@setOnClickListener
             }
+
+            val currentName = companyNameInput.text.toString()
+            if (selectedCompanyName.isEmpty() || currentName != selectedCompanyName) {
+                statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+                statusMessage.text = "Error: Please select a company from the list"
+                return@setOnClickListener
+            }
             logoUrlInput = url
             logAction("User initiated scan for URL: $logoUrlInput")
             startScanMode()
@@ -92,6 +225,8 @@ class WriteUrlActivity : AppCompatActivity() {
             logAction("User stopped scanning")
             stopScanMode()
         }
+
+        setupAutoComplete()
 
         findViewById<View>(R.id.llPoweredBy).setOnClickListener {
             logAction("User clicked Powered by Devisoft")
@@ -176,12 +311,23 @@ class WriteUrlActivity : AppCompatActivity() {
                 if (success) {
                     statusMessage.setTextColor(getColor(R.color.brand_blue))
                     logAction("Logo URL write success: $logoUrlInput")
+                    resetForm()
                 } else {
                     statusMessage.setTextColor(getColor(R.color.error_red))
                     logAction("Logo URL write failed: $message")
                 }
             }
         }
+    }
+
+    private fun resetForm() {
+        selectedCompanyName = ""
+        selectedMemberWebsite = ""
+        logoUrlInput = ""
+        companyNameInput.setText("", false)
+        urlInput.setText("")
+        statusMessage.text = "URL Written! Ready for next."
+        statusMessage.setTextColor(getColor(R.color.brand_blue))
     }
 
     private fun logAction(action: String) {
@@ -196,5 +342,10 @@ class WriteUrlActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         nfcManager.stopScanning()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        coroutineScope.cancel()
     }
 }

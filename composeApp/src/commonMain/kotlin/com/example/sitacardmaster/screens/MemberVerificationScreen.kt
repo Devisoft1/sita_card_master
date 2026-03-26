@@ -1,5 +1,6 @@
 package com.example.sitacardmaster.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -17,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import com.example.sitacardmaster.network.models.AddAmountResponse
 import com.example.sitacardmaster.network.MemberApiClient
 import com.example.sitacardmaster.network.models.VerifyMemberResponse
+import com.example.sitacardmaster.PoweredBySection
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,6 +54,13 @@ fun MemberVerificationScreen(
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = Color.White
                 )
+            )
+        },
+        bottomBar = {
+            PoweredBySection(
+                modifier = Modifier
+                    .background(Color.White)
+                    .padding(bottom = 16.dp)
             )
         }
     ) { padding ->

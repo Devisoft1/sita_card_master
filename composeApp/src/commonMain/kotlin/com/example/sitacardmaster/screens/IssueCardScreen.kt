@@ -39,10 +39,12 @@ import kotlinx.coroutines.delay
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import com.example.sitacardmaster.SettingsStorage
+import com.example.sitacardmaster.PoweredBySection
 import sitacardmaster.composeapp.generated.resources.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.Serializable
+import org.jetbrains.compose.resources.painterResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,10 +79,11 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
     var companySuggestions by remember { mutableStateOf<List<VerifyMemberResponse>>(emptyList()) }
     var selectedCompanyName by remember { mutableStateOf("") }
 
-    val totalBuy = "0"
+    var totalBuy = "0"
     var statusMessage by remember { mutableStateOf("Ready to write") }
     var scanningMode by remember { mutableStateOf<ScanMode>(ScanMode.None) }
     
+    var showCardAlreadyIssuedDialog by remember { mutableStateOf(false) }
     var cardAlreadyIssuedErrorMessage by remember { mutableStateOf("") }
     
     var remainingSeconds by remember { mutableStateOf(60) }
@@ -287,7 +290,14 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
             }
         },
         containerColor = surfaceGray,
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        bottomBar = {
+            PoweredBySection(
+                modifier = Modifier
+                    .background(white)
+                    .padding(bottom = 16.dp)
+            )
+        }
     ) { padding ->
         // AlertDialog for Card Already Issued
         if (showCardAlreadyIssuedDialog) {
