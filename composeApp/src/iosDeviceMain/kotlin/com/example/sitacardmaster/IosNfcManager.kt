@@ -126,6 +126,13 @@ class IosNfcManager : NfcManager {
         onDeleteResult = onResult
         startSession()
     }
+
+    override fun clearScanData() {
+        cleanup()
+        delegate.detectedTag.value = null
+        delegate.detectedTagId.value = null
+        delegate.isMultipleTagsDetected.value = false
+    }
 }
 
 @OptIn(ExperimentalForeignApi::class)

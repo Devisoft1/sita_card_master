@@ -508,5 +508,6 @@ class IssueCardActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         nfcManager.stopScanning()
+        nfcManager.clearScanData()
     }
 }

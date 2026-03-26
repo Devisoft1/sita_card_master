@@ -46,6 +46,12 @@ import sitacardmaster.composeapp.generated.resources.*
 fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
     val apiClient = remember { MemberApiClient() }
     
+    DisposableEffect(Unit) {
+        onDispose {
+            nfcManager.clearScanData()
+        }
+    }
+
     var memberId by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var validUpto by remember { mutableStateOf("") }

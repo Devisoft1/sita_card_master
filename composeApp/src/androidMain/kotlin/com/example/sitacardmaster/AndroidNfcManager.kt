@@ -54,6 +54,13 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
         }
     }
 
+    override fun clearScanData() {
+        (detectedTag as MutableState<Tag?>).value = null
+        (detectedTagId as MutableState<String?>).value = null
+        (isMultipleTagsDetected as MutableState<Boolean>).value = false
+        lastTagId = null
+    }
+
     fun onNewIntent(intent: Intent) {
         if (NfcAdapter.ACTION_TAG_DISCOVERED == intent.action ||
             NfcAdapter.ACTION_TECH_DISCOVERED == intent.action ||

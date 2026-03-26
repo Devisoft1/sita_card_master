@@ -477,6 +477,12 @@ class DashboardActivity : AppCompatActivity() {
         platformLog("SITACardMaster", "Dashboard: $action")
     }
 
+    override fun onStart() {
+        super.onStart()
+        resetUI()
+        nfcManager.clearScanData()
+    }
+
     override fun onResume() {
         super.onResume()
         if (isScanning) nfcManager.startScanning()
@@ -485,5 +491,9 @@ class DashboardActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         nfcManager.stopScanning()
+    }
+
+    override fun onStop() {
+        super.onStop()
     }
 }

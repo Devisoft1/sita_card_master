@@ -42,6 +42,12 @@ class IosNfcManager : NfcManager {
     override fun deleteCardData(onResult: (Boolean, String) -> Unit) {
         onResult(false, "NFC not supported on Simulator")
     }
+
+    override fun clearScanData() {
+        (detectedTag as MutableState<Any?>).value = null
+        (detectedTagId as MutableState<String?>).value = null
+        (isMultipleTagsDetected as MutableState<Boolean>).value = false
+    }
 }
 
 @Composable

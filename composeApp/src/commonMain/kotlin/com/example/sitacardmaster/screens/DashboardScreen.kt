@@ -42,6 +42,12 @@ fun DashboardScreen(
     val grayText = Color(0xFF666666)
     val errorRed = Color(0xFFE53935)
     val successGreen = Color(0xFF4CAF50)
+ 
+    DisposableEffect(Unit) {
+        onDispose {
+            nfcManager.clearScanData()
+        }
+    }
 
     var isScanning by remember { mutableStateOf(false) }
     var isDeleteMode by remember { mutableStateOf(false) }
