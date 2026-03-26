@@ -568,10 +568,8 @@ fun DashboardScreen(
                 Text(
                     text = scanStatus,
                     color = when {
-                        scanStatus.contains("successfully", ignoreCase = true) -> successGreen
-                        scanStatus.contains("error", ignoreCase = true) || 
-                        scanStatus.contains("failed", ignoreCase = true) ||
-                        scanStatus.contains("not detected", ignoreCase = true) -> errorRed
+                        scanStatus.contains("successfully", ignoreCase = true) || scanStatus.contains("Success", ignoreCase = true) -> successGreen
+                        scanStatus.contains("Error") || scanStatus.contains("failed") || scanStatus.contains("Failed") || scanStatus.contains("not detected", ignoreCase = true) -> errorRed
                         else -> grayText
                     },
                     modifier = Modifier.padding(bottom = 16.dp)

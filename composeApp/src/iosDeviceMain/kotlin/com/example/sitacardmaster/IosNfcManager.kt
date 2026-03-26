@@ -15,6 +15,7 @@ class IosNfcManager : NfcManager {
     
     override val detectedTag: State<Any?> = delegate.detectedTag
     override val detectedTagId: State<String?> = delegate.detectedTagId
+    override val isMultipleTagsDetected: State<Boolean> = delegate.isMultipleTagsDetected
 
     internal var onReadResult: ((Boolean, Map<String, String>?, String) -> Unit)? = null
     internal var onWriteResult: ((Boolean, String) -> Unit)? = null
@@ -60,7 +61,7 @@ class IosNfcManager : NfcManager {
             if (secondsElapsed >= 60) {
                 session?.invalidateSessionWithErrorMessage("No card detected (60s timeout)")
                 stopTimer()
-                manager.onWriteResult?.invoke(false, "No card detected")
+                onWriteResult?.invoke(false, "No card detected")
             } else {
                 session?.alertMessage = "Hold your iPhone near the card. ($timeStr)"
             }
@@ -131,6 +132,7 @@ class IosNfcManager : NfcManager {
 private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), NFCTagReaderSessionDelegateProtocol {
     val detectedTag: MutableState<Any?> = mutableStateOf(null)
     val detectedTagId: MutableState<String?> = mutableStateOf(null)
+    val isMultipleTagsDetected: MutableState<Boolean> = mutableStateOf(false)
 
     private val commonKeys = listOf(
         byteArrayOf(0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte()),
@@ -187,7 +189,7 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
             val ndefTag = nfcTag?.asNFCNDEFTag() ?: (tag as? NFCNDEFTagProtocol)
 
             if (mifareTag == null && ndefTag == null) {
-                session.invalidateSessionWithErrorMessage("Tag not supported (Mifare/NDEF required).")
+                session.invalidateSessionWithErrorMessage("Card not supported.")
                 return@connectToTag
             }
             
@@ -204,20 +206,20 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
                 } else if (mifareTag != null) {
                     processWrite(session, mifareTag)
                 } else {
-                    session.invalidateSessionWithErrorMessage("Mifare tag required for this operation.")
+                    session.invalidateSessionWithErrorMessage("Card not supported.")
                 }
             }
             else if (manager.onReadResult != null) {
                 if (mifareTag != null) processRead(session, mifareTag)
-                else session.invalidateSessionWithErrorMessage("Mifare tag required for reading.")
+                else session.invalidateSessionWithErrorMessage("Card not supported.")
             }
             else if (manager.onClearResult != null) {
                 if (mifareTag != null) processClear(session, mifareTag)
-                else session.invalidateSessionWithErrorMessage("Mifare tag required for clearing.")
+                else session.invalidateSessionWithErrorMessage("Card not supported.")
             }
             else if (manager.onDeleteResult != null) {
                 if (mifareTag != null) processDelete(session, mifareTag)
-                else session.invalidateSessionWithErrorMessage("Mifare tag required for deleting.")
+                else session.invalidateSessionWithErrorMessage("Card not supported.")
             }
             else session.invalidateSession()
         }
@@ -250,7 +252,7 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
             val message = NFCNdefMessage(listOf(uriRecord))
             tag.writeNDEF(message) { writeError ->
                 if (writeError != null) {
-                    manager.onWriteResult?.invoke(false, "NDEF Write Failed: ${writeError.localizedDescription}")
+                    manager.onWriteResult?.invoke(false, "Write Failed: ${writeError.localizedDescription}")
                 } else {
                     manager.onWriteResult?.invoke(true, "Logo URL written successfully!")
                 }
@@ -263,6 +265,7 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
         val results = mutableMapOf<String, String>()
         results["card_mfid"] = detectedTagId.value ?: ""
 
+        authenticateAndReadSector(tag, 3) { success3, sector3Data ->
             if (!success3) {
                 manager.onReadResult?.invoke(false, null, "Card not detected properly please scan again")
                 session.invalidateSession()
@@ -351,7 +354,11 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
     }
 
     private fun processClear(session: NFCTagReaderSession, tag: NFCMifareTagProtocol) {
-        val emptyBlocks3 = mapOf(12 to "00000000000000000000000000000000", 13 to "00, 14" to "00") // Simplified
+        val emptyBlocks3 = mapOf(
+            12 to "00000000000000000000000000000000",
+            13 to "00000000000000000000000000000000",
+            14 to "00000000000000000000000000000000"
+        )
         authenticateAndWriteSector(tag, 3, emptyBlocks3) {
             manager.onClearResult?.invoke(true, "Card Cleared")
             session.invalidateSession()

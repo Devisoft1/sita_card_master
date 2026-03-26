@@ -50,7 +50,7 @@ class MemberApiClient {
         password: String,
         cardMfid: String = "",
         cardValidity: String = "",
-        cardType: String = "Membership" // Default to Membership if not provided
+        cardType: String = "Member" // Default to Member if not provided
     ): Result<VerifyMemberResponse> {
         return try {
             val endpoint = "$baseUrl/members/verify"

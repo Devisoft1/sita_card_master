@@ -57,9 +57,9 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
     var addressText by remember { mutableStateOf("") }
     var showMemberInfoCard by remember { mutableStateOf(false) }
 
-    var cardType by remember { mutableStateOf("Membership") }
+    var cardType by remember { mutableStateOf("Member") }
     var isCardTypeDropdownExpanded by remember { mutableStateOf(false) }
-    val cardTypeOptions = listOf("Membership", "Add-on", "Event")
+    val cardTypeOptions = listOf("Member", "Add-on", "Company Executive", "Corporate Member")
 
     var companySearchQuery by remember { mutableStateOf("") }
     var isCompanyDropdownExpanded by remember { mutableStateOf(false) }

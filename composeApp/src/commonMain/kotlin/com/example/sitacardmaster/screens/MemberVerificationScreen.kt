@@ -160,7 +160,7 @@ fun MemberVerificationScreen(
                                Text(data.memberId?.toString() ?: "N/A", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
                            }
                            Column(horizontalAlignment = Alignment.End) {
-                               Text("Membership Validity", style = MaterialTheme.typography.labelSmall)
+                               Text("Member Validity", style = MaterialTheme.typography.labelSmall)
                                Text(data.validity?.take(10) ?: "N/A", style = MaterialTheme.typography.bodyLarge)
                                Spacer(modifier = Modifier.height(4.dp))
                                Text("Card Validity", style = MaterialTheme.typography.labelSmall)

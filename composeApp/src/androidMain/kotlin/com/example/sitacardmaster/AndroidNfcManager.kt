@@ -346,7 +346,7 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                     resultMessage = if (e is java.io.IOException || e.message?.contains("Tag lost", ignoreCase = true) == true) {
                         "Card not detected properly please scan again"
                     } else {
-                        "NDEF Error: ${e.message}"
+                        "Write failed: ${e.message}"
                     }
                 } finally {
                     try { if (ndef.isConnected) ndef.close() } catch (e: Exception) {}
@@ -369,7 +369,7 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                         platformLog("SITACardMaster", "Writing Logo URL (Hex) to Block 21: $url")
                         writeHexBlock(mifare, 21, stringToHex(url))
                         success = true
-                        resultMessage = "Logo URL written to Block 21 (Legacy)!"
+                        resultMessage = "Logo URL written successfully!"
                     } else {
                         resultMessage = "Card not detected properly please scan again"
                     }
@@ -378,7 +378,7 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                     resultMessage = if (e is java.io.IOException || e.message?.contains("Tag lost", ignoreCase = true) == true) {
                         "Card not detected properly please scan again"
                     } else {
-                        "Error: ${e.message}"
+                        "Write failed: ${e.message}"
                     }
                 } finally {
                     try { if (mifare.isConnected) mifare.close() } catch (e: Exception) {}
@@ -386,7 +386,7 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                 onResult(success, resultMessage)
             }.start()
         } else {
-            onResult(false, "This tag does not support NDEF or Mifare Classic.")
+            onResult(false, "This card is not supported.")
         }
     }
 
@@ -394,14 +394,14 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
         val tag = detectedTag.value
         if (tag == null) {
             platformLog("SITACardMaster", "Read failed: No tag in state")
-            onResult(false, null, "No card detected (or multiple cards present).")
+            onResult(false, null, "No card detected.")
             return
         }
 
         val mifare = MifareClassic.get(tag as Tag)
         if (mifare == null) {
             platformLog("SITACardMaster", "Read failed: Not a Mifare Classic card")
-            onResult(false, null, "Not a Mifare Classic card.")
+            onResult(false, null, "Card not supported.")
             return
         }
 

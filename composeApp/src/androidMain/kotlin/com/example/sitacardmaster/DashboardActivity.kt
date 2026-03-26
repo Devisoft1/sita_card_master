@@ -301,7 +301,7 @@ class DashboardActivity : AppCompatActivity() {
 
     private fun showCardDetails(data: Map<String, String>) {
         detailsContainer.visibility = View.VISIBLE
-        val cardType = data["cardType"] ?: "Membership"
+        val cardType = data["cardType"] ?: "Member"
         premiumMemberLabel.text = cardType.uppercase()
         
         displayMemberId.text = data["memberId"] ?: "N/A"

@@ -98,7 +98,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="none"
-                            android:text="Membership"
+                            android:text="Member"
                             android:textSize="@dimen/_13ssp" />
                     </com.google.android.material.textfield.TextInputLayout>
 

@@ -128,10 +128,10 @@ class IssueCardActivity : AppCompatActivity() {
     }
 
     private fun setupCardTypeDropdown() {
-        val cardTypes = arrayOf("Membership", "Add-on", "Event")
+        val cardTypes = arrayOf("Member", "Add-on", "Company Executive", "Corporate Member")
         val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, cardTypes)
         cardTypeInput.setAdapter(adapter)
-        cardTypeInput.setText("Membership", false) // Default
+        cardTypeInput.setText("Member", false) // Default
     }
 
     private var selectedCompanyName: String = ""
@@ -259,7 +259,7 @@ class IssueCardActivity : AppCompatActivity() {
         websiteText.text = "---"
         addressText.text = "---"
         memberInfoCard.visibility = View.GONE
-        cardTypeInput.setText("Membership", false)
+        cardTypeInput.setText("Member", false)
     }
 
     private fun startScanning() {
