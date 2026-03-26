@@ -238,17 +238,6 @@ fun WriteUrlScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                         }
                     }
 
-                    OutlinedTextField(
-                        value = logoUrlInput,
-                        onValueChange = { logoUrlInput = it },
-                        label = { Text("Logo URL") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 12.dp),
-                        leadingIcon = { Icon(Icons.Default.Language, contentDescription = null, tint = brandBlue) },
-                        shape = RoundedCornerShape(8.dp),
-                        singleLine = true
-                    )
 
                     Text(
                         text = "Select member to add url in logo and Tap Logo to write.",
