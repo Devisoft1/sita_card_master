@@ -147,7 +147,11 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
 
     override fun tagReaderSession(session: NFCTagReaderSession, didInvalidateWithError: NSError) {
         if (didInvalidateWithError.code != 200L && didInvalidateWithError.code != 201L) {
-             val errorMessage = didInvalidateWithError.localizedDescription
+             val errorMessage = if (didInvalidateWithError.code == 203L) {
+                 "Card not detected properly please scan again"
+             } else {
+                 didInvalidateWithError.localizedDescription
+             }
              manager.onReadResult?.invoke(false, null, errorMessage)
              manager.onWriteResult?.invoke(false, errorMessage)
              manager.onClearResult?.invoke(false, errorMessage)
@@ -259,9 +263,8 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
         val results = mutableMapOf<String, String>()
         results["card_mfid"] = detectedTagId.value ?: ""
 
-        authenticateAndReadSector(tag, 3) { success3, sector3Data ->
             if (!success3) {
-                manager.onReadResult?.invoke(false, null, "Card Authentication Failed")
+                manager.onReadResult?.invoke(false, null, "Card not detected properly please scan again")
                 session.invalidateSession()
                 return@authenticateAndReadSector
             }
@@ -303,7 +306,7 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
             val url = data["logoUrl"] ?: ""
             val sector5Blocks = mapOf(21 to stringToHex(url))
             authenticateAndWriteSector(tag, 5, sector5Blocks) { success ->
-                if (!success) manager.onWriteResult?.invoke(false, "Logo URL Write Failed")
+                if (!success) manager.onWriteResult?.invoke(false, "Card not detected properly please scan again")
                 else manager.onWriteResult?.invoke(true, "Logo URL Written Successfully")
                 session.invalidateSession()
             }
@@ -318,7 +321,7 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
         
         authenticateAndWriteSector(tag, 3, sector3Blocks) { success3 ->
             if (!success3) {
-                manager.onWriteResult?.invoke(false, "Card Write Failed")
+                manager.onWriteResult?.invoke(false, "Card not detected properly please scan again")
                 session.invalidateSession()
                 return@authenticateAndWriteSector
             }
@@ -332,14 +335,14 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
             
             authenticateAndWriteSector(tag, 4, sector4Blocks) { success4 ->
                 if (!success4) {
-                    manager.onWriteResult?.invoke(false, "Card Write Failed")
+                    manager.onWriteResult?.invoke(false, "Card not detected properly please scan again")
                     session.invalidateSession()
                     return@authenticateAndWriteSector
                 }
                 
                 val sector5Blocks = mapOf(20 to stringToHex(data["cardType"] ?: ""))
                 authenticateAndWriteSector(tag, 5, sector5Blocks) { success5 ->
-                    if (!success5) manager.onWriteResult?.invoke(false, "Card Write Failed")
+                    if (!success5) manager.onWriteResult?.invoke(false, "Card not detected properly please scan again")
                     else manager.onWriteResult?.invoke(true, "Write Success")
                     session.invalidateSession()
                 }

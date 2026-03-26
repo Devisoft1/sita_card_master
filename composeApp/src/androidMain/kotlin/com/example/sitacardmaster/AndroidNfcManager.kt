@@ -129,7 +129,9 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                     platformLog("SITACardMaster", "Authenticated Sector $sector using Key A ($keyName)")
                     return true
                 }
-            } catch (e: Exception) { }
+            } catch (e: Exception) { 
+                if (e is java.io.IOException || e.message?.contains("Tag lost", ignoreCase = true) == true) throw e
+            }
 
             // Try Key B
             try {
@@ -137,7 +139,9 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                     platformLog("SITACardMaster", "Authenticated Sector $sector using Key B ($keyName)")
                     return true
                 }
-            } catch (e: Exception) { }
+            } catch (e: Exception) { 
+                if (e is java.io.IOException || e.message?.contains("Tag lost", ignoreCase = true) == true) throw e
+            }
         }
 
         platformLog("SITACardMaster", "Authentication failed for Sector $sector after trying all common A/B keys")
@@ -270,22 +274,26 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                             resultMessage = "Data written successfully!"
                         } else {
                             success = false
-                            resultMessage = "Authentication failed for Sector 5."
+                            resultMessage = "Card not detected properly please scan again"
                         }
 
                     } else {
                          success = false
-                         resultMessage = "Authentication failed for Sector 4."
+                         resultMessage = "Card not detected properly please scan again"
                     }
                 } else {
                    success = false
-                   resultMessage = "Authentication failed for Sector 3. Please ensure the card is a standard Mifare Classic card."
+                   resultMessage = "Card not detected properly please scan again"
                 }
 
             } catch (e: Exception) {
                 platformLog("SITACardMaster", "Write Error: ${e.message}")
                 success = false
-                resultMessage = "Error: ${e.message}"
+                resultMessage = if (e is java.io.IOException || e.message?.contains("Tag lost", ignoreCase = true) == true) {
+                    "Card not detected properly please scan again"
+                } else {
+                    "Error: ${e.message}"
+                }
             } finally {
                 try {
                     if (mifare.isConnected) {
@@ -335,7 +343,11 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                     }
                 } catch (e: Exception) {
                     platformLog("SITACardMaster", "❌ NDEF Write Error: ${e.message}")
-                    resultMessage = "NDEF Error: ${e.message}"
+                    resultMessage = if (e is java.io.IOException || e.message?.contains("Tag lost", ignoreCase = true) == true) {
+                        "Card not detected properly please scan again"
+                    } else {
+                        "NDEF Error: ${e.message}"
+                    }
                 } finally {
                     try { if (ndef.isConnected) ndef.close() } catch (e: Exception) {}
                 }
@@ -359,11 +371,15 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                         success = true
                         resultMessage = "Logo URL written to Block 21 (Legacy)!"
                     } else {
-                        resultMessage = "Authentication failed for Sector 5."
+                        resultMessage = "Card not detected properly please scan again"
                     }
                 } catch (e: Exception) {
                     platformLog("SITACardMaster", "Write Logo URL Error: ${e.message}")
-                    resultMessage = "Error: ${e.message}"
+                    resultMessage = if (e is java.io.IOException || e.message?.contains("Tag lost", ignoreCase = true) == true) {
+                        "Card not detected properly please scan again"
+                    } else {
+                        "Error: ${e.message}"
+                    }
                 } finally {
                     try { if (mifare.isConnected) mifare.close() } catch (e: Exception) {}
                 }
@@ -471,13 +487,17 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                 } else {
                     platformLog("SITACardMaster", "Sector 3 Authentication Failed")
                     success = false
-                    resultMessage = "Auth failed for Sector 3"
+                    resultMessage = "Card not detected properly please scan again"
                 }
 
             } catch (e: Exception) {
                 platformLog("SITACardMaster", "Read Exception: ${e.message}")
                 success = false
-                resultMessage = "Read error: ${e.message}"
+                resultMessage = if (e is java.io.IOException || e.message?.contains("Tag lost", ignoreCase = true) == true) {
+                    "Card not detected properly please scan again"
+                } else {
+                    "Read error: ${e.message}"
+                }
             } finally {
                 try {
                     if (mifare.isConnected) {
@@ -659,20 +679,24 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                                 resultMessage = "Card cleared successfully."
                             } else {
                                 success = false
-                                resultMessage = "Failed to auth card."
+                                resultMessage = "Card not detected properly please scan again"
                             }
                         } else {
                             success = false
-                            resultMessage = "Failed to auth card."
+                            resultMessage = "Card not detected properly please scan again"
                         }
                     } else {
                         success = false
-                        resultMessage = "Failed to auth card."
+                        resultMessage = "Card not detected properly please scan again"
                     }
             } catch (e: Exception) {
                 platformLog("SITACardMaster", "Clear Error: ${e.message}")
                 success = false
-                resultMessage = "Error: ${e.message}"
+                resultMessage = if (e is java.io.IOException || e.message?.contains("Tag lost", ignoreCase = true) == true) {
+                    "Card not detected properly please scan again"
+                } else {
+                    "Error: ${e.message}"
+                }
             } finally {
                 try {
                     if (mifare.isConnected)  mifare.close()
@@ -730,13 +754,17 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                     resultMessage = "Card data deleted successfully."
                 } else {
                     success = false
-                    resultMessage = "Failed to authenticate card for deletion."
+                    resultMessage = "Card not detected properly please scan again"
                 }
 
             } catch (e: Exception) {
                 platformLog("SITACardMaster", "Delete Data Error: ${e.message}")
                 success = false
-                resultMessage = "Error: ${e.message}"
+                resultMessage = if (e is java.io.IOException || e.message?.contains("Tag lost", ignoreCase = true) == true) {
+                    "Card not detected properly please scan again"
+                } else {
+                    "Error: ${e.message}"
+                }
             } finally {
                 try {
                     if (mifare.isConnected) mifare.close()
