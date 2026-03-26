@@ -10,3 +10,8 @@ actual fun currentTime(): String {
     val formatter = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
     return formatter.format(java.util.Date())
 }
+
+actual fun platformNow(): String {
+    val formatter = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
+    return formatter.format(java.util.Date())
+}

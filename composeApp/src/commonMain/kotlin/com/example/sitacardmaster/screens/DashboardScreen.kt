@@ -39,6 +39,7 @@ fun DashboardScreen(
     nfcManager: NfcManager,
     onIssueCardClick: () -> Unit,
     onVerifyMemberClick: () -> Unit,
+    onWriteLogoUrlClick: () -> Unit,
     onLogsClick: () -> Unit,
     onLogout: () -> Unit
 ) {
@@ -58,33 +59,14 @@ fun DashboardScreen(
     var isDeleteMode by remember { mutableStateOf(false) }
     var cardData by remember { mutableStateOf<Map<String, String>?>(null) }
     var scanStatus by remember { mutableStateOf("") }
-    var isUrlWriteMode by remember { mutableStateOf(false) }
-    var logoUrlInput by remember { mutableStateOf("") }
-    var showUrlInputDialog by remember { mutableStateOf(false) }
 
-    // Write URL member dropdown state
-    var urlWriteMemberQuery by remember { mutableStateOf("") }
-    var urlWriteSelectedMember by remember { mutableStateOf("") }
-    var urlWriteSuggestions by remember { mutableStateOf<List<com.example.sitacardmaster.network.models.VerifyMemberResponse>>(emptyList()) }
-    var urlWriteDropdownExpanded by remember { mutableStateOf(false) }
-    var urlWriteIsFocused by remember { mutableStateOf(false) }
 
     var remainingSeconds by remember { mutableStateOf(60) }
 
     // API Integration
     val apiClient = remember { MemberApiClient() }
 
-    // Fetch suggestions for Write URL dropdown
-    LaunchedEffect(urlWriteMemberQuery, urlWriteIsFocused) {
-        if (!urlWriteIsFocused) return@LaunchedEffect
-        kotlinx.coroutines.delay(300)
-        val query = if (urlWriteMemberQuery == urlWriteSelectedMember) "" else urlWriteMemberQuery
-        val result = apiClient.getApprovedMembers(query)
-        if (result.isSuccess) {
-            urlWriteSuggestions = result.getOrNull() ?: emptyList()
-            urlWriteDropdownExpanded = urlWriteSuggestions.isNotEmpty() && urlWriteIsFocused
-        }
-    }
+
     val scope = rememberCoroutineScope()
     var currentAmount by remember { mutableStateOf<String?>("Loading...") }
     var globalAmount by remember { mutableStateOf<String?>("0.00") }
@@ -135,26 +117,6 @@ fun DashboardScreen(
                 return@LaunchedEffect
             }
 
-            if (isUrlWriteMode) {
-                platformLog("Dashboard", "Writing Logo URL: $logoUrlInput")
-                scanStatus = "Writing Logo URL..."
-                nfcManager.writeLogoUrl(logoUrlInput) { success, message ->
-                    if (success) {
-                        scanStatus = "Logo URL written successfully"
-                        platformLog("Dashboard", "Logo URL write success")
-                        // Reset for next write
-                        logoUrlInput = ""
-                        urlWriteMemberQuery = ""
-                        urlWriteSelectedMember = ""
-                    } else {
-                        scanStatus = "Write Failed: $message"
-                        platformLog("Dashboard", "Logo URL write failed: $message")
-                    }
-                    isScanning = false
-                    isUrlWriteMode = false
-                }
-                return@LaunchedEffect
-            }
 
             platformLog("Dashboard", "Reading card data...")
             nfcManager.readCard { success, data, message ->
@@ -346,7 +308,6 @@ fun DashboardScreen(
                         onClick = {
                             isScanning = false
                             isDeleteMode = false
-                            isUrlWriteMode = false
                             nfcManager.stopScanning()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = grayText)
@@ -356,110 +317,7 @@ fun DashboardScreen(
                 }
             }
 
-            if (showUrlInputDialog) {
-                AlertDialog(
-                    onDismissRequest = {
-                        showUrlInputDialog = false
-                        urlWriteMemberQuery = ""
-                        urlWriteSelectedMember = ""
-                        urlWriteDropdownExpanded = false
-                    },
-                    title = {
-                        Text(
-                            "Write Logo URL",
-                            fontWeight = FontWeight.Bold,
-                            color = brandBlue
-                        )
-                    },
-                    text = {
-                        Column {
-                            Text(
-                                "Select a member to auto-fill their website URL.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = grayText
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
 
-                            // Member search dropdown
-                            ExposedDropdownMenuBox(
-                                expanded = urlWriteDropdownExpanded,
-                                onExpandedChange = { urlWriteDropdownExpanded = it }
-                            ) {
-                                OutlinedTextField(
-                                    value = urlWriteMemberQuery,
-                                    onValueChange = {
-                                        urlWriteMemberQuery = it
-                                        if (it != urlWriteSelectedMember) {
-                                            urlWriteSelectedMember = ""
-                                            logoUrlInput = ""
-                                        }
-                                    },
-                                    label = { Text("Company Name") },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .menuAnchor()
-                                        .onFocusChanged { fs ->
-                                            urlWriteIsFocused = fs.isFocused
-                                        },
-                                    shape = RoundedCornerShape(8.dp),
-                                    singleLine = true
-                                )
-                                ExposedDropdownMenu(
-                                    expanded = urlWriteDropdownExpanded,
-                                    onDismissRequest = { urlWriteDropdownExpanded = false }
-                                ) {
-                                    urlWriteSuggestions.forEach { member ->
-                                        DropdownMenuItem(
-                                            text = { Text("${member.companyName} (${member.memberId})") },
-                                            onClick = {
-                                                urlWriteSelectedMember = member.companyName ?: ""
-                                                urlWriteMemberQuery = urlWriteSelectedMember
-                                                // Auto-fill SITA member card URL
-                                                val memberId = member.memberId ?: ""
-                                                logoUrlInput = if (memberId.isNotBlank()) {
-                                                    "https://sita.shanti-pos.com/member-card/$memberId"
-                                                } else ""
-                                                urlWriteDropdownExpanded = false
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-
-                        }
-                    },
-                    confirmButton = {
-                        Button(
-                            onClick = {
-                                if (urlWriteSelectedMember.isEmpty()) return@Button
-                                if (logoUrlInput.isNotEmpty()) {
-                                    showUrlInputDialog = false
-                                    urlWriteMemberQuery = ""
-                                    urlWriteSelectedMember = ""
-                                    isScanning = true
-                                    isUrlWriteMode = true
-                                    scanStatus = "READY TO WRITE URL... TAP CARD"
-                                    nfcManager.startScanning()
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = brandBlue),
-                            enabled = urlWriteSelectedMember.isNotEmpty() && logoUrlInput.isNotEmpty()
-                        ) {
-                            Text("WRITE")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = {
-                            showUrlInputDialog = false
-                            urlWriteMemberQuery = ""
-                            urlWriteSelectedMember = ""
-                        }) {
-                            Text("Cancel")
-                        }
-                    },
-                    containerColor = Color.White
-                )
-            }
 
             // Error Display Section
             if (verificationError != null) {
@@ -759,7 +617,7 @@ fun DashboardScreen(
             }
 
             Button(
-                onClick = { showUrlInputDialog = true },
+                onClick = onWriteLogoUrlClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)

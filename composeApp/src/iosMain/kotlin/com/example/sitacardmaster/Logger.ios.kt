@@ -13,3 +13,9 @@ actual fun currentTime(): String {
     formatter.dateFormat = "HH:mm:ss"
     return formatter.stringFromDate(NSDate())
 }
+
+actual fun platformNow(): String {
+    val formatter = NSDateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+    return formatter.stringFromDate(NSDate())
+}

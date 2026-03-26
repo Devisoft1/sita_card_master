@@ -9,9 +9,10 @@ import com.example.sitacardmaster.screens.DashboardScreen
 import com.example.sitacardmaster.screens.IssueCardScreen
 import com.example.sitacardmaster.screens.LoginScreen
 import com.example.sitacardmaster.screens.MemberVerificationScreen
+import com.example.sitacardmaster.screens.WriteUrlScreen
 
 enum class Screen {
-    Login, Dashboard, IssueCard, MemberVerification, Logs
+    Login, Dashboard, IssueCard, MemberVerification, WriteUrl, Logs
 }
 
 @Composable
@@ -29,8 +30,13 @@ fun App(nfcManager: NfcManager = rememberNfcManager()) {
                     nfcManager = nfcManager,
                     onIssueCardClick = { currentScreen = Screen.IssueCard },
                     onVerifyMemberClick = { currentScreen = Screen.MemberVerification },
+                    onWriteLogoUrlClick = { currentScreen = Screen.WriteUrl },
                     onLogsClick = { /* Handle logs */ },
                     onLogout = { currentScreen = Screen.Login }
+                )
+                Screen.WriteUrl -> WriteUrlScreen(
+                    onBack = { currentScreen = Screen.Dashboard },
+                    nfcManager = nfcManager
                 )
                 Screen.IssueCard -> IssueCardScreen(
                     onBack = { currentScreen = Screen.Dashboard },

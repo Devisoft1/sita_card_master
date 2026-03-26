@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import com.example.sitacardmaster.NfcManager
 import com.example.sitacardmaster.PlatformDatePicker
 import com.example.sitacardmaster.platformLog
+import com.example.sitacardmaster.platformNow
 import com.example.sitacardmaster.network.MemberApiClient
 import com.example.sitacardmaster.network.models.VerifyMemberResponse
 import kotlinx.coroutines.launch
@@ -712,8 +713,4 @@ private fun saveIssuedCardLocally(settings: SettingsStorage, card: IssuedCard) {
     }
 }
 
-private fun platformNow(): String {
-    val now = kotlinx.datetime.Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-    return "${now.year}-${now.monthNumber.toString().padStart(2, '0')}-${now.dayOfMonth.toString().padStart(2, '0')} " +
-           "${now.hour.toString().padStart(2, '0')}:${now.minute.toString().padStart(2, '0')}:${now.second.toString().padStart(2, '0')}"
-}
+
