@@ -288,7 +288,7 @@ fun DashboardScreen(
                 Text(
                     text = if (isScanning) {
                         if (isDeleteMode) "TAP CARD TO DELETE DATA..." else "TAP CARD NOW..."
-                    } else "Tap logo to scan card",
+                    } else "Tap logo to scan",
                     color = brandBlue,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,

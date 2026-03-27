@@ -243,7 +243,7 @@ class DashboardActivity : AppCompatActivity() {
 
     private fun stopScanMode() {
         isScanning = false
-        scanInstruction.text = "Tap logo to scan card"
+        scanInstruction.text = "Tap logo to scan"
         scanProgress.visibility = View.GONE
         stopScanButton.visibility = View.GONE
         newCardButton.visibility = View.VISIBLE
