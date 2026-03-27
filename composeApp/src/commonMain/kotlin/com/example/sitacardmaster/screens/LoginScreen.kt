@@ -77,13 +77,13 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                 Text(
                     text = "Welcome Back!",
                     color = Color.White,
-                    fontSize = 32.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = "Sign in to continue",
                     color = Color.White.copy(alpha = 0.8f),
-                    fontSize = 18.sp,
+                    fontSize = 14.sp,
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
@@ -273,7 +273,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
 
                     // Powered By
                     PoweredBySection(
-                        modifier = Modifier.padding(top = 8.dp),
+                        modifier = Modifier.padding(top = 16.dp),
                         textColor = Color(0xFF666666)
                     )
                 }

@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.*
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,6 +36,7 @@ fun WriteUrlScreen(nfcManager: NfcManager, onBack: () -> Unit) {
     val apiClient = remember { MemberApiClient() }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val focusManager = LocalFocusManager.current
 
     var companySearchQuery by remember { mutableStateOf("") }
     var selectedCompanyName by remember { mutableStateOf("") }
@@ -111,14 +113,14 @@ fun WriteUrlScreen(nfcManager: NfcManager, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             Surface(
-                shadowElevation = 4.dp,
+                shadowElevation = 2.dp,
                 color = white
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .windowInsetsPadding(WindowInsets.statusBars)
-                        .height(56.dp)
+                        .height(40.dp)
                         .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -137,7 +139,7 @@ fun WriteUrlScreen(nfcManager: NfcManager, onBack: () -> Unit) {
 
                     Text(
                         text = "Write Logo URL",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = brandBlue,
                         modifier = Modifier.padding(start = 8.dp)
                     )
@@ -192,7 +194,7 @@ fun WriteUrlScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                                     selectedCompanyName = ""
                                 }
                             },
-                            label = { Text("Company Name") },
+                            label = { Text("Select Member") },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(bottom = 12.dp)
@@ -204,7 +206,7 @@ fun WriteUrlScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                                 Icon(Icons.Default.Business, contentDescription = null, tint = brandBlue)
                             },
                             trailingIcon = {
-                                if (companySearchQuery.isNotEmpty() && companySearchQuery != selectedCompanyName) {
+                                if (companySearchQuery.isNotEmpty()) {
                                     IconButton(onClick = { 
                                         companySearchQuery = ""
                                         selectedCompanyName = ""
@@ -228,10 +230,9 @@ fun WriteUrlScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                                         selectedCompanyName = member.companyName ?: ""
                                         companySearchQuery = selectedCompanyName
                                         val memberId = member.memberId ?: ""
-                                        if (memberId.isNotBlank()) {
-                                            logoUrlInput = "https://sita.shanti-pos.com/member-card/$memberId"
-                                        }
+                                        logoUrlInput = "https://sita.shanti-pos.com/member-card/$memberId"
                                         isCompanyDropdownExpanded = false
+                                        focusManager.clearFocus()
                                     }
                                 )
                             }

@@ -15,6 +15,10 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.draw.alpha
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import org.jetbrains.compose.resources.painterResource
+import sitacardmaster.composeapp.generated.resources.*
 
 @Composable
 fun PoweredBySection(
@@ -29,22 +33,25 @@ fun PoweredBySection(
         modifier = modifier
             .fillMaxWidth()
             .clickable { uriHandler.openUri("https://devisoft.co.in") }
-            .padding(vertical = 16.dp),
+            .padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Main Text
         Text(
             text = buildAnnotatedString {
                 withStyle(SpanStyle(color = textColor, fontSize = 11.sp)) {
                     append("Powered by ")
                 }
-                withStyle(SpanStyle(color = devisoftBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)) {
-                    append("Devi")
-                }
-                withStyle(SpanStyle(color = devisoftOrange, fontSize = 11.sp, fontWeight = FontWeight.Bold)) {
-                    append("Soft")
-                }
             }
+        )
+        
+        // Logo (Added as per user request for "devisoft logo")
+        Image(
+            painter = painterResource(Res.drawable.devisoft),
+            contentDescription = "DeviSoft Logo",
+            modifier = Modifier.height(14.dp),
+            contentScale = ContentScale.Fit
         )
     }
 }

@@ -18,6 +18,8 @@ import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.runtime.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -97,6 +99,7 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
     val grayText = Color(0xFF757575)
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
     
     val tag by nfcManager.detectedTag
@@ -257,14 +260,14 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             Surface(
-                shadowElevation = 4.dp,
+                shadowElevation = 2.dp,
                 color = white
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .windowInsetsPadding(WindowInsets.statusBars)
-                        .height(56.dp)
+                        .height(40.dp)
                         .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -283,7 +286,7 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
 
                     Text(
                         text = "Issue New Card",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = brandBlue,
                         modifier = Modifier.padding(start = 8.dp)
                     )
@@ -369,7 +372,7 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                                     showMemberInfoCard = false
                                 }
                             },
-                            label = { Text("Company Name") },
+                            label = { Text("Select Member") },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(bottom = 12.dp)
@@ -381,7 +384,7 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                                 Icon(Icons.Default.Business, contentDescription = null, tint = brandBlue)
                             },
                             trailingIcon = {
-                                if (companySearchQuery.isNotEmpty() && companySearchQuery != selectedCompanyName) {
+                                if (companySearchQuery.isNotEmpty()) {
                                     IconButton(onClick = { 
                                         companySearchQuery = ""
                                         selectedCompanyName = ""
@@ -414,6 +417,7 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                                         addressText = member.companyAddress ?: "---"
                                         showMemberInfoCard = true
                                         isCompanyDropdownExpanded = false
+                                        focusManager.clearFocus()
                                     }
                                 )
                             }
@@ -597,46 +601,9 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                                 Text("Start Scan & Write", fontWeight = FontWeight.Bold)
                             }
                             
-                            Spacer(modifier = Modifier.height(12.dp))
+                            // "Clear Card (NFC)" button removed to match Android version
                             
-                            Button(
-                                onClick = {
-                                    scanningMode = ScanMode.Clearing
-                                    statusMessage = "Clearing Data..."
-                                    nfcManager.startScanning()
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = grayText),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text("Clear Card (NFC)", fontWeight = FontWeight.Bold)
-                            }
-                            
-                            Spacer(modifier = Modifier.height(12.dp))
-                            
-                            Button(
-                                onClick = {
-                                    memberId = ""
-                                    selectedCompanyName = ""
-                                    companySearchQuery = ""
-                                    password = ""
-                                    validUpto = ""
-                                    totalBuy = ""
-                                    showMemberInfoCard = false
-                                    statusMessage = "Ready to write"
-                                    scanningMode = ScanMode.None
-                                    nfcManager.stopScanning()
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9E9E9E)),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text("CLEAR PAGE", fontWeight = FontWeight.Bold)
-                            }
+                            // "CLEAR PAGE" button removed to match Android version
                         }
                     }
                 }

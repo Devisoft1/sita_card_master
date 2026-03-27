@@ -264,10 +264,10 @@ fun DashboardScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Image(
-                    painter = painterResource(Res.drawable.logo),
+                    painter = painterResource(Res.drawable.sita_logo),
                     contentDescription = "Logo",
                     modifier = Modifier
-                        .size(150.dp)
+                        .size(220.dp)
                         .clickable {
                             isScanning = true
                             // If user just clicks logo, default to read mode
