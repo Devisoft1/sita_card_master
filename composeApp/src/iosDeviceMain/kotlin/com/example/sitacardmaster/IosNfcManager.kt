@@ -39,6 +39,8 @@ class IosNfcManager : NfcManager {
     }
     
     private fun startSession() {
+        if (session != null) return // Already running
+        
         secondsElapsed = 0
         session = NFCTagReaderSession(
             pollingOption = NFCPollingISO14443 or NFCPollingISO15693,
@@ -219,7 +221,7 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
                         ?: "NDEF-TAG"
 
             detectedTagId.value = tagId
-            detectedTag.value = mifareTag ?: ndefTag
+            // Don't set detectedTag yet if it's NDEF, wait for read
             detectedUrl.value = null
             
             if (ndefTag != null) {
@@ -227,36 +229,44 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
                     if (error == null && message != null) {
                         val record = message.records.firstOrNull() as? NFCNdefPayload
                         if (record != null && record.typeNameFormat == NFCNdefTypeNameFormatWellKnown) {
-                            // Extract URL from Well Known URI record
                             val url = record.wellKnownTypeURIPayload()?.absoluteString
                             detectedUrl.value = url
                         }
                     }
+                    // NOW set the tag to trigger the LaunchedEffect in UI
+                    detectedTag.value = mifareTag ?: ndefTag
+                    
+                    // Proceed with standard write/read if pending
+                    handlePendingOperations(session, mifareTag, ndefTag)
                 }
+            } else {
+                detectedTag.value = mifareTag
+                handlePendingOperations(session, mifareTag, null)
             }
-            
-            if (manager.onWriteResult != null) {
-                if (manager.pendingWriteData?.containsKey("logoUrl") == true && ndefTag != null) {
-                    processNdefWrite(session, ndefTag)
-                } else if (mifareTag != null) {
-                    processWrite(session, mifareTag)
-                } else {
-                    session.invalidateSessionWithErrorMessage("Card not supported.")
-                }
+        }
+    }
+
+    private fun handlePendingOperations(session: NFCTagReaderSession, mifareTag: NFCMifareTagProtocol?, ndefTag: NFCNDEFTagProtocol?) {
+        if (manager.onWriteResult != null) {
+            if (manager.pendingWriteData?.containsKey("logoUrl") == true && ndefTag != null) {
+                processNdefWrite(session, ndefTag)
+            } else if (mifareTag != null) {
+                processWrite(session, mifareTag)
+            } else {
+                session.invalidateSessionWithErrorMessage("Card not supported.")
             }
-            else if (manager.onReadResult != null) {
-                if (mifareTag != null) processRead(session, mifareTag)
-                else session.invalidateSessionWithErrorMessage("Card not supported.")
-            }
-            else if (manager.onClearResult != null) {
-                if (mifareTag != null) processClear(session, mifareTag)
-                else session.invalidateSessionWithErrorMessage("Card not supported.")
-            }
-            else if (manager.onDeleteResult != null) {
-                if (mifareTag != null) processDelete(session, mifareTag)
-                else session.invalidateSessionWithErrorMessage("Card not supported.")
-            }
-            else session.invalidateSession()
+        }
+        else if (manager.onReadResult != null) {
+            if (mifareTag != null) processRead(session, mifareTag)
+            else session.invalidateSessionWithErrorMessage("Card not supported.")
+        }
+        else if (manager.onClearResult != null) {
+            if (mifareTag != null) processClear(session, mifareTag)
+            else session.invalidateSessionWithErrorMessage("Card not supported.")
+        }
+        else if (manager.onDeleteResult != null) {
+            if (mifareTag != null) processDelete(session, mifareTag)
+            else session.invalidateSessionWithErrorMessage("Card not supported.")
         }
     }
 
