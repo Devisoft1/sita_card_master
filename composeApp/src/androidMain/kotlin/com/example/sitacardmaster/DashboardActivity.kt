@@ -116,7 +116,7 @@ class DashboardActivity : AppCompatActivity() {
         errorContainer = findViewById(R.id.errorContainer)
         errorText = findViewById(R.id.errorText)
         
-        val logoutButton = findViewById<Button>(R.id.logoutButton)
+        val logoutButton = findViewById<ImageButton>(R.id.logoutButton)
         val backButton = findViewById<ImageButton>(R.id.backButton)
         val titleText = findViewById<TextView>(R.id.appBarTitle)
 

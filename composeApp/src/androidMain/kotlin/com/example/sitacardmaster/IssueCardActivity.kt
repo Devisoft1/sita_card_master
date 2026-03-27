@@ -97,7 +97,7 @@ class IssueCardActivity : AppCompatActivity() {
         timerText = findViewById(R.id.timerText)
         val backButton = findViewById<ImageButton>(R.id.backButton)
         findViewById<TextView>(R.id.appBarTitle).text = "Issue New Card"
-        findViewById<Button>(R.id.logoutButton)?.visibility = View.GONE
+        findViewById<ImageButton>(R.id.logoutButton)?.visibility = View.GONE
 
         findViewById<View>(R.id.llPoweredBy).setOnClickListener {
             val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://devisoft.co.in"))

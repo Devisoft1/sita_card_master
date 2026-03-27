@@ -17,6 +17,8 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.runtime.*
@@ -267,7 +269,7 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .windowInsetsPadding(WindowInsets.statusBars)
-                        .height(40.dp)
+                        .height(34.dp)
                         .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -288,8 +290,19 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                         text = "Issue New Card",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = brandBlue,
-                        modifier = Modifier.padding(start = 8.dp)
+                        modifier = Modifier.padding(start = 8.dp).weight(1f)
                     )
+
+                    IconButton(onClick = {
+                         onBack()
+                    }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                            contentDescription = "Logout",
+                            tint = errorRed,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
             }
         },

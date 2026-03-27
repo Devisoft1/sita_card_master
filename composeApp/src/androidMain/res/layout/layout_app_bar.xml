@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/topBar"
     android:layout_width="match_parent"
-    android:layout_height="@dimen/_35sdp"
+    android:layout_height="28dp"
     app:cardElevation="@dimen/_4sdp"
     app:cardCornerRadius="0dp"
     app:cardBackgroundColor="@color/white">
@@ -40,14 +40,15 @@
             app:layout_constraintBottom_toBottomOf="parent"
             android:layout_marginStart="@dimen/_8sdp" />
 
-        <Button
+        <ImageButton
             android:id="@+id/logoutButton"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Logout"
-            android:textColor="@color/error_red"
-            android:textSize="@dimen/_11ssp"
+            android:layout_width="@dimen/_28sdp"
+            android:layout_height="@dimen/_28sdp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_logout"
+            android:contentDescription="Logout"
+            android:scaleType="centerInside"
+            app:tint="@color/error_red"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent" />

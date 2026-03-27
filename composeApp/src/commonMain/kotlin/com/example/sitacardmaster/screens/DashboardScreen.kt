@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.focus.onFocusChanged
@@ -219,7 +220,7 @@ fun DashboardScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .windowInsetsPadding(WindowInsets.statusBars)
-                        .height(40.dp)
+                        .height(34.dp)
                         .padding(start = 4.dp, end = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -231,8 +232,13 @@ fun DashboardScreen(
                         modifier = Modifier.padding(start = 8.dp).weight(1f)
                     )
 
-                    TextButton(onClick = onLogout) {
-                        Text("Logout", color = errorRed, fontWeight = FontWeight.Bold)
+                    IconButton(onClick = onLogout) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                            contentDescription = "Logout",
+                            tint = errorRed,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 }
             }

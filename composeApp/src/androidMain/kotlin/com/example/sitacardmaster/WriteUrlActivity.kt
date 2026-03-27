@@ -192,7 +192,7 @@ class WriteUrlActivity : AppCompatActivity() {
 
         val backButton = findViewById<ImageButton>(R.id.backButton)
         val titleText = findViewById<TextView>(R.id.appBarTitle)
-        val logoutButton = findViewById<Button>(R.id.logoutButton)
+        val logoutButton = findViewById<ImageButton>(R.id.logoutButton)
 
         titleText.text = "Write Logo URL"
         logoutButton.visibility = View.GONE
