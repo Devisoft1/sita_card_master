@@ -151,7 +151,6 @@ fun WriteUrlScreen(nfcManager: NfcManager, onBack: () -> Unit) {
         bottomBar = {
             PoweredBySection(
                 modifier = Modifier
-                    .background(white)
                     .padding(bottom = 16.dp)
             )
         }

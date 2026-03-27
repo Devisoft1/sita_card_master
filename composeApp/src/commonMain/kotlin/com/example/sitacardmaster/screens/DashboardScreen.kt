@@ -242,7 +242,6 @@ fun DashboardScreen(
                 bottomBar = {
             PoweredBySection(
                 modifier = Modifier
-                    .background(Color.White)
                     .padding(bottom = 16.dp)
             )
         }

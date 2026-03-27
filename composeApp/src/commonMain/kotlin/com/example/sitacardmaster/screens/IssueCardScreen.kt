@@ -298,7 +298,6 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
         bottomBar = {
             PoweredBySection(
                 modifier = Modifier
-                    .background(white)
                     .padding(bottom = 16.dp)
             )
         }

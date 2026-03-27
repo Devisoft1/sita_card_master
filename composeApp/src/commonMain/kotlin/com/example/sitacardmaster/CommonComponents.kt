@@ -40,7 +40,7 @@ fun PoweredBySection(
         // Main Text
         Text(
             text = buildAnnotatedString {
-                withStyle(SpanStyle(color = textColor, fontSize = 11.sp)) {
+                withStyle(SpanStyle(color = textColor, fontSize = 13.sp)) {
                     append("Powered by ")
                 }
             }
@@ -50,7 +50,7 @@ fun PoweredBySection(
         Image(
             painter = painterResource(Res.drawable.devisoft),
             contentDescription = "DeviSoft Logo",
-            modifier = Modifier.height(14.dp),
+            modifier = Modifier.height(34.dp),
             contentScale = ContentScale.Fit
         )
     }
