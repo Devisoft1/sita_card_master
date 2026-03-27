@@ -10,6 +10,7 @@ import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.example.sitacardmaster.R
+import com.example.sitacardmaster.screens.formatDate
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -395,46 +396,73 @@ class IssueCardActivity : AppCompatActivity() {
              statusMessage.text = "Verified"
         }
         
-        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) { // Using GlobalScope for simplicity in Activity for now, ideally LifecycleScope
-             logAction("API Request: Member=$memberId, Company=$company, MFID=$tagId, Validity=$validUpto")
-             logAction("API Password: $password") // Added Log
-             val result = apiClient.verifyMember(
-                 memberId = memberId,
-                 companyName = company,
-                 password = password,
-                 cardMfid = tagId,
-                 cardValidity = validUpto,
-                 cardType = cardType
-             )
-             
-             if (result.isSuccess) {
-                 runOnUiThread {
-                     statusMessage.setTextColor(android.graphics.Color.parseColor("#4CAF50"))
-                     statusMessage.text = "Member Verified! Writing to Card..."
-                     writeCard()
-                 }
-             } else {
-                 val error = result.exceptionOrNull()?.message ?: "Verification failed"
-                 
-                 // CRITICAL: If the error is about a duplicate card, STOP and do NOT proceed to fallback.
-                 if (error.contains("already registered", ignoreCase = true) || 
-                     error.contains("different member", ignoreCase = true)) {
-                     
-                     logAction("API Blocked: $error")
-                     runOnUiThread {
-                         com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
-                             .setTitle("Card Already Issued")
-                             .setMessage(error)
-                             .setPositiveButton("OK", null)
-                             .show()
-                         statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
-                         statusMessage.text = error
-                         stopScanning()
-                     }
-                     return@launch
-                 }
+        nfcManager.readCard { readSuccess, cardData, _ ->
+            val existingCompany = cardData?.get("companyName")?.takeIf { it.isNotBlank() }
+            val existingMemberId = cardData?.get("memberId")?.takeIf { it.isNotBlank() }
 
-                 logAction("Verification using card data was not possible: $error. Attempting fallback lookup by ID: $memberId")
+            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) { // Using GlobalScope for simplicity in Activity for now, ideally LifecycleScope
+                 logAction("API Request: Member=$memberId, Company=$company, MFID=$tagId, Validity=$validUpto")
+                 logAction("API Password: $password") // Added Log
+                 val result = apiClient.verifyMember(
+                     memberId = memberId,
+                     companyName = company,
+                     password = password,
+                     cardMfid = tagId,
+                     cardValidity = validUpto,
+                     cardType = cardType
+                 )
+                 
+                 if (result.isSuccess) {
+                     runOnUiThread {
+                         statusMessage.setTextColor(android.graphics.Color.parseColor("#4CAF50"))
+                         statusMessage.text = "Member Verified! Writing to Card..."
+                         writeCard()
+                     }
+                 } else {
+                     val error = result.exceptionOrNull()?.message ?: "Verification failed"
+                     
+                     // CRITICAL: If the error is about a duplicate card, STOP and do NOT proceed to fallback.
+                     if (error.contains("already registered", ignoreCase = true) || 
+                         error.contains("different member", ignoreCase = true)) {
+                         
+                         if (!existingCompany.isNullOrBlank()) {
+                             val displayError = "Card is already registered to:\n$existingCompany"
+                             logAction("API Blocked: $error")
+                             runOnUiThread {
+                                 com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
+                                     .setTitle("Card Already Issued")
+                                     .setMessage(displayError)
+                                     .setPositiveButton("OK", null)
+                                     .show()
+                                 statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+                                 statusMessage.text = displayError
+                                 stopScanning()
+                             }
+                             return@launch
+                         } else {
+                             // Fallback: Fetch from API to find out who really owns this MFID
+                             val membersResult = apiClient.getApprovedMembers()
+                             val duplicateName = membersResult.getOrNull()?.find { 
+                                 it.card_mfid.equals(tagId, ignoreCase = true) 
+                             }?.companyName ?: "Unknown Company"
+                             
+                             val displayError = "Card is already registered to:\n$duplicateName"
+                             logAction("API Blocked: $error")
+                             runOnUiThread {
+                                 com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
+                                     .setTitle("Card Already Issued")
+                                     .setMessage(displayError)
+                                     .setPositiveButton("OK", null)
+                                     .show()
+                                 statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+                                 statusMessage.text = displayError
+                                 stopScanning()
+                             }
+                             return@launch
+                         }
+                     }
+
+                     logAction("Verification using card data was not possible: $error. Attempting fallback lookup by ID: $memberId")
                  
                  // Fallback: Try fetching by ID only
                  val fallbackResult = apiClient.getMemberById(memberId)
@@ -451,10 +479,11 @@ class IssueCardActivity : AppCompatActivity() {
                          statusMessage.text = error
                          stopScanning()
                      }
-                 }
-             }
-        }
-    }
+                 } // end runOnUiThread
+             } // end else branch of API failure
+         } // end of GlobalScope.launch
+        } // end of readCard
+    } // end of verifyAndProcessCard
 
     private fun writeCard() {
         val memberId = memberIdText.text.toString()

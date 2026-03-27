@@ -141,69 +141,92 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
         if (scanningMode != ScanMode.None && tag != null) {
             if (scanningMode == ScanMode.Writing) {
                 statusMessage = "Card detected! Verifying with API..."
-                scope.launch {
-                    val mfid = tagId ?: ""
-                    platformLog("IssueCardScreen", "Verifying Member: $memberId, Company: $selectedCompanyName, MFID: $mfid")
-                    val result = apiClient.verifyMember(
-                        memberId = memberId,
-                        companyName = selectedCompanyName,
-                        password = password,
-                        cardMfid = mfid,
-                        cardValidity = validUpto,
-                        cardType = cardType
-                    )
-                    
-                    if (result.isSuccess) {
-                        statusMessage = "Member Verified! Writing to Card..."
-                        nfcManager.writeCard(
+                
+                nfcManager.readCard { readSuccess, cardData, _ ->
+                    val existingCompany = cardData?.get("companyName")?.takeIf { it.isNotBlank() }
+                    val existingMemberId = cardData?.get("memberId")?.takeIf { it.isNotBlank() }
+
+                    scope.launch {
+                        val mfid = tagId ?: ""
+                        platformLog("IssueCardScreen", "Verifying Member: $memberId, Company: $selectedCompanyName, MFID: $mfid")
+                        val result = apiClient.verifyMember(
                             memberId = memberId,
                             companyName = selectedCompanyName,
                             password = password,
-                            validUpto = validUpto,
-                            totalBuy = totalBuy,
-                            cardType = cardType,
-                            onResult = { success, message ->
-                                statusMessage = message
-                                scanningMode = ScanMode.None
-                                if (success) {
-                                    companySearchQuery = ""
-                                    showMemberInfoCard = false
-                                    statusMessage = "Card Issued Successfully. Ready for next."
-                                    nfcManager.stopScanning()
-                                    
-                                    // Save to local storage for persistence (Matching Android DatabaseHelper)
-                                    val issuedCard = IssuedCard(
-                                        memberId = memberId,
-                                        company = selectedCompanyName,
-                                        validUpto = validUpto,
-                                        totalBuy = totalBuy,
-                                        timestamp = platformNow()
-                                    )
-                                    saveIssuedCardLocally(settingsStorage, issuedCard)
-                                    
-                                    companySearchQuery = ""
-                                    selectedCompanyName = ""
-                                    password = ""
-                                    memberId = ""
-                                    validUpto = ""
-                                }
-                            }
+                            cardMfid = mfid,
+                            cardValidity = validUpto,
+                            cardType = cardType
                         )
-                    } else {
-                        val error = result.exceptionOrNull()?.message ?: "Verification Failed"
                         
-                        // Check for already registered card (Matching Android logic)
-                        if (error.contains("already registered", ignoreCase = true) || 
-                            error.contains("different member", ignoreCase = true)) {
-                            
-                            scanningMode = ScanMode.None
-                            statusMessage = error
-                            showCardAlreadyIssuedDialog = true
-                            cardAlreadyIssuedErrorMessage = error
-                            nfcManager.stopScanning()
+                        if (result.isSuccess) {
+                            statusMessage = "Member Verified! Writing to Card..."
+                            nfcManager.writeCard(
+                                memberId = memberId,
+                                companyName = selectedCompanyName,
+                                password = password,
+                                validUpto = validUpto,
+                                totalBuy = totalBuy,
+                                cardType = cardType,
+                                onResult = { success, message ->
+                                    statusMessage = message
+                                    scanningMode = ScanMode.None
+                                    if (success) {
+                                        companySearchQuery = ""
+                                        showMemberInfoCard = false
+                                        statusMessage = "Card Issued Successfully. Ready for next."
+                                        nfcManager.stopScanning()
+                                        
+                                        // Save to local storage for persistence (Matching Android DatabaseHelper)
+                                        val issuedCard = IssuedCard(
+                                            memberId = memberId,
+                                            company = selectedCompanyName,
+                                            validUpto = validUpto,
+                                            totalBuy = totalBuy,
+                                            timestamp = platformNow()
+                                        )
+                                        saveIssuedCardLocally(settingsStorage, issuedCard)
+                                        
+                                        companySearchQuery = ""
+                                        selectedCompanyName = ""
+                                        password = ""
+                                        memberId = ""
+                                        validUpto = ""
+                                    }
+                                }
+                            )
                         } else {
-                            platformLog("IssueCardScreen", "Verification using card data was not possible: $error. Attempting fallback lookup by ID: $memberId")
-                            val fallbackResult = apiClient.getMemberById(memberId)
+                            val error = result.exceptionOrNull()?.message ?: "Verification Failed"
+                            
+                            // Check for already registered card (Matching Android logic)
+                            if (error.contains("already registered", ignoreCase = true) || 
+                                error.contains("different member", ignoreCase = true)) {
+                                
+                                if (!existingCompany.isNullOrBlank()) {
+                                    val displayError = "Card is already registered to:\n$existingCompany"
+                                    
+                                    scanningMode = ScanMode.None
+                                    statusMessage = error
+                                    showCardAlreadyIssuedDialog = true
+                                    cardAlreadyIssuedErrorMessage = displayError
+                                    nfcManager.stopScanning()
+                                } else {
+                                    // Fallback: Fetch from API to find out who really owns this MFID
+                                    val membersResult = apiClient.getApprovedMembers()
+                                    val duplicateName = membersResult.getOrNull()?.find { 
+                                        it.card_mfid.equals(mfid, ignoreCase = true) 
+                                    }?.companyName ?: "Unknown Company"
+                                    
+                                    val displayError = "Card is already registered to:\n$duplicateName"
+                                    
+                                    scanningMode = ScanMode.None
+                                    statusMessage = error
+                                    showCardAlreadyIssuedDialog = true
+                                    cardAlreadyIssuedErrorMessage = displayError
+                                    nfcManager.stopScanning()
+                                }
+                            } else {
+                                platformLog("IssueCardScreen", "Verification using card data was not possible: $error. Attempting fallback lookup by ID: $memberId")
+                                val fallbackResult = apiClient.getMemberById(memberId)
                             
                             if (fallbackResult.isSuccess) {
                                 platformLog("IssueCardScreen", "Fallback Success! Member found by ID.")
@@ -235,11 +258,12 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                                 statusMessage = "Error: $error"
                                 scanningMode = ScanMode.None
                                 nfcManager.stopScanning()
-                            }
-                        }
-                    }
-                }
-            } else if (scanningMode == ScanMode.Clearing) {
+                            } // end else
+                        } // end if-else result.isSuccess
+                    } // end coroutineScope.launch
+                } // end nfcManager.readCard
+            } // end if (mfid != null)
+        } else if (scanningMode == ScanMode.Clearing) {
                 statusMessage = "Card detected! Clearing..."
                 nfcManager.clearCard { success, message ->
                     statusMessage = message
