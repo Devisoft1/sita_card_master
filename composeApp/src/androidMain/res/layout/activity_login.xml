@@ -188,7 +188,7 @@
                             android:layout_height="wrap_content"
                             android:text="Devi"
                             android:textColor="@color/devisoft_blue"
-                            android:textSize="18sp"
+                            android:textSize="11sp"
                             android:textStyle="bold" />
 
                         <TextView
@@ -196,7 +196,7 @@
                             android:layout_height="wrap_content"
                             android:text="Soft"
                             android:textColor="@color/devisoft_orange"
-                            android:textSize="18sp"
+                            android:textSize="11sp"
                             android:textStyle="bold" />
                     </LinearLayout>
 
