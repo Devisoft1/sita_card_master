@@ -599,7 +599,8 @@ fun DashboardScreen(
 
                         else -> grayText
                     },
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    modifier = Modifier.padding(bottom = 16.dp),
+                    textAlign = TextAlign.Center
                 )
             }
 
@@ -607,7 +608,7 @@ fun DashboardScreen(
             Button(
                 onClick = onIssueCardClick,
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .fillMaxWidth(0.85f)
                     .height(48.dp)
                     .padding(bottom = 8.dp),
                 shape = RoundedCornerShape(12.dp),
@@ -624,7 +625,7 @@ fun DashboardScreen(
             Button(
                 onClick = onWriteLogoUrlClick,
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .fillMaxWidth(0.85f)
                     .height(48.dp)
                     .padding(bottom = 8.dp),
                 shape = RoundedCornerShape(12.dp),
@@ -639,7 +640,7 @@ fun DashboardScreen(
             }
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(0.85f),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(

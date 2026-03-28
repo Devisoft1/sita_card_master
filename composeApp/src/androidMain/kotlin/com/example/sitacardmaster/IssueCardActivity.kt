@@ -396,13 +396,25 @@ class IssueCardActivity : AppCompatActivity() {
                  if (cardPassword.isEmpty()) {
                      logAction("BLANK_CARD_DETECTED: Card is not registered.")
                      runOnUiThread {
+                         val padding = (resources.displayMetrics.density * 24).toInt()
+                         val container = android.widget.FrameLayout(this@IssueCardActivity).apply {
+                             setPadding(padding, padding, padding, 0)
+                         }
+                         val messageView = TextView(this@IssueCardActivity).apply {
+                             text = "Wrong Card Detected"
+                             gravity = android.view.Gravity.CENTER
+                             textSize = 18f
+                             setTextColor(resources.getColor(R.color.error_red, theme))
+                             setTypeface(null, android.graphics.Typeface.BOLD)
+                         }
+                         container.addView(messageView)
+
                          com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
-                             .setTitle("Card Not Registered")
-                             .setMessage("Wrong card detected")
+                             .setView(container)
                              .setPositiveButton("OK", null)
                              .show()
                          statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
-                         statusMessage.text = "Error: Card not registered"
+                         statusMessage.text = "Error: Wrong card detected"
                          stopScanning()
                      }
                      return@launch

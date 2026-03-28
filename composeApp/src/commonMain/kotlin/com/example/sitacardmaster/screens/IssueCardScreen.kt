@@ -152,7 +152,7 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                         if (cardPassword.isEmpty()) {
                             platformLog("SITACardMaster", "BLANK_CARD_DETECTED: Card is not registered.")
                             scanningMode = ScanMode.None
-                            statusMessage = "Error: Card not registered"
+                            statusMessage = "Error: Wrong card detected"
                             showCardAlreadyIssuedDialog = true
                             cardAlreadyIssuedErrorMessage = "Wrong card detected"
                             nfcManager.stopScanning()
@@ -297,19 +297,18 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
         if (showCardAlreadyIssuedDialog) {
             AlertDialog(
                 onDismissRequest = { showCardAlreadyIssuedDialog = false },
-                title = { 
-                    Text(
-                        "Card Already Issued", 
-                        style = MaterialTheme.typography.titleLarge,
-                        color = errorRed,
-                        fontWeight = FontWeight.Bold
-                    ) 
-                },
                 text = { 
-                    Text(
-                        cardAlreadyIssuedErrorMessage,
-                        style = MaterialTheme.typography.bodyLarge
-                    ) 
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = cardAlreadyIssuedErrorMessage,
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            color = errorRed,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 },
                 confirmButton = {
                     Button(
