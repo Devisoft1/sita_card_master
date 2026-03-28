@@ -317,14 +317,7 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
                 return@authenticateAndReadSector
             }
             
-            val block12 = sector3Data[12] ?: ""
-            if (block12.all { it == '0' || it == ' ' }) {
-                manager.onReadResult?.invoke(true, null, "Blank card")
-                session.invalidateSession()
-                return@authenticateAndReadSector
-            }
-            
-            results["memberId"] = smartDecode(block12)
+            results["memberId"] = smartDecode(sector3Data[12] ?: "")
             results["companyName"] = hexToString(sector3Data[13] ?: "").trimNulls()
             results["validUpto"] = formatHexDate(sector3Data[14] ?: "")
 
@@ -340,7 +333,17 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
                         results["cardType"] = hexToString(sector5Data[20] ?: "").trimNulls()
                         results["logoUrl"] = hexToString(sector5Data[21] ?: "").trimNulls()
                     }
-                    manager.onReadResult?.invoke(true, results, "Read Success")
+                    
+                    // Check if actually blank (all fields we care about are empty)
+                    val isTrulyBlank = (results["memberId"] ?: "").isBlank() && 
+                                      (results["password"] ?: "").isBlank() &&
+                                      (results["companyName"] ?: "").isBlank()
+                                      
+                    if (isTrulyBlank) {
+                        manager.onReadResult?.invoke(true, null, "Blank card")
+                    } else {
+                        manager.onReadResult?.invoke(true, results, "Read Success")
+                    }
                     session.invalidateSession()
                 }
             }

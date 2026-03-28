@@ -28,7 +28,6 @@ class IssueCardActivity : AppCompatActivity() {
 
     private lateinit var memberIdText: TextView
     private lateinit var companyNameInput: com.google.android.material.textfield.MaterialAutoCompleteTextView
-    private lateinit var passwordInput: com.google.android.material.textfield.TextInputEditText
     private lateinit var cardTypeInput: com.google.android.material.textfield.MaterialAutoCompleteTextView
     private lateinit var validUptoText: TextView
     private lateinit var phoneNumberText: TextView
@@ -80,7 +79,6 @@ class IssueCardActivity : AppCompatActivity() {
 
         memberIdText = findViewById(R.id.memberIdText)
         companyNameInput = findViewById(R.id.companyName)
-        passwordInput = findViewById(R.id.passwordInput)
         cardTypeInput = findViewById(R.id.cardTypeInput)
         validUptoText = findViewById(R.id.validUptoText)
         phoneNumberText = findViewById(R.id.phoneNumberText)
@@ -117,12 +115,6 @@ class IssueCardActivity : AppCompatActivity() {
             if (memberIdText.text.isEmpty() || memberIdText.text == "---") {
                 statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
                 statusMessage.text = "Error: Member ID is missing"
-                return@setOnClickListener
-            }
-            if (passwordInput.text.isNullOrEmpty()) {
-                statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
-                statusMessage.text = "Error: Please enter password"
-                statusMessage.text = "Error: Please enter password"
                 return@setOnClickListener
             }
             if (cardTypeInput.text.isEmpty()) {
@@ -297,7 +289,6 @@ class IssueCardActivity : AppCompatActivity() {
 
     private fun clearOtherFields() {
         memberIdText.text = "---"
-        passwordInput.text?.clear()
         validUptoText.text = "---"
         phoneNumberText.text = "---"
         whatsappInputText.text = "---"
@@ -387,7 +378,6 @@ class IssueCardActivity : AppCompatActivity() {
         val tagId = tag.id.joinToString("") { byte -> "%02X".format(byte) }
         val memberId = memberIdText.text.toString()
         val company = companyNameInput.text.toString()
-        val password = passwordInput.text.toString()
         val cardType = cardTypeInput.text.toString()
         val validUpto = validUptoText.text.toString()
 
@@ -401,105 +391,74 @@ class IssueCardActivity : AppCompatActivity() {
             val existingMemberId = cardData?.get("memberId")?.takeIf { it.isNotBlank() }
 
             kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) { // Using GlobalScope for simplicity in Activity for now, ideally LifecycleScope
-                 logAction("API Request: Member=$memberId, Company=$company, MFID=$tagId, Validity=$validUpto")
-                 logAction("API Password: $password") // Added Log
+                 val cardPassword = cardData?.get("password") ?: ""
+                 
+                 if (cardPassword.isEmpty()) {
+                     logAction("BLANK_CARD_DETECTED: Card is not registered.")
+                     runOnUiThread {
+                         com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
+                             .setTitle("Card Not Registered")
+                             .setMessage("Wrong card detected")
+                             .setPositiveButton("OK", null)
+                             .show()
+                         statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+                         statusMessage.text = "Error: Card not registered"
+                         stopScanning()
+                     }
+                     return@launch
+                 }
+
+                 logAction("READ_CARD: MFID=$tagId, Password (from card)=$cardPassword")
+                 logAction("VERIFY_API_START: MemberID=$memberId, Company=$company, MFID=$tagId, Validity=$validUpto")
                  val result = apiClient.verifyMember(
                      memberId = memberId,
                      companyName = company,
-                     password = password,
+                     password = cardPassword,
                      cardMfid = tagId,
                      cardValidity = validUpto,
                      cardType = cardType
                  )
                  
                  if (result.isSuccess) {
+                     logAction("VERIFY_API_SUCCESS: Member Verified!")
                      runOnUiThread {
                          statusMessage.setTextColor(android.graphics.Color.parseColor("#4CAF50"))
                          statusMessage.text = "Member Verified! Writing to Card..."
-                         writeCard()
+                         writeCard(cardPassword)
                      }
                  } else {
                      val error = result.exceptionOrNull()?.message ?: "Verification failed"
+                     logAction("VERIFY_API_FAILED: $error")
                      
-                     // CRITICAL: If the error is about a duplicate card, STOP and do NOT proceed to fallback.
-                     if (error.contains("already registered", ignoreCase = true) || 
-                         error.contains("different member", ignoreCase = true)) {
-                         
-                         if (!existingCompany.isNullOrBlank()) {
-                             val displayError = "Card is already registered to:\n$existingCompany"
-                             logAction("API Blocked: $error")
-                             runOnUiThread {
-                                 com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
-                                     .setTitle("Card Already Issued")
-                                     .setMessage(displayError)
-                                     .setPositiveButton("OK", null)
-                                     .show()
-                                 statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
-                                 statusMessage.text = displayError
-                                 stopScanning()
-                             }
-                             return@launch
-                         } else {
-                             // Fallback: Fetch from API to find out who really owns this MFID
-                             val membersResult = apiClient.getApprovedMembers()
-                             val duplicateName = membersResult.getOrNull()?.find { 
-                                 it.card_mfid.equals(tagId, ignoreCase = true) 
-                             }?.companyName ?: "Unknown Company"
-                             
-                             val displayError = "Card is already registered to:\n$duplicateName"
-                             logAction("API Blocked: $error")
-                             runOnUiThread {
-                                 com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
-                                     .setTitle("Card Already Issued")
-                                     .setMessage(displayError)
-                                     .setPositiveButton("OK", null)
-                                     .show()
-                                 statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
-                                 statusMessage.text = displayError
-                                 stopScanning()
-                             }
-                             return@launch
-                         }
-                     }
-
-                     logAction("Verification using card data was not possible: $error. Attempting fallback lookup by ID: $memberId")
-                 
-                 // Fallback: Try fetching by ID only
-                 val fallbackResult = apiClient.getMemberById(memberId)
-                 
-                 runOnUiThread {
-                     if (fallbackResult.isSuccess) {
-                         logAction("Fallback Success! Member found by ID.")
-                         statusMessage.setTextColor(android.graphics.Color.parseColor("#4CAF50"))
-                         statusMessage.text = "Fallback Verified! Writing to Card..."
-                         writeCard()
-                     } else {
-                         logAction("Fallback Failed: ${fallbackResult.exceptionOrNull()?.message}")
+                     runOnUiThread {
+                         com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
+                             .setTitle("Verification Failed")
+                             .setMessage(error)
+                             .setPositiveButton("OK", null)
+                             .show()
                          statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
                          statusMessage.text = error
                          stopScanning()
                      }
-                 } // end runOnUiThread
-             } // end else branch of API failure
-         } // end of GlobalScope.launch
+                 }
+            } // end of GlobalScope.launch
         } // end of readCard
     } // end of verifyAndProcessCard
 
-    private fun writeCard() {
+    private fun writeCard(cardPassword: String) {
         val memberId = memberIdText.text.toString()
         val company = companyNameInput.text.toString()
-        val password = passwordInput.text.toString()
         val cardType = cardTypeInput.text.toString()
         val validUpto = validUptoText.text.toString()
         // val totalBuy = totalBuyInput.text.toString() // Removed
         val totalBuy = "0" // Defaulting to 0 since input is removed
 
-        logAction("Starting Write Card. Member: $memberId, Pwd: $password") // Added Log
+        logAction("Starting Write Card. Member: $memberId, Pwd (from card): $cardPassword") 
 
         nfcManager.writeCard(
             memberId = memberId,
             companyName = company,
-            password = password,
+            password = cardPassword,
             validUpto = validUpto,
             totalBuy = totalBuy,
             cardType = cardType,
