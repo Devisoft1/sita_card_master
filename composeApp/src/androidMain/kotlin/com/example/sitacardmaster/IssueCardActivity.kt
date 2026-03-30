@@ -135,13 +135,30 @@ class IssueCardActivity : AppCompatActivity() {
                 startScanButton.isEnabled = true
                 if (result.isSuccess) {
                     val memberDetails = result.getOrNull()
-                    val hasExistingCard = memberDetails?.cards?.any { 
-                        it.cardType.equals(selectedCardType, ignoreCase = true) 
-                    } == true
+                    val existingCards = memberDetails?.cards ?: emptyList()
                     
-                    if (hasExistingCard) {
+                    platformLog("SITACardMaster", "VALIDATION_LOG (Pre-Scan): Checking for duplicate card type: $selectedCardType")
+                    platformLog("SITACardMaster", "VALIDATION_LOG (Pre-Scan): Existing cards count: ${existingCards.size}")
+                    
+                    var isDuplicateType = false
+                    existingCards.forEachIndexed { index, card ->
+                        val existingType = card.cardType ?: "N/A"
+                        val match = existingType.trim().equals(selectedCardType.trim(), ignoreCase = true)
+                        platformLog("SITACardMaster", "VALIDATION_LOG (Pre-Scan): Card #$index - ID: ${card.card_mfid}, Type: $existingType, Match: $match")
+                        if (match) {
+                            isDuplicateType = true
+                            platformLog("SITACardMaster", "VALIDATION_LOG (Pre-Scan): DUPLICATE DETECTED for type '$selectedCardType'")
+                        }
+                    }
+                    
+                    if (isDuplicateType) {
                         statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
                         statusMessage.text = "Error: Member already has an assigned card of type '$selectedCardType'"
+                        com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
+                            .setTitle("Duplicate Card Type")
+                            .setMessage("Member already has an assigned card of type '$selectedCardType'")
+                            .setPositiveButton("OK", null)
+                            .show()
                     } else {
                         startScanning()
                     }
@@ -411,30 +428,88 @@ class IssueCardActivity : AppCompatActivity() {
 
         runOnUiThread {
              statusMessage.setTextColor(resources.getColor(R.color.brand_blue, theme))
-             statusMessage.text = "Verified"
+             statusMessage.text = "Verifying..."
         }
         
         nfcManager.readCard { readSuccess, cardData, _ ->
-            val existingCompany = cardData?.get("companyName")?.takeIf { it.isNotBlank() }
-            val existingMemberId = cardData?.get("memberId")?.takeIf { it.isNotBlank() }
-
-            if (existingMemberId != null && existingMemberId != memberId) {
-                val message = "Card already registered to other member: ${existingCompany ?: "Unknown"}"
-                logAction("CARD_ALREADY_REGISTERED: MFID=$tagId, OldMember=$existingMemberId, NewMember=$memberId")
-                runOnUiThread {
-                    com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
-                        .setTitle("Card Already Assigned")
-                        .setMessage(message)
-                        .setPositiveButton("OK", null)
-                        .show()
-                    statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
-                    statusMessage.text = "Error: $message"
-                    stopScanning()
+            // Check if card MFID is already assigned in the DATABASE
+            // Strategy:
+            //   1. Use getMemberById(memberId) to reliably check if THIS member already
+            //      has this physical card (list API returns cards as ObjectIDs, not MFIDs).
+            //   2. Use getApprovedMembers("") to check if a DIFFERENT member owns it.
+            coroutineScope.launch {
+                // --- Step 1: Check if current member already owns this card ---
+                val currentMemberResult = apiClient.getMemberById(memberId)
+                if (currentMemberResult.isSuccess) {
+                    val currentMember = currentMemberResult.getOrNull()
+                    val alreadyOwnedBySelf = currentMember?.cards?.any {
+                        it.card_mfid?.trim()?.equals(tagId.trim(), ignoreCase = true) == true
+                    } == true
+                    
+                    if (alreadyOwnedBySelf) {
+                        val ownerName = currentMember?.companyName ?: "this member"
+                        val message = "Card already registered to this member ($ownerName). Cannot reassign with a different card type."
+                        logAction("CARD_ALREADY_REGISTERED_SELF: MFID=$tagId, MemberId=$memberId")
+                        runOnUiThread {
+                            com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
+                                .setTitle("Card Already Assigned")
+                                .setMessage(message)
+                                .setPositiveButton("OK", null)
+                                .show()
+                            statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+                            statusMessage.text = "Error: $message"
+                            stopScanning()
+                        }
+                        return@launch
+                    }
                 }
-                return@readCard
+                
+                // --- Step 2: Check if a different member owns this card ---
+                val membersResult = apiClient.getApprovedMembers("")
+                if (membersResult.isSuccess) {
+                    val allMembers = membersResult.getOrNull() ?: emptyList()
+                    var owningMember: com.example.sitacardmaster.network.models.VerifyMemberResponse? = null
+                    
+                    for (m in allMembers) {
+                        if (m.memberId == memberId) continue // skip self (already checked above)
+                        val hasMfidMatch = m.card_mfid?.trim()?.equals(tagId.trim(), ignoreCase = true) == true ||
+                                          m.cards?.any { it.card_mfid?.trim()?.equals(tagId.trim(), ignoreCase = true) == true } == true
+                        if (hasMfidMatch) {
+                            owningMember = m
+                            break
+                        }
+                    }
+                    
+                    if (owningMember != null) {
+                        val ownerName = owningMember.companyName ?: "Unknown Member"
+                        val ownerId = owningMember.memberId ?: "N/A"
+                        val message = "Card already registered to: $ownerName ($ownerId)"
+                        logAction("CARD_ALREADY_REGISTERED_OTHER: MFID=$tagId, Owner=$ownerName ($ownerId), TargetId=$memberId")
+                        runOnUiThread {
+                            com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
+                                .setTitle("Card Already Assigned")
+                                .setMessage(message)
+                                .setPositiveButton("OK", null)
+                                .show()
+                            statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+                            statusMessage.text = "Error: $message"
+                            stopScanning()
+                        }
+                        return@launch
+                    }
+                    
+                    // Card not registered anywhere — proceed
+                    verifyMemberWithApi(tagId, cardData, memberId, company, cardType, validUpto)
+                } else {
+                    // Fallback to API verify directly if member search fails
+                    verifyMemberWithApi(tagId, cardData, memberId, company, cardType, validUpto)
+                }
             }
+        }
+    }
 
-            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) { // Using GlobalScope for simplicity in Activity for now, ideally LifecycleScope
+    private fun verifyMemberWithApi(tagId: String, cardData: Map<String, String>?, memberId: String, company: String, cardType: String, validUpto: String) {
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                  val cardPassword = cardData?.get("password") ?: ""
                  
                  if (cardPassword.isEmpty()) {
@@ -476,6 +551,35 @@ class IssueCardActivity : AppCompatActivity() {
                  )
                  
                  if (result.isSuccess) {
+                     val response = result.getOrNull()
+                     val existingCards = response?.cards ?: emptyList()
+                     
+                     platformLog("SITACardMaster", "VALIDATION_LOG (Post-Scan): Checking for duplicate card type: $cardType")
+                     platformLog("SITACardMaster", "VALIDATION_LOG (Post-Scan): Existing cards count: ${existingCards.size}")
+                     
+                     var isDuplicateType = false
+                     existingCards.forEachIndexed { index, card ->
+                         val existingType = card.cardType ?: "N/A"
+                         val match = existingType.trim().equals(cardType.trim(), ignoreCase = true)
+                         platformLog("SITACardMaster", "VALIDATION_LOG (Post-Scan): Card #$index - ID: ${card.card_mfid}, Type: $existingType, Match: $match")
+                         if (match) isDuplicateType = true
+                     }
+
+                     if (isDuplicateType) {
+                         logAction("VERIFY_API_FAILED: Card of type $cardType already assigned.")
+                         runOnUiThread {
+                             com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
+                                 .setTitle("Duplicate Card Type")
+                                 .setMessage("Card of type '$cardType' already assigned to this member")
+                                 .setPositiveButton("OK", null)
+                                 .show()
+                             statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+                             statusMessage.text = "Error: Card of type '$cardType' already assigned"
+                             stopScanning()
+                         }
+                         return@launch
+                     }
+
                      logAction("VERIFY_API_SUCCESS: Member Verified!")
                      runOnUiThread {
                          statusMessage.setTextColor(android.graphics.Color.parseColor("#4CAF50"))
@@ -498,8 +602,7 @@ class IssueCardActivity : AppCompatActivity() {
                      }
                  }
             } // end of GlobalScope.launch
-        } // end of readCard
-    } // end of verifyAndProcessCard
+        }
 
     private fun writeCard(cardPassword: String) {
         val memberId = memberIdText.text.toString()
@@ -509,7 +612,7 @@ class IssueCardActivity : AppCompatActivity() {
         // val totalBuy = totalBuyInput.text.toString() // Removed
         val totalBuy = "0" // Defaulting to 0 since input is removed
 
-        logAction("Starting Write Card. Member: $memberId, Pwd (from card): $cardPassword") 
+        logAction("Starting Write Card. Member: $memberId, Pwd (from card): $cardPassword")
 
         nfcManager.writeCard(
             memberId = memberId,
@@ -518,7 +621,7 @@ class IssueCardActivity : AppCompatActivity() {
             validUpto = validUpto,
             totalBuy = totalBuy,
             cardType = cardType,
-            onResult = { success, message ->
+            onResult = { success: Boolean, message: String ->
                 runOnUiThread {
                     statusMessage.text = message
                     logAction("Write Result: $message")
@@ -529,7 +632,7 @@ class IssueCardActivity : AppCompatActivity() {
                         // If DatabaseHelper is strictly defined, I might need to update it too if I want to remove it there.
                         // For now sticking to minimal changes as "make ui also" was the ask.
                         try {
-                             DatabaseHelper(this).saveIssuedCard(
+                            DatabaseHelper(this@IssueCardActivity).saveIssuedCard(
                                 memberId = memberId,
                                 company = company,
                                 validUpto = validUpto,
@@ -539,8 +642,8 @@ class IssueCardActivity : AppCompatActivity() {
                         } catch (e: Exception) {
                             logAction("Local Storage Error: ${e.message}")
                         }
-                       
-                         stopScanning()
+
+                        stopScanning()
                         // Refresh/Reset the page
                         resetForm()
                     } else {
@@ -550,7 +653,6 @@ class IssueCardActivity : AppCompatActivity() {
             }
         )
     }
-
     private fun logAction(action: String) {
         platformLog("SITACardMaster", "IssueCard: $action")
     }
