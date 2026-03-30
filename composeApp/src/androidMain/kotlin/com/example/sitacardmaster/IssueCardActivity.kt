@@ -112,17 +112,45 @@ class IssueCardActivity : AppCompatActivity() {
                 statusMessage.text = "Error: Please select a company from the list"
                 return@setOnClickListener
             }
-            if (memberIdText.text.isEmpty() || memberIdText.text == "---") {
+            val memberId = memberIdText.text.toString()
+            if (memberId.isEmpty() || memberId == "---") {
                 statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
                 statusMessage.text = "Error: Member ID is missing"
                 return@setOnClickListener
             }
-            if (cardTypeInput.text.isEmpty()) {
+            val selectedCardType = cardTypeInput.text.toString()
+            if (selectedCardType.isEmpty()) {
                 statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
                 statusMessage.text = "Error: Please select card type"
                 return@setOnClickListener
             }
-            startScanning()
+            
+            // Validate existing card types
+            statusMessage.setTextColor(resources.getColor(R.color.brand_blue, theme))
+            statusMessage.text = "Validating member cards..."
+            startScanButton.isEnabled = false
+            
+            coroutineScope.launch {
+                val result = apiClient.getMemberById(memberId)
+                startScanButton.isEnabled = true
+                if (result.isSuccess) {
+                    val memberDetails = result.getOrNull()
+                    val hasExistingCard = memberDetails?.cards?.any { 
+                        it.cardType.equals(selectedCardType, ignoreCase = true) 
+                    } == true
+                    
+                    if (hasExistingCard) {
+                        statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+                        statusMessage.text = "Error: Member already has an assigned card of type '$selectedCardType'"
+                    } else {
+                        startScanning()
+                    }
+                } else {
+                    statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+                    val errorMsg = result.exceptionOrNull()?.message ?: "Validation failed"
+                    statusMessage.text = "Error validating cards: $errorMsg"
+                }
+            }
         }
 
         cancelScanButton.setOnClickListener {
@@ -389,6 +417,22 @@ class IssueCardActivity : AppCompatActivity() {
         nfcManager.readCard { readSuccess, cardData, _ ->
             val existingCompany = cardData?.get("companyName")?.takeIf { it.isNotBlank() }
             val existingMemberId = cardData?.get("memberId")?.takeIf { it.isNotBlank() }
+
+            if (existingMemberId != null && existingMemberId != memberId) {
+                val message = "Card already registered to other member: ${existingCompany ?: "Unknown"}"
+                logAction("CARD_ALREADY_REGISTERED: MFID=$tagId, OldMember=$existingMemberId, NewMember=$memberId")
+                runOnUiThread {
+                    com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
+                        .setTitle("Card Already Assigned")
+                        .setMessage(message)
+                        .setPositiveButton("OK", null)
+                        .show()
+                    statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+                    statusMessage.text = "Error: $message"
+                    stopScanning()
+                }
+                return@readCard
+            }
 
             kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) { // Using GlobalScope for simplicity in Activity for now, ideally LifecycleScope
                  val cardPassword = cardData?.get("password") ?: ""

@@ -32,7 +32,8 @@ data class CardDetails(
     val card_mfid: String? = null,
     val cardTotal: Double = 0.0,
     val amount: Double = 0.0,
-    val status: String? = null
+    val status: String? = null,
+    val cardType: String? = null
 )
 
 @Serializable
