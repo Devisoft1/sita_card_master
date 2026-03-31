@@ -336,7 +336,6 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
                     
                     // Check if actually blank (all fields we care about are empty)
                     val isTrulyBlank = (results["memberId"] ?: "").isBlank() && 
-                                      (results["password"] ?: "").isBlank() &&
                                       (results["companyName"] ?: "").isBlank()
                                       
                     if (isTrulyBlank) {
@@ -402,14 +401,35 @@ private class IosNfcDelegate(private val manager: IosNfcManager) : NSObject(), N
     }
 
     private fun processClear(session: NFCTagReaderSession, tag: NFCMifareTagProtocol) {
+        platformLog("SITACardMaster", "iOS: Clearing card data (Preserving Password)...")
         val emptyBlocks3 = mapOf(
             12 to "00000000000000000000000000000000",
             13 to "00000000000000000000000000000000",
             14 to "00000000000000000000000000000000"
         )
-        authenticateAndWriteSector(tag, 3, emptyBlocks3) {
-            manager.onClearResult?.invoke(true, "Card Cleared")
-            session.invalidateSession()
+        authenticateAndWriteSector(tag, 3, emptyBlocks3) { success3 ->
+            if (success3) platformLog("SITACardMaster", "iOS: Sector 3 Cleared.")
+            
+            val emptyBlocks4 = mapOf(
+                16 to "00000000000000000000000000000000",
+                17 to "00000000000000000000000000000000"
+                // 18 (Password) PRESERVED
+            )
+            authenticateAndWriteSector(tag, 4, emptyBlocks4) { success4 ->
+                if (success4) platformLog("SITACardMaster", "iOS: Sector 4 Cleared (Password Kept).")
+                
+                val emptyBlocks5 = mapOf(
+                    20 to "00000000000000000000000000000000",
+                    21 to "00000000000000000000000000000000"
+                )
+                authenticateAndWriteSector(tag, 5, emptyBlocks5) { success5 ->
+                    if (success5) platformLog("SITACardMaster", "iOS: Sector 5 Cleared.")
+                    
+                    manager.onClearResult?.invoke(true, "Card cleared successfully")
+                    manager.onDeleteResult?.invoke(true, "Card data deleted successfully")
+                    session.invalidateSession()
+                }
+            }
         }
     }
 

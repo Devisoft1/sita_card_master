@@ -337,7 +337,6 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                     }
 
                     val isTrulyBlank = data["memberId"].isNullOrBlank() && 
-                                      data["password"].isNullOrBlank() &&
                                       data["companyName"].isNullOrBlank()
                     
                     if (isTrulyBlank) {
@@ -384,15 +383,18 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
             try {
                 mifare.connect()
                 if (authenticateSector(mifare, 3)) {
-                    platformLog("SITACardMaster", "Clearing card data...")
+                    platformLog("SITACardMaster", "Clearing Sector 3 (Member data)...")
                     writeBlock(mifare, 12, "")
                     writeBlock(mifare, 13, "")
                     writeBlock(mifare, 14, "")
                     if (authenticateSector(mifare, 4)) {
+                        platformLog("SITACardMaster", "Clearing Sector 4 (Purchase info, preserving Password)...")
                         writeBlock(mifare, 16, "")
                         writeBlock(mifare, 17, "")
-                        writeBlock(mifare, 18, "")
+                        // writeBlock(mifare, 18, "") // PRESERVED PASSWORD per user request
+                        platformLog("SITACardMaster", "Block 18 (Password) PRESERVED.")
                         if (authenticateSector(mifare, 5)) {
+                            platformLog("SITACardMaster", "Clearing Sector 5 (Card Type)...")
                             writeBlock(mifare, 20, "")
                             success = true
                             resultMessage = "Card cleared successfully."
@@ -430,10 +432,17 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                 var sectorsWiped = 0
                 for (sector in sectorsToWipe) {
                     if (authenticateSector(mifare, sector)) {
+                        platformLog("SITACardMaster", "Wiping Sector $sector...")
                         val firstBlock = mifare.sectorToBlock(sector)
                         val numBlocks = mifare.getBlockCountInSector(sector)
                         for (i in 0 until (numBlocks - 1)) {
-                            mifare.writeBlock(firstBlock + i, ByteArray(16))
+                            val currentBlock = firstBlock + i
+                            if (currentBlock == 18) {
+                                platformLog("SITACardMaster", "Skipping Block 18 (Password) - PRESERVED.")
+                                continue
+                            }
+                            mifare.writeBlock(currentBlock, ByteArray(16))
+                            platformLog("SITACardMaster", "Block $currentBlock wiped.")
                         }
                         sectorsWiped++
                     }
@@ -441,8 +450,10 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                 if (sectorsWiped > 0) {
                     success = true
                     resultMessage = "Card data deleted successfully."
+                    platformLog("SITACardMaster", "DELETE_SUCCESS: Card data wiped, Password kept.")
                 } else {
                     resultMessage = "Wipe failed"
+                    platformLog("SITACardMaster", "DELETE_ERROR: Authentication failed for data sectors.")
                 }
             } catch (e: Exception) {
                 resultMessage = "Error: ${e.message}"
