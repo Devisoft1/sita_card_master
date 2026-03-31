@@ -306,12 +306,15 @@ class DashboardActivity : AppCompatActivity() {
         nfcManager.readCard { success, data, message ->
             runOnUiThread {
                 stopScanMode()
-                if (success && data != null) {
-                    logAction("Card read success: ${data["memberId"]}")
+                if (success && data != null && !data["password"].isNullOrBlank() && !data["memberId"].isNullOrBlank()) {
+                    logAction("Card read success: MemberID=${data["memberId"]}, CardType=${data["cardType"]}")
                     showCardDetails(data)
-                } else if (success && data == null) {
-                    logAction("Card read success: Blank card")
-                    scanStatus.text = "Blank card - No data found"
+                } else if (success) {
+                    val reason = if (data == null) "Truly blank" 
+                                else if (data["memberId"].isNullOrBlank()) "Missing MemberID" 
+                                else "Missing Password"
+                    logAction("Card read success: Card is empty ($reason)")
+                    scanStatus.text = "card is empty"
                     scanStatus.visibility = View.VISIBLE
                     scanStatus.setTextColor(getColor(R.color.error_red))
                 } else {
