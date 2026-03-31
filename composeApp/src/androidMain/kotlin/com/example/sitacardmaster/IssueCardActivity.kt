@@ -627,6 +627,14 @@ class IssueCardActivity : AppCompatActivity() {
                     logAction("Write Result: $message")
                     if (success) {
                         statusMessage.setTextColor(android.graphics.Color.parseColor("#4CAF50"))
+                        
+                        // Show Success Alert
+                        com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
+                            .setTitle("Card Issued Successfully")
+                            .setMessage("Member: $company\nCard Type: $cardType")
+                            .setPositiveButton("OK", null)
+                            .show()
+                            
                         // Save to local storage
                         // Assuming DatabaseHelper.saveIssuedCard signature might still need 'totalBuy', passing "0" or checking if it needs update
                         // If DatabaseHelper is strictly defined, I might need to update it too if I want to remove it there.

@@ -90,6 +90,9 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
     var showCardAlreadyIssuedDialog by remember { mutableStateOf(false) }
     var cardAlreadyIssuedErrorMessage by remember { mutableStateOf("") }
     
+    var showSuccessDialog by remember { mutableStateOf(false) }
+    var successDialogMessage by remember { mutableStateOf("") }
+    
     var remainingSeconds by remember { mutableStateOf(60) }
     
     val brandBlue = Color(0xFF2D2F91)
@@ -184,6 +187,9 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                                     statusMessage = message
                                     scanningMode = ScanMode.None
                                     if (success) {
+                                        successDialogMessage = "Member: $selectedCompanyName\nCard Type: $cardType"
+                                        showSuccessDialog = true
+                                        
                                         companySearchQuery = ""
                                         showMemberInfoCard = false
                                         statusMessage = "Card Issued Successfully. Ready for next."
@@ -314,6 +320,41 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                     Button(
                         onClick = { showCardAlreadyIssuedDialog = false },
                         colors = ButtonDefaults.buttonColors(containerColor = errorRed)
+                    ) {
+                        Text("OK")
+                    }
+                },
+                containerColor = white
+            )
+        }
+
+        // AlertDialog for Card Issued Successfully
+        if (showSuccessDialog) {
+            AlertDialog(
+                onDismissRequest = { showSuccessDialog = false },
+                title = {
+                    Text(
+                        text = "Card Issued Successfully",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = successGreen
+                    )
+                },
+                text = {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Text(
+                            text = successDialogMessage,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.Black
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showSuccessDialog = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = brandBlue)
                     ) {
                         Text("OK")
                     }
