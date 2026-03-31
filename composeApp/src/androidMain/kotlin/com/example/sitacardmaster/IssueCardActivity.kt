@@ -419,19 +419,42 @@ class IssueCardActivity : AppCompatActivity() {
     }
 
     private fun verifyAndProcessCard(tag: Tag) {
-        // Tag ID (MFID)
         val tagId = tag.id.joinToString("") { byte -> "%02X".format(byte) }
         val memberId = memberIdText.text.toString()
         val company = companyNameInput.text.toString()
         val cardType = cardTypeInput.text.toString()
         val validUpto = validUptoText.text.toString()
-
+        
+        logAction("Starting verification for Card: $tagId")
         runOnUiThread {
              statusMessage.setTextColor(resources.getColor(R.color.brand_blue, theme))
              statusMessage.text = "Verifying..."
         }
         
         nfcManager.readCard { readSuccess, cardData, _ ->
+            logAction("Read Result: success=$readSuccess, data=$cardData")
+            
+            // --- Step 0: Check Physical Card Data for existing registration ---
+            val existingMemberId = cardData?.get("memberId")
+            val existingCompanyName = cardData?.get("companyName")
+            
+            if (!existingMemberId.isNullOrBlank() && existingMemberId != memberId) {
+                val ownerName = existingCompanyName ?: "Unknown Member"
+                val message = "This card is already registered to other member: $ownerName ($existingMemberId)"
+                logAction("DUPLICATE_FOUND_ON_CARD: MFID=$tagId, Owner=$ownerName ($existingMemberId)")
+                runOnUiThread {
+                    com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
+                        .setTitle("Card Already Assigned")
+                        .setMessage(message)
+                        .setPositiveButton("OK", null)
+                        .show()
+                    statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+                    statusMessage.text = "Error: $message"
+                    stopScanning()
+                }
+                return@readCard
+            }
+
             // Check if card MFID is already assigned in the DATABASE
             // Strategy:
             //   1. Use getMemberById(memberId) to reliably check if THIS member already
@@ -513,30 +536,9 @@ class IssueCardActivity : AppCompatActivity() {
                  val cardPassword = cardData?.get("password") ?: ""
                  
                  if (cardPassword.isEmpty()) {
-                     logAction("BLANK_CARD_DETECTED: Card is not registered.")
-                     runOnUiThread {
-                         val padding = (resources.displayMetrics.density * 24).toInt()
-                         val container = android.widget.FrameLayout(this@IssueCardActivity).apply {
-                             setPadding(padding, padding, padding, 0)
-                         }
-                         val messageView = TextView(this@IssueCardActivity).apply {
-                             text = "Wrong Card Detected"
-                             gravity = android.view.Gravity.CENTER
-                             textSize = 18f
-                             setTextColor(resources.getColor(R.color.error_red, theme))
-                             setTypeface(null, android.graphics.Typeface.BOLD)
-                         }
-                         container.addView(messageView)
-
-                         com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
-                             .setView(container)
-                             .setPositiveButton("OK", null)
-                             .show()
-                         statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
-                         statusMessage.text = "Error: Wrong card detected"
-                         stopScanning()
-                     }
-                     return@launch
+                      logAction("BLANK_CARD_DETECTED: Card is truly blank (no member data and no password).")
+                      showWrongCardAlert()
+                      return@launch
                  }
 
                  logAction("READ_CARD: MFID=$tagId, Password (from card)=$cardPassword")
@@ -591,18 +593,47 @@ class IssueCardActivity : AppCompatActivity() {
                      logAction("VERIFY_API_FAILED: $error")
                      
                      runOnUiThread {
-                         com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
-                             .setTitle("Verification Failed")
-                             .setMessage(error)
-                             .setPositiveButton("OK", null)
-                             .show()
-                         statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
-                         statusMessage.text = error
-                         stopScanning()
+                         if (error.lowercase().contains("card not found") || error.lowercase().contains("register the card")) {
+                             showWrongCardAlert()
+                         } else {
+                             com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
+                                 .setTitle("Verification Failed")
+                                 .setMessage(error)
+                                 .setPositiveButton("OK", null)
+                                 .show()
+                             statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+                             statusMessage.text = error
+                             stopScanning()
+                         }
                      }
                  }
             } // end of GlobalScope.launch
         }
+
+    private fun showWrongCardAlert() {
+        runOnUiThread {
+            val padding = (resources.displayMetrics.density * 24).toInt()
+            val container = android.widget.FrameLayout(this@IssueCardActivity).apply {
+                setPadding(padding, padding, padding, 0)
+            }
+            val messageView = TextView(this@IssueCardActivity).apply {
+                text = "Wrong Card Detected"
+                gravity = android.view.Gravity.CENTER
+                textSize = 18f
+                setTextColor(resources.getColor(R.color.error_red, theme))
+                setTypeface(null, android.graphics.Typeface.BOLD)
+            }
+            container.addView(messageView)
+
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
+                .setView(container)
+                .setPositiveButton("OK", null)
+                .show()
+            statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+            statusMessage.text = "Error: Wrong card detected"
+            stopScanning()
+        }
+    }
 
     private fun writeCard(cardPassword: String) {
         val memberId = memberIdText.text.toString()

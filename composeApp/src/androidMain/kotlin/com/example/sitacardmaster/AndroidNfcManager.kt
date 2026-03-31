@@ -17,6 +17,12 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+private const val TAG = "AndroidNfcManager"
+
+private fun logInfo(tag: String, message: String) {
+    android.util.Log.i(tag, message)
+}
+
 class AndroidNfcManager(private val activity: Activity) : NfcManager {
     private val nfcAdapter: NfcAdapter? = NfcAdapter.getDefaultAdapter(activity)
     private val pendingIntent: PendingIntent = PendingIntent.getActivity(
@@ -300,44 +306,55 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                 // Sector 3 (Blocks 12, 13, 14)
                 if (authenticateSector(mifare, 3)) {
                     platformLog("SITACardMaster", "Sector 3 Authenticated. Reading Member data...")
-                    val memberIdHex = readBlockHexStrings(mifare, 12)
-                    data["memberId"] = smartDecode(memberIdHex)
-                    platformLog("SITACardMaster", "Block 12 (Member ID): ${data["memberId"]}")
+                    logInfo(TAG, "Sector 3 Authenticated. Reading Member data...")
+                    val memberIdBytes = mifare.readBlock(12)
+                    val memberId = smartDecode(bytesToHex(memberIdBytes))
+                    data["memberId"] = memberId
+                    logInfo(TAG, "Block 12 (Member ID): $memberId")
                     
-                    val companyHex = readBlockHexStrings(mifare, 13)
-                    data["companyName"] = hexToString(companyHex.replace(" ", "")).trimNulls()
-                    platformLog("SITACardMaster", "Block 13 (Company): ${data["companyName"]}")
+                    val companyNameBytes = mifare.readBlock(13)
+                    val companyName = smartDecode(bytesToHex(companyNameBytes))
+                    data["companyName"] = companyName
+                    logInfo(TAG, "Block 13 (Company): $companyName")
                     
-                    val validUptoHex = readBlockHexStrings(mifare, 14)
-                    data["validUpto"] = formatHexDate(validUptoHex)
-                    platformLog("SITACardMaster", "Block 14 (Valid Upto): ${data["validUpto"]}")
+                    val validUptoBytes = mifare.readBlock(14)
+                    val validUpto = smartDecode(bytesToHex(validUptoBytes))
+                    data["validUpto"] = validUpto
+                    logInfo(TAG, "Block 14 (Valid Upto): $validUpto")
 
                     // Sector 4 (Block 16, 17, 18)
                     if (authenticateSector(mifare, 4)) {
                         platformLog("SITACardMaster", "Sector 4 Authenticated. Reading Purchase & Password...")
-                        val totalBuyHex = readBlockHexStrings(mifare, 16)
-                        data["totalBuy"] = hexToString(totalBuyHex.replace(" ", "")).trimNulls()
-                        platformLog("SITACardMaster", "Block 16 (Total Buy): ${data["totalBuy"]}")
+                        logInfo(TAG, "Sector 4 Authenticated. Reading Purchase & Password...")
+                        val totalBuyBytes = mifare.readBlock(16)
+                        val totalBuy = smartDecode(bytesToHex(totalBuyBytes))
+                        data["totalBuy"] = totalBuy
+                        logInfo(TAG, "Block 16 (Total Buy): $totalBuy")
                         
-                        val lastBuyHex = readBlockHexStrings(mifare, 17)
-                        data["lastBuyDate"] = formatHexDate(lastBuyHex)
-                        platformLog("SITACardMaster", "Block 17 (Last Buy Date): ${data["lastBuyDate"]}")
+                        val lastBuyDateBytes = mifare.readBlock(17)
+                        val lastBuyDate = smartDecode(bytesToHex(lastBuyDateBytes))
+                        data["lastBuyDate"] = lastBuyDate
+                        logInfo(TAG, "Block 17 (Last Buy Date): $lastBuyDate")
                         
-                        val passwordHex = readBlockHexStrings(mifare, 18)
-                        data["password"] = hexToString(passwordHex.replace(" ", "")).trimNulls()
-                        platformLog("SITACardMaster", "Block 18 (Password): ${data["password"]}")
+                        val passwordBytes = mifare.readBlock(18)
+                        val cardPassword = smartDecode(bytesToHex(passwordBytes))
+                        data["password"] = cardPassword
+                        logInfo(TAG, "Block 18 (Password): $cardPassword")
 
                         // Sector 5 (Block 20)
                         if (authenticateSector(mifare, 5)) {
                             platformLog("SITACardMaster", "Sector 5 Authenticated. Reading Card Type...")
-                            val cardTypeHex = readBlockHexStrings(mifare, 20)
-                            data["cardType"] = hexToString(cardTypeHex.replace(" ", "")).trimNulls()
-                            platformLog("SITACardMaster", "Block 20 (Card Type): ${data["cardType"]}")
+                            logInfo(TAG, "Sector 5 Authenticated. Reading Card Type...")
+                            val cardTypeBytes = mifare.readBlock(20)
+                            val cardType = smartDecode(bytesToHex(cardTypeBytes))
+                            data["cardType"] = cardType
+                            logInfo(TAG, "Block 20 (Card Type): $cardType")
                         }
                     }
 
                     val isTrulyBlank = data["memberId"].isNullOrBlank() && 
-                                      data["companyName"].isNullOrBlank()
+                                      data["companyName"].isNullOrBlank() &&
+                                      data["password"].isNullOrBlank()
                     
                     if (isTrulyBlank) {
                         success = true
@@ -513,7 +530,11 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
 
     private fun logCardDiagnostics(mifare: MifareClassic) {
         try {
-            platformLog("SITACardMaster", "Card Info - Type: ${mifare.type}, Size: ${mifare.size}, Sectors: ${mifare.sectorCount}")
+            logInfo(TAG, "MifareClassic connected successfully.")
+            val type = mifare.type
+            val size = mifare.size
+            val sectorCount = mifare.sectorCount
+            logInfo(TAG, "Card Info - Type: $type, Size: $size, Sectors: $sectorCount")
         } catch (e: Exception) {}
     }
 
