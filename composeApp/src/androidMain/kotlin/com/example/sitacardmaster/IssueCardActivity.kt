@@ -434,25 +434,44 @@ class IssueCardActivity : AppCompatActivity() {
         nfcManager.readCard { readSuccess, cardData, _ ->
             logAction("Read Result: success=$readSuccess, data=$cardData")
             
-            // --- Step 0: Check Physical Card Data for existing registration ---
             val existingMemberId = cardData?.get("memberId")
             val existingCompanyName = cardData?.get("companyName")
             
-            if (!existingMemberId.isNullOrBlank() && existingMemberId != memberId) {
-                val ownerName = existingCompanyName ?: "Unknown Member"
-                val message = "This card is already registered to other member: $ownerName ($existingMemberId)"
-                logAction("DUPLICATE_FOUND_ON_CARD: MFID=$tagId, Owner=$ownerName ($existingMemberId)")
-                runOnUiThread {
-                    com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
-                        .setTitle("Card Already Assigned")
-                        .setMessage(message)
-                        .setPositiveButton("OK", null)
-                        .show()
-                    statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
-                    statusMessage.text = "Error: $message"
-                    stopScanning()
+            if (!existingMemberId.isNullOrBlank()) {
+                if (existingMemberId != memberId) {
+                    val ownerName = existingCompanyName ?: "Unknown Member"
+                    val message = "This card is already registered to other member: $ownerName ($existingMemberId)"
+                    logAction("DUPLICATE_FOUND_ON_CARD: MFID=$tagId, Owner=$ownerName ($existingMemberId)")
+                    runOnUiThread {
+                        com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
+                            .setTitle("Card Already Assigned")
+                            .setMessage(message)
+                            .setPositiveButton("OK", null)
+                            .show()
+                        statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+                        statusMessage.text = "Error: $message"
+                        stopScanning()
+                    }
+                    return@readCard
+                } else {
+                    // Same member - check card type
+                    val existingCardType = cardData?.get("cardType") ?: "Member"
+                    if (!existingCardType.trim().equals(cardType.trim(), ignoreCase = true)) {
+                        val message = "Card already assigned to this member with different card type: $existingCardType"
+                        logAction("SAME_MEMBER_DIFFERENT_TYPE: MFID=$tagId, TypeOnCard=$existingCardType, TargetType=$cardType")
+                        runOnUiThread {
+                            com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
+                                .setTitle("Card Already Assigned")
+                                .setMessage(message)
+                                .setPositiveButton("OK", null)
+                                .show()
+                            statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+                            statusMessage.text = "Error: $message"
+                            stopScanning()
+                        }
+                        return@readCard
+                    }
                 }
-                return@readCard
             }
 
             // Check if card MFID is already assigned in the DATABASE
