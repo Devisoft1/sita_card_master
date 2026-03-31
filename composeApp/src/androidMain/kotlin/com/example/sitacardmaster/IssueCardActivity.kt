@@ -42,6 +42,8 @@ class IssueCardActivity : AppCompatActivity() {
     private lateinit var tapCardHint: TextView
     private lateinit var startScanButton: Button
     private lateinit var cancelScanButton: Button
+    private lateinit var clearPageButton: Button
+    private lateinit var buttonContainer: View
     private val apiClient = com.example.sitacardmaster.network.MemberApiClient()
     private val coroutineScope = kotlinx.coroutines.MainScope()
     private lateinit var timerText: TextView
@@ -93,6 +95,8 @@ class IssueCardActivity : AppCompatActivity() {
         tapCardHint = findViewById(R.id.tapCardHint)
         startScanButton = findViewById(R.id.startScanButton)
         cancelScanButton = findViewById(R.id.cancelScanButton)
+        clearPageButton = findViewById(R.id.clearPageButton)
+        buttonContainer = findViewById(R.id.buttonContainer)
         timerText = findViewById(R.id.timerText)
         val backButton = findViewById<ImageButton>(R.id.backButton)
         findViewById<TextView>(R.id.appBarTitle).text = "Issue New Card"
@@ -172,6 +176,10 @@ class IssueCardActivity : AppCompatActivity() {
 
         cancelScanButton.setOnClickListener {
             stopScanning()
+        }
+
+        clearPageButton.setOnClickListener {
+            resetForm()
         }
 
         setupAutoComplete()
@@ -350,7 +358,7 @@ class IssueCardActivity : AppCompatActivity() {
         statusMessage.text = "Scanning..."
         scanProgress.visibility = View.VISIBLE
         tapCardHint.visibility = View.VISIBLE
-        startScanButton.visibility = View.GONE
+        buttonContainer.visibility = View.GONE
         cancelScanButton.visibility = View.VISIBLE
         logAction("Scanning started for Member: ${memberIdText.text}")
         hideKeyboard()
@@ -378,7 +386,7 @@ class IssueCardActivity : AppCompatActivity() {
         statusMessage.text = "Ready to write"
         scanProgress.visibility = View.GONE
         tapCardHint.visibility = View.GONE
-        startScanButton.visibility = View.VISIBLE
+        buttonContainer.visibility = View.VISIBLE
         cancelScanButton.visibility = View.GONE
         nfcManager.stopScanning()
         timerText.visibility = View.GONE

@@ -311,6 +311,13 @@ class WriteUrlActivity : AppCompatActivity() {
                 if (success) {
                     statusMessage.setTextColor(getColor(R.color.brand_blue))
                     logAction("Logo URL write success: $logoUrlInput")
+                    
+                    // Show success popup with member name
+                    com.google.android.material.dialog.MaterialAlertDialogBuilder(this@WriteUrlActivity)
+                        .setMessage("Successfully written Logo URL for $selectedCompanyName")
+                        .setPositiveButton("OK", null)
+                        .show()
+                        
                     resetForm()
                 } else {
                     statusMessage.setTextColor(getColor(R.color.error_red))
@@ -326,8 +333,8 @@ class WriteUrlActivity : AppCompatActivity() {
         logoUrlInput = ""
         companyNameInput.setText("", false)
         urlInput.setText("")
-        statusMessage.text = "URL Written! Ready for next."
-        statusMessage.setTextColor(getColor(R.color.brand_blue))
+        statusMessage.text = "Ready to write"
+        statusMessage.setTextColor(getColor(R.color.gray_text))
     }
 
     private fun logAction(action: String) {

@@ -341,16 +341,52 @@
                             android:visibility="gone"
                             android:layout_marginBottom="@dimen/_16sdp" />
 
-                        <Button
-                            android:id="@+id/startScanButton"
+                        <LinearLayout
+                            android:id="@+id/buttonContainer"
                             android:layout_width="match_parent"
-                            android:layout_height="@dimen/_48sdp"
-                            android:text="Start Scan &amp; Write"
-                            android:textSize="@dimen/_14ssp"
-                            android:textStyle="bold"
-                            android:textAllCaps="false"
-                            app:cornerRadius="@dimen/_8sdp"
-                            app:backgroundTint="@color/brand_blue" />
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:weightSum="2">
+
+                            <Button
+                                android:id="@+id/clearPageButton"
+                                android:layout_width="0dp"
+                                android:layout_height="@dimen/_45sdp"
+                                android:layout_weight="1"
+                                android:layout_marginEnd="6dp"
+                                android:text="Clear Page"
+                                android:textAllCaps="false"
+                                android:textColor="@color/white"
+                                android:textSize="@dimen/_12ssp"
+                                android:textStyle="bold"
+                                app:backgroundTint="@color/gray"
+                                app:cornerRadius="@dimen/_8sdp"
+                                app:icon="@drawable/ic_refresh"
+                                app:iconGravity="textStart"
+                                app:iconPadding="4dp"
+                                app:iconSize="18dp"
+                                app:iconTint="@color/white" />
+
+                            <Button
+                                android:id="@+id/startScanButton"
+                                android:layout_width="0dp"
+                                android:layout_height="@dimen/_45sdp"
+                                android:layout_weight="1"
+                                android:layout_marginStart="6dp"
+                                android:text="Start Scan"
+                                android:textAllCaps="false"
+                                android:textColor="@color/white"
+                                android:textSize="@dimen/_12ssp"
+                                android:textStyle="bold"
+                                app:backgroundTint="@color/brand_blue"
+                                app:cornerRadius="@dimen/_8sdp"
+                                app:icon="@drawable/ic_card_membership"
+                                app:iconGravity="textStart"
+                                app:iconPadding="4dp"
+                                app:iconSize="18dp"
+                                app:iconTint="@color/white" />
+
+                        </LinearLayout>
 
                         <Button
                             android:id="@+id/cancelScanButton"
