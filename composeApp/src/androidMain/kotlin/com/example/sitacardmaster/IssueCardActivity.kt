@@ -156,13 +156,12 @@ class IssueCardActivity : AppCompatActivity() {
                     }
                     
                     if (isDuplicateType) {
-                        statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
-                        statusMessage.text = "Error: Member already has an assigned card of type '$selectedCardType'"
                         com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
                             .setTitle("Duplicate Card Type")
                             .setMessage("Member already has an assigned card of type '$selectedCardType'")
                             .setPositiveButton("OK", null)
                             .show()
+                        statusMessage.text = "Ready to write" // Reset to neutral state
                     } else {
                         startScanning()
                     }
@@ -402,13 +401,13 @@ class IssueCardActivity : AppCompatActivity() {
             if (nfcManager.isMultipleTagsDetected.value) {
                 runOnUiThread {
                     stopScanning()
-                    statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
-                    statusMessage.text = "card not detected properly please hold it again"
                     com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
                         .setTitle("Scan Error")
                         .setMessage("card not detected properly please hold it again")
                         .setPositiveButton("OK", null)
                         .show()
+                    statusMessage.setTextColor(resources.getColor(R.color.gray_text, theme))
+                    statusMessage.text = "Ready to write"
                 }
                 return
             }
@@ -456,8 +455,8 @@ class IssueCardActivity : AppCompatActivity() {
                             .setMessage(message)
                             .setPositiveButton("OK", null)
                             .show()
-                        statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
-                        statusMessage.text = "Error: $message"
+                        statusMessage.setTextColor(resources.getColor(R.color.gray_text, theme))
+                        statusMessage.text = "Ready to write"
                         stopScanning()
                     }
                     return@readCard
@@ -473,8 +472,8 @@ class IssueCardActivity : AppCompatActivity() {
                                 .setMessage(message)
                                 .setPositiveButton("OK", null)
                                 .show()
-                            statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
-                            statusMessage.text = "Error: $message"
+                            statusMessage.setTextColor(resources.getColor(R.color.gray_text, theme))
+                            statusMessage.text = "Ready to write"
                             stopScanning()
                         }
                         return@readCard
@@ -506,8 +505,8 @@ class IssueCardActivity : AppCompatActivity() {
                                 .setMessage(message)
                                 .setPositiveButton("OK", null)
                                 .show()
-                            statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
-                            statusMessage.text = "Error: $message"
+                            statusMessage.setTextColor(resources.getColor(R.color.gray_text, theme))
+                            statusMessage.text = "Ready to write"
                             stopScanning()
                         }
                         return@launch
@@ -541,8 +540,8 @@ class IssueCardActivity : AppCompatActivity() {
                                 .setMessage(message)
                                 .setPositiveButton("OK", null)
                                 .show()
-                            statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
-                            statusMessage.text = "Error: $message"
+                            statusMessage.setTextColor(resources.getColor(R.color.gray_text, theme))
+                            statusMessage.text = "Ready to write"
                             stopScanning()
                         }
                         return@launch
@@ -602,8 +601,8 @@ class IssueCardActivity : AppCompatActivity() {
                                  .setMessage("Card of type '$cardType' already assigned to this member")
                                  .setPositiveButton("OK", null)
                                  .show()
-                             statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
-                             statusMessage.text = "Error: Card of type '$cardType' already assigned"
+                             statusMessage.setTextColor(resources.getColor(R.color.gray_text, theme))
+                             statusMessage.text = "Ready to write"
                              stopScanning()
                          }
                          return@launch
@@ -656,8 +655,8 @@ class IssueCardActivity : AppCompatActivity() {
                 .setView(container)
                 .setPositiveButton("OK", null)
                 .show()
-            statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
-            statusMessage.text = "Error: Wrong card detected"
+            statusMessage.setTextColor(resources.getColor(R.color.gray_text, theme))
+            statusMessage.text = "Ready to write"
             stopScanning()
         }
     }
