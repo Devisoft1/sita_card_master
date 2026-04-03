@@ -314,7 +314,7 @@ class DashboardActivity : AppCompatActivity() {
                                 else if (data["memberId"].isNullOrBlank()) "Missing MemberID" 
                                 else "Missing Password"
                     logAction("Card read success: Card is empty ($reason)")
-                    showResultPopup("Empty Card", "This card has no registered data.")
+                    showResultPopup("Empty Card", "card is empty not assigne to any member")
                 } else {
                     logAction("Card read error: $message")
                     showResultPopup("Read Error", message)

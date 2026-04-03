@@ -199,7 +199,7 @@ fun DashboardScreen(
                     cardData = data
                     if (data == null) {
                         dialogTitle = "Empty Card"
-                        dialogMessage = "This card has no registered data."
+                        dialogMessage = "card is empty not assigne to any member"
                         showResultDialog = true
                     } else {
                         platformLog("Dashboard", "Card read success: ${data["memberId"]}")
