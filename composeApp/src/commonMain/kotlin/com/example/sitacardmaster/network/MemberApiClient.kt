@@ -82,7 +82,12 @@ class MemberApiClient {
                 val errorMessage = try {
                     val json = Json { ignoreUnknownKeys = true }
                     val errorObj = json.decodeFromString<ErrorResponse>(errorBody)
-                    errorObj.message
+                    val msg = errorObj.message
+                    if (msg.contains("card_mfid and password are required", ignoreCase = true)) {
+                        "card not registered"
+                    } else {
+                        msg
+                    }
                 } catch (e: Exception) {
                     "Verification failed: ${response.status.value}"
                 }
@@ -139,7 +144,12 @@ class MemberApiClient {
                 val errorMessage = try {
                     val json = Json { ignoreUnknownKeys = true }
                     val errorObj = json.decodeFromString<DeleteCardResponse>(responseBody)
-                    errorObj.message
+                    val msg = errorObj.message
+                    if (msg.contains("card_mfid and password are required", ignoreCase = true)) {
+                        "card not registered"
+                    } else {
+                        msg
+                    }
                 } catch (e: Exception) {
                     "Deletion failed: ${response.status.value}"
                 }
