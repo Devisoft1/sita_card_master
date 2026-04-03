@@ -153,7 +153,7 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                         val mfid = tagId ?: ""
                         
                         if (cardPassword.isEmpty()) {
-                            platformLog("SITACardMaster", "BLANK_CARD_DETECTED: Card is not registered.")
+                            platformLog("SITACardMaster", "BLANK_CARD_DETECTED: Card is blank (no password). Blocking issuance.")
                             scanningMode = ScanMode.None
                             statusMessage = "Error: Wrong card detected"
                             showCardAlreadyIssuedDialog = true

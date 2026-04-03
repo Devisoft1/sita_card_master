@@ -346,7 +346,9 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                             platformLog("SITACardMaster", "Sector 5 Authenticated. Reading Card Type...")
                             logInfo(TAG, "Sector 5 Authenticated. Reading Card Type...")
                             val cardTypeBytes = mifare.readBlock(20)
-                            val cardType = smartDecode(bytesToHex(cardTypeBytes))
+                            var cardType = smartDecode(bytesToHex(cardTypeBytes))
+                            // Normalize truncated card types due to 16-byte block limit
+                            if (cardType == "Company Executiv") cardType = "Company Executive"
                             data["cardType"] = cardType
                             logInfo(TAG, "Block 20 (Card Type): $cardType")
                         }

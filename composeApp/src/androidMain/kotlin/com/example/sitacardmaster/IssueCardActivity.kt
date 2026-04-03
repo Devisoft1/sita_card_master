@@ -147,8 +147,12 @@ class IssueCardActivity : AppCompatActivity() {
                     var isDuplicateType = false
                     existingCards.forEachIndexed { index, card ->
                         val existingType = card.cardType ?: "N/A"
-                        val match = existingType.trim().equals(selectedCardType.trim(), ignoreCase = true)
-                        platformLog("SITACardMaster", "VALIDATION_LOG (Pre-Scan): Card #$index - ID: ${card.card_mfid}, Type: $existingType, Match: $match")
+                        // Only count as duplicate if types match AND card is NOT blocked
+                        val typeMatches = existingType.trim().equals(selectedCardType.trim(), ignoreCase = true)
+                        val isBlocked = card.status?.trim()?.equals("Blocked", ignoreCase = true) == true
+                        val match = typeMatches && !isBlocked
+                        
+                        platformLog("SITACardMaster", "VALIDATION_LOG (Pre-Scan): Card #$index - ID: ${card.card_mfid}, Type: $existingType, Status: ${card.status}, Match: $match")
                         if (match) {
                             isDuplicateType = true
                             platformLog("SITACardMaster", "VALIDATION_LOG (Pre-Scan): DUPLICATE DETECTED for type '$selectedCardType'")
@@ -562,11 +566,16 @@ class IssueCardActivity : AppCompatActivity() {
                  val cardPassword = cardData?.get("password") ?: ""
                  
                  if (cardPassword.isEmpty()) {
-                      logAction("NEW_CARD_DETECTED: Card is blank (no member data and no password). Proceeding to issue.")
+                      logAction("BLANK_CARD_DETECTED: Card is blank (no password). Blocking issuance.")
                       runOnUiThread {
-                          statusMessage.setTextColor(android.graphics.Color.parseColor("#4CAF50"))
-                          statusMessage.text = "New Card Detected! Writing to Card..."
-                          writeCard("")
+                          statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
+                          statusMessage.text = "Error: Wrong card detected"
+                          com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
+                              .setTitle("Scan Error")
+                              .setMessage("Wrong card detected")
+                              .setPositiveButton("OK", null)
+                              .show()
+                          stopScanning()
                       }
                       return@launch
                  }
