@@ -211,6 +211,7 @@ fun DashboardScreen(
     }
 
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
         topBar = {
             Surface(
                 shadowElevation = 2.dp,
@@ -220,16 +221,16 @@ fun DashboardScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .windowInsetsPadding(WindowInsets.statusBars)
-                        .height(34.dp)
-                        .padding(start = 4.dp, end = 8.dp),
+                        .height(56.dp)
+                        .padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = "Admin",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = brandBlue,
-                        modifier = Modifier.padding(start = 8.dp).weight(1f)
+                        modifier = Modifier.weight(1f)
                     )
 
                     IconButton(onClick = onLogout) {
@@ -237,7 +238,7 @@ fun DashboardScreen(
                             imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                             contentDescription = "Logout",
                             tint = errorRed,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(28.dp)
                         )
                     }
                 }
@@ -245,10 +246,11 @@ fun DashboardScreen(
         },
         containerColor = surfaceGray,
 
-                bottomBar = {
+        bottomBar = {
             PoweredBySection(
                 modifier = Modifier
-                    .padding(bottom = 16.dp)
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .padding(bottom = 8.dp)
             )
         }
     ) { padding ->
@@ -268,27 +270,38 @@ fun DashboardScreen(
                     .padding(vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Image(
-                    painter = painterResource(Res.drawable.sita_logo),
-                    contentDescription = "Logo",
+                // Logo Fix: Circular container with shadow/elevation
+                Surface(
                     modifier = Modifier
-                        .size(220.dp)
-                        .clickable {
-                            isScanning = true
-                            // If user just clicks logo, default to read mode
-                            isDeleteMode = false
-                            scanStatus = "Scanning... Tap card"
-                            nfcManager.startScanning()
-                        },
-                    contentScale = ContentScale.Fit
-                )
+                        .size(180.dp)
+                        .padding(vertical = 8.dp),
+                    shape = androidx.compose.foundation.shape.CircleShape,
+                    color = Color.White,
+                    shadowElevation = 6.dp,
+                    border = androidx.compose.foundation.BorderStroke(2.dp, Color(0xFFF0F0F0))
+                ) {
+                    Image(
+                        painter = painterResource(Res.drawable.sita_logo),
+                        contentDescription = "Logo",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp)
+                            .clickable {
+                                isScanning = true
+                                isDeleteMode = false
+                                scanStatus = "Scanning... Tap card"
+                                nfcManager.startScanning()
+                            },
+                        contentScale = ContentScale.Fit
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
                     text = if (isScanning) {
                         if (isDeleteMode) "TAP CARD TO DELETE DATA..." else "TAP CARD NOW..."
-                    } else "Tap logo to scan",
+                    } else "TAP LOGO TO SCAN CARD",
                     color = brandBlue,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
@@ -604,44 +617,10 @@ fun DashboardScreen(
                 )
             }
 
-            // Action Buttons
-            Button(
-                onClick = onIssueCardClick,
-                modifier = Modifier
-                    .fillMaxWidth(0.85f)
-                    .height(48.dp)
-                    .padding(bottom = 8.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = brandBlue)
-            ) {
-                Text(
-                    text = "ISSUE NEW CARD",
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    style = MaterialTheme.typography.labelSmall
-                )
-            }
-
-            Button(
-                onClick = onWriteLogoUrlClick,
-                modifier = Modifier
-                    .fillMaxWidth(0.85f)
-                    .height(48.dp)
-                    .padding(bottom = 8.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)) // Greenish for distinction
-            ) {
-                Text(
-                    text = "WRITE LOGO URL",
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    style = MaterialTheme.typography.labelSmall
-                )
-            }
-
+            // Action Buttons Reordered as per Screenshot
             Row(
-                modifier = Modifier.fillMaxWidth(0.85f),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.fillMaxWidth(0.9f),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Button(
                     onClick = {
@@ -652,9 +631,10 @@ fun DashboardScreen(
                     },
                     modifier = Modifier
                         .weight(1f)
-                        .height(48.dp),
+                        .height(56.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = errorRed)
+                    colors = ButtonDefaults.buttonColors(containerColor = errorRed),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
                 ) {
                     Text(
                         text = "DELETE CARD",
@@ -665,26 +645,58 @@ fun DashboardScreen(
                 }
 
                 Button(
-                    onClick = {
-                        cardData = null
-                        apiResponse = null
-                        verificationError = null
-                        currentAmount = "Loading..."
-                        globalAmount = "0.00"
-                        scanStatus = ""
-                    },
+                    onClick = onIssueCardClick,
                     modifier = Modifier
                         .weight(1f)
-                        .height(48.dp),
+                        .height(56.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9E9E9E))
+                    colors = ButtonDefaults.buttonColors(containerColor = brandBlue),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
                 ) {
                     Text(
-                        text = "CLEAR PAGE",
+                        text = "ISSUE CARD",
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                         style = MaterialTheme.typography.labelSmall
                     )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Button(
+                onClick = {
+                    cardData = null
+                    apiResponse = null
+                    verificationError = null
+                    currentAmount = "Loading..."
+                    globalAmount = "0.00"
+                    scanStatus = ""
+                },
+                modifier = Modifier
+                    .fillMaxWidth(0.9f)
+                    .height(56.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9E9E9E)),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+            ) {
+                Text(
+                    text = "CLEAR PAGE",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+
+            // Hidden Secondary Action
+            if (false) { // Keep hidden as it wasn't requested for dashboard flow
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = onWriteLogoUrlClick,
+                    modifier = Modifier.fillMaxWidth(0.9f).height(40.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = successGreen)
+                ) {
+                     Text("WRITE LOGO URL")
                 }
             }
             }
