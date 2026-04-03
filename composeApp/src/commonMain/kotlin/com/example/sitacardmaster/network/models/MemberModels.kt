@@ -56,7 +56,8 @@ data class VerifyMemberResponse(
     val email: String? = null,
     val website: String? = null,
     val whatsapp: String? = null,
-    val status: Int? = null,
+    @Serializable(with = StringOrIntSerializer::class)
+    val status: String? = null,
     @Serializable(with = CardListSerializer::class)
     val cards: List<CardDetails>? = null
 )

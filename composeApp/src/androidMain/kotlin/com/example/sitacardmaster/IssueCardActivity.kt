@@ -573,9 +573,11 @@ class IssueCardActivity : AppCompatActivity() {
                           com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
                               .setTitle("Scan Error")
                               .setMessage("Wrong card detected")
-                              .setPositiveButton("OK", null)
+                              .setPositiveButton("OK") { _, _ ->
+                                  stopScanning()
+                                  resetUiState()
+                              }
                               .show()
-                          stopScanning()
                       }
                       return@launch
                  }
@@ -601,15 +603,16 @@ class IssueCardActivity : AppCompatActivity() {
                      var isDuplicateType = false
                      existingCards.forEachIndexed { index, card ->
                          val existingType = card.cardType ?: "N/A"
-                         val match = existingType.trim().equals(cardType.trim(), ignoreCase = true)
-                         platformLog("SITACardMaster", "VALIDATION_LOG (Post-Scan): Card #$index - ID: ${card.card_mfid}, Type: $existingType, Match: $match")
+                         val isBlocked = card.status?.trim()?.equals("Blocked", ignoreCase = true) == true
+                         val match = existingType.trim().equals(cardType.trim(), ignoreCase = true) && !isBlocked
+                         platformLog("SITACardMaster", "VALIDATION_LOG (Post-Scan): Card #$index - ID: ${card.card_mfid}, Type: $existingType, Status: ${card.status}, Match: $match")
                          if (match) isDuplicateType = true
                      }
 
                      if (isDuplicateType) {
                          logAction("VERIFY_API_FAILED: Card of type $cardType already assigned.")
                          runOnUiThread {
-                             showResultPopup("Duplicate Card Type", "Card of type '$cardType' already assigned to this member", isError = true)
+                             showResultPopup("Duplicate Card Type", "Card of type '$cardType' already assigned to this member", isError = true, onOk = ::resetUiState)
                          }
                          return@launch
                      }
@@ -632,14 +635,14 @@ class IssueCardActivity : AppCompatActivity() {
                              writeCard(cardPassword)
                          } else {
                              logAction("VERIFY_API_ERROR_DISPLAY: $error")
-                             showResultPopup("Verification Failed", error, isError = true)
+                             showResultPopup("Verification Failed", error, isError = true, onOk = ::resetUiState)
                          }
                      }
                  }
             } // end of GlobalScope.launch
         }
 
-    private fun showResultPopup(title: String, message: String, isError: Boolean) {
+    private fun showResultPopup(title: String, message: String, isError: Boolean, onOk: (() -> Unit)? = null) {
         val cleanMessage = message.replace("(found in CardTransaction Log)", "").trim()
         runOnUiThread {
             val padding = (resources.displayMetrics.density * 24).toInt()
@@ -674,7 +677,7 @@ class IssueCardActivity : AppCompatActivity() {
             com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
                 .setView(container)
                 .setPositiveButton("OK") { _, _ ->
-                    resetUiState()
+                    if (onOk != null) onOk.invoke() else resetUiState()
                 }
                 .setCancelable(false)
                 .show()
@@ -711,7 +714,7 @@ class IssueCardActivity : AppCompatActivity() {
                     logAction("Write Result: $message")
                     if (success) {
                         // Show Success Alert
-                        showResultPopup("Card Issued Successfully", "Member: $company\nCard Type: $cardType", isError = false)
+                        showResultPopup("Card Issued Successfully", "Member: $company\nCard Type: $cardType", isError = false, onOk = ::resetForm)
                             
                         // Save to local storage
                         // Assuming DatabaseHelper.saveIssuedCard signature might still need 'totalBuy', passing "0" or checking if it needs update

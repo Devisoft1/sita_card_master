@@ -35,8 +35,8 @@ class MemberApiClient {
                     parameter("search", search)
                 }
             }.body()
-            // The API returns all members, so we filter for status 1 (Approved) locally.
-            Result.success(response.members.filter { it.status == 1 })
+            // The API returns all members, so we filter for status 1 (Approved) or "Active" locally.
+            Result.success(response.members.filter { it.status == "1" || it.status?.trim()?.equals("Active", ignoreCase = true) == true })
         } catch (e: Exception) {
             // Log the error for easier debugging
             println("API Error in getApprovedMembers: ${e.message}")
