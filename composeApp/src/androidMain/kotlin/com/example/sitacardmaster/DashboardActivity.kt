@@ -50,6 +50,7 @@ class DashboardActivity : AppCompatActivity() {
     private lateinit var displayEmail: TextView
     private lateinit var displayWebsite: TextView
     private lateinit var displayWhatsapp: TextView
+    private lateinit var displayStatus: TextView
     private lateinit var premiumMemberLabel: TextView
     private lateinit var newCardButton: Button
     private lateinit var clearButton: Button
@@ -103,6 +104,7 @@ class DashboardActivity : AppCompatActivity() {
         displayEmail = findViewById(R.id.displayEmail)
         displayWebsite = findViewById(R.id.displayWebsite)
         displayWhatsapp = findViewById(R.id.displayWhatsapp)
+        displayStatus = findViewById(R.id.displayStatus)
         premiumMemberLabel = findViewById(R.id.premiumMemberLabel)
         newCardButton = findViewById(R.id.newCardButton)
         clearButton = findViewById(R.id.clearButton)
@@ -433,6 +435,8 @@ class DashboardActivity : AppCompatActivity() {
         val amountFormatter = java.text.DecimalFormat("#,###.00")
         displayTotalBuy.text = "₹${amountFormatter.format((data["totalBuy"] ?: "0.00").toDoubleOrNull() ?: 0.0)}"
         displayAmount.text = "Loading..." 
+        displayStatus.text = "Loading..."
+        displayStatus.setTextColor(resources.getColor(R.color.brand_blue, theme))
         
         displayAddress.visibility = View.GONE
         displayPhone.visibility = View.GONE
@@ -470,6 +474,17 @@ class DashboardActivity : AppCompatActivity() {
                         if (!response.companyName.isNullOrBlank()) displayCompany.text = response.companyName
                         if (!response.memberId.isNullOrBlank()) displayMemberId.text = response.memberId
                         
+                        // Set Status (Prioritize Card Status over Member Status)
+                        val rawStatus = matchingCard?.status ?: response.status ?: "Active"
+                        val statusText = if (rawStatus == "1") "Active" else rawStatus
+                        
+                        displayStatus.text = statusText
+                        if (statusText.equals("Blocked", ignoreCase = true)) {
+                            displayStatus.setTextColor(resources.getColor(R.color.error_red, theme))
+                        } else {
+                            displayStatus.setTextColor(resources.getColor(R.color.brand_blue, theme))
+                        }
+                        
                         bindValue(displayAddress, response.companyAddress)
                         bindValue(displayPhone, response.phoneNumber)
                         bindValue(displayEmail, response.email)
@@ -503,6 +518,17 @@ class DashboardActivity : AppCompatActivity() {
                                         displayValidUpto.text = formatDate(response.validity)
                                         if (!response.companyName.isNullOrBlank()) displayCompany.text = response.companyName
                                         if (!response.memberId.isNullOrBlank()) displayMemberId.text = response.memberId
+                                        
+                                        // Set Status (Prioritize Card Status over Member Status)
+                                        val rawStatus = matchingCard?.status ?: response.status ?: "Active"
+                                        val statusText = if (rawStatus == "1") "Active" else rawStatus
+                                        
+                                        displayStatus.text = statusText
+                                        if (statusText.equals("Blocked", ignoreCase = true)) {
+                                            displayStatus.setTextColor(resources.getColor(R.color.error_red, theme))
+                                        } else {
+                                            displayStatus.setTextColor(resources.getColor(R.color.brand_blue, theme))
+                                        }
                                         bindValue(displayAddress, response.companyAddress)
                                         bindValue(displayPhone, response.phoneNumber)
                                         bindValue(displayEmail, response.email)
