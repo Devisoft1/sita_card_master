@@ -562,8 +562,12 @@ class IssueCardActivity : AppCompatActivity() {
                  val cardPassword = cardData?.get("password") ?: ""
                  
                  if (cardPassword.isEmpty()) {
-                      logAction("BLANK_CARD_DETECTED: Card is truly blank (no member data and no password).")
-                      showWrongCardAlert()
+                      logAction("NEW_CARD_DETECTED: Card is blank (no member data and no password). Proceeding to issue.")
+                      runOnUiThread {
+                          statusMessage.setTextColor(android.graphics.Color.parseColor("#4CAF50"))
+                          statusMessage.text = "New Card Detected! Writing to Card..."
+                          writeCard("")
+                      }
                       return@launch
                  }
 
@@ -596,14 +600,7 @@ class IssueCardActivity : AppCompatActivity() {
                      if (isDuplicateType) {
                          logAction("VERIFY_API_FAILED: Card of type $cardType already assigned.")
                          runOnUiThread {
-                             com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
-                                 .setTitle("Duplicate Card Type")
-                                 .setMessage("Card of type '$cardType' already assigned to this member")
-                                 .setPositiveButton("OK", null)
-                                 .show()
-                             statusMessage.setTextColor(resources.getColor(R.color.gray_text, theme))
-                             statusMessage.text = "Ready to write"
-                             stopScanning()
+                             showResultPopup("Duplicate Card Type", "Card of type '$cardType' already assigned to this member", isError = true)
                          }
                          return@launch
                      }
@@ -620,45 +617,67 @@ class IssueCardActivity : AppCompatActivity() {
                      
                      runOnUiThread {
                          if (error.lowercase().contains("card not found") || error.lowercase().contains("register the card")) {
-                             showWrongCardAlert()
+                             logAction("ORPHANED_CARD_DETECTED: Card not in DB (404) - Proceeding to issue this card.")
+                             statusMessage.setTextColor(android.graphics.Color.parseColor("#4CAF50"))
+                             statusMessage.text = "Orphaned Card Detected! Writing to Card..."
+                             writeCard(cardPassword)
                          } else {
-                             com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
-                                 .setTitle("Verification Failed")
-                                 .setMessage(error)
-                                 .setPositiveButton("OK", null)
-                                 .show()
-                             statusMessage.setTextColor(resources.getColor(R.color.error_red, theme))
-                             statusMessage.text = error
-                             stopScanning()
+                             logAction("VERIFY_API_ERROR_DISPLAY: $error")
+                             showResultPopup("Verification Failed", error, isError = true)
                          }
                      }
                  }
             } // end of GlobalScope.launch
         }
 
-    private fun showWrongCardAlert() {
+    private fun showResultPopup(title: String, message: String, isError: Boolean) {
+        val cleanMessage = message.replace("(found in CardTransaction Log)", "").trim()
         runOnUiThread {
             val padding = (resources.displayMetrics.density * 24).toInt()
             val container = android.widget.FrameLayout(this@IssueCardActivity).apply {
                 setPadding(padding, padding, padding, 0)
             }
-            val messageView = TextView(this@IssueCardActivity).apply {
-                text = "Wrong Card Detected"
+            
+            val layout = android.widget.LinearLayout(this@IssueCardActivity).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
                 gravity = android.view.Gravity.CENTER
-                textSize = 18f
-                setTextColor(resources.getColor(R.color.error_red, theme))
+            }
+
+            val titleView = TextView(this@IssueCardActivity).apply {
+                text = title
+                gravity = android.view.Gravity.CENTER
+                textSize = 20f
+                setTextColor(if (isError) resources.getColor(R.color.error_red, theme) else android.graphics.Color.parseColor("#4CAF50"))
                 setTypeface(null, android.graphics.Typeface.BOLD)
             }
-            container.addView(messageView)
+            
+            val messageView = TextView(this@IssueCardActivity).apply {
+                text = cleanMessage
+                gravity = android.view.Gravity.CENTER
+                textSize = 16f
+                setPadding(0, (8 * resources.displayMetrics.density).toInt(), 0, 0)
+            }
+            
+            layout.addView(titleView)
+            layout.addView(messageView)
+            container.addView(layout)
 
             com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
                 .setView(container)
-                .setPositiveButton("OK", null)
+                .setPositiveButton("OK") { _, _ ->
+                    resetUiState()
+                }
+                .setCancelable(false)
                 .show()
-            statusMessage.setTextColor(resources.getColor(R.color.gray_text, theme))
-            statusMessage.text = "Ready to write"
+            
             stopScanning()
         }
+    }
+
+    private fun resetUiState() {
+        statusMessage.setTextColor(resources.getColor(R.color.gray_text, theme))
+        statusMessage.text = "TAP CARD NOW"
+        nfcManager.clearScanData()
     }
 
     private fun writeCard(cardPassword: String) {
@@ -680,17 +699,10 @@ class IssueCardActivity : AppCompatActivity() {
             cardType = cardType,
             onResult = { success: Boolean, message: String ->
                 runOnUiThread {
-                    statusMessage.text = message
                     logAction("Write Result: $message")
                     if (success) {
-                        statusMessage.setTextColor(android.graphics.Color.parseColor("#4CAF50"))
-                        
                         // Show Success Alert
-                        com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IssueCardActivity)
-                            .setTitle("Card Issued Successfully")
-                            .setMessage("Member: $company\nCard Type: $cardType")
-                            .setPositiveButton("OK", null)
-                            .show()
+                        showResultPopup("Card Issued Successfully", "Member: $company\nCard Type: $cardType", isError = false)
                             
                         // Save to local storage
                         // Assuming DatabaseHelper.saveIssuedCard signature might still need 'totalBuy', passing "0" or checking if it needs update

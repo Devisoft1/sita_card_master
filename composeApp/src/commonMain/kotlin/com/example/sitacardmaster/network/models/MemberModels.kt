@@ -121,6 +121,17 @@ data class AddAmountResponse(
 )
 
 @Serializable
+data class DeleteCardRequest(
+    val card_mfid: String,
+    val password: String
+)
+
+@Serializable
+data class DeleteCardResponse(
+    val message: String
+)
+
+@Serializable
 data class ErrorResponse(
     val message: String
 )

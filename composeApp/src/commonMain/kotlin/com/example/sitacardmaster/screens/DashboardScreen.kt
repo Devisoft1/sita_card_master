@@ -60,27 +60,40 @@ fun DashboardScreen(
     var isDeleteMode by remember { mutableStateOf(false) }
     var cardData by remember { mutableStateOf<Map<String, String>?>(null) }
     var scanStatus by remember { mutableStateOf("") }
-
+    
+    // Dialog State
+    var showResultDialog by remember { mutableStateOf(false) }
+    var dialogTitle by remember { mutableStateOf("") }
+    var dialogMessage by remember { mutableStateOf("") }
 
     var remainingSeconds by remember { mutableStateOf(60) }
-
-    // API Integration
-    val apiClient = remember { MemberApiClient() }
-
-
-    val scope = rememberCoroutineScope()
     var currentAmount by remember { mutableStateOf<String?>("Loading...") }
     var globalAmount by remember { mutableStateOf<String?>("0.00") }
-
-    val uriHandler = LocalUriHandler.current
     var apiResponse by remember {
         mutableStateOf<com.example.sitacardmaster.network.models.VerifyMemberResponse?>(
             null
         )
     }
-
-    // Verified Member State
     var verificationError by remember { mutableStateOf<String?>(null) }
+
+    val resetDashboard = {
+        cardData = null
+        apiResponse = null
+        verificationError = null
+        currentAmount = "Loading..."
+        globalAmount = "0.00"
+        scanStatus = ""
+        isScanning = false
+        isDeleteMode = false
+        nfcManager.clearScanData()
+    }
+
+    // API Integration
+    val apiClient = remember { MemberApiClient() }
+
+    val scope = rememberCoroutineScope()
+
+    val uriHandler = LocalUriHandler.current
 
     // Logic to handle scan results
     val detectedTag by nfcManager.detectedTag
@@ -96,24 +109,85 @@ fun DashboardScreen(
                     uriHandler.openUri(url)
                 } catch (e: Exception) {
                     platformLog("Dashboard", "Failed to open URL: ${e.message}")
-                    scanStatus = "Failed to open URL"
+                    dialogTitle = "URL Error"
+                    dialogMessage = "Failed to open URL: ${e.message}"
+                    showResultDialog = true
                 }
                 return@LaunchedEffect
             }
 
             if (isDeleteMode) {
                 platformLog("Dashboard", "Processing card deletion...")
-                scanStatus = "Deleting data..."
-                nfcManager.clearCard { success, message ->
-                    if (success) {
-                        scanStatus = "Card data deleted successfully"
-                        platformLog("Dashboard", "Card deletion success")
-                    } else {
-                        scanStatus = "Delete Failed: $message"
-                        platformLog("Dashboard", "Card deletion failed: $message")
+                scanStatus = "Reading card before deletion..."
+
+                nfcManager.readCard { readSuccess, data, readMessage ->
+                    if (!readSuccess) {
+                        dialogTitle = "Read Error"
+                        dialogMessage = readMessage
+                        showResultDialog = true
+                        return@readCard
                     }
-                    isScanning = false
-                    isDeleteMode = false // Reset mode
+
+                    val cardMfid = (data?.get("card_mfid") ?: "").lowercase()
+                    val password = data?.get("password") ?: ""
+
+                    if (cardMfid.isEmpty()) {
+                        dialogTitle = "Already Blank"
+                        dialogMessage = "This card is already blank or not registered."
+                        showResultDialog = true
+                        return@readCard
+                    }
+
+                    scanStatus = "Validating deletion..."
+                    scope.launch {
+                        val deleteResult = apiClient.deleteCard(cardMfid, password)
+                        deleteResult.fold(
+                            onSuccess = { response ->
+                                platformLog("Dashboard", "Server deletion success: ${response.message}")
+                                scanStatus = "Database record cleared. Wiping card..."
+
+                                nfcManager.clearCard { clearSuccess, clearMessage ->
+                                    if (clearSuccess) {
+                                        platformLog("Dashboard", "DATABASE_DELETED: Card record removed from server.")
+                                        platformLog("Dashboard", "CARD_DELETED: Card data physically wiped.")
+                                        dialogTitle = "Success"
+                                        dialogMessage = "Data cleared successfully"
+                                    } else {
+                                        platformLog("Dashboard", "DELETE_PARTIAL_FAILURE: Server record deleted, but CARD_WIPE_FAILED: $clearMessage")
+                                        dialogTitle = "Partial Success"
+                                        dialogMessage = "API deleted record, but physical wipe failed: $clearMessage. Please try again."
+                                    }
+                                    showResultDialog = true
+                                }
+                            },
+                            onFailure = { error ->
+                                val errorMessage = error.message ?: "Deletion failed"
+                                
+                                if (errorMessage.lowercase().contains("card not found") || errorMessage.lowercase().contains("404")) {
+                                    platformLog("Dashboard", "Step 2 (404): Card not found in DB - Proceeding to wipe orphaned card.")
+                                    scanStatus = "Card not in registry. Wiping anyway..."
+                                    
+                                    nfcManager.clearCard { clearSuccess, clearMessage ->
+                                        if (clearSuccess) {
+                                            platformLog("Dashboard", "DATABASE_DELETED: Card already missing from server (404 path).")
+                                            platformLog("Dashboard", "CARD_DELETED: Orphaned card physically wiped.")
+                                            dialogTitle = "Success"
+                                            dialogMessage = "Data cleared successfully"
+                                        } else {
+                                            dialogTitle = "Wipe Failed"
+                                            dialogMessage = "Record not found in database, and physical wipe failed: $clearMessage."
+                                        }
+                                        showResultDialog = true
+                                    }
+                                } else {
+                                    platformLog("Dashboard", "Server deletion failed: $errorMessage")
+                                    dialogTitle = "Deletion Declined"
+                                    dialogMessage = errorMessage
+                                    showResultDialog = true
+                                }
+                            }
+                        )
+                    }
                 }
                 return@LaunchedEffect
             }
@@ -123,12 +197,12 @@ fun DashboardScreen(
             nfcManager.readCard { success, data, message ->
                 if (success) {
                     cardData = data
-                    scanStatus =
-                        if (data == null) "No data in the card" else "Card read successfully"
-                    platformLog("Dashboard", "Card read success: ${data?.get("memberId")}")
-
-                    // Fetch Amount from API
-                    if (data != null) {
+                    if (data == null) {
+                        dialogTitle = "Empty Card"
+                        dialogMessage = "This card has no registered data."
+                        showResultDialog = true
+                    } else {
+                        platformLog("Dashboard", "Card read success: ${data["memberId"]}")
                         val memberId = data["memberId"] ?: ""
                         val companyName = data["companyName"] ?: ""
                         platformLog(
@@ -184,8 +258,10 @@ fun DashboardScreen(
                         }
                     }
                 } else {
-                    scanStatus = "Read error: $message"
                     platformLog("Dashboard", "Card read error: $message")
+                    dialogTitle = "Read Error"
+                    dialogMessage = message
+                    showResultDialog = true
                 }
                 isScanning = false
             }
@@ -205,9 +281,31 @@ fun DashboardScreen(
                 isScanning = false
                 isDeleteMode = false
                 nfcManager.stopScanning()
-                scanStatus = "No card detected"
+                dialogTitle = "Timeout"
+                dialogMessage = "No card detected within 60 seconds."
+                showResultDialog = true
             }
         }
+    }
+
+    // Result Dialog
+    if (showResultDialog) {
+        AlertDialog(
+            onDismissRequest = { 
+                showResultDialog = false
+                resetDashboard()
+            },
+            title = { Text(dialogTitle) },
+            text = { Text(dialogMessage.replace("(found in CardTransaction Log)", "").trim()) },
+            confirmButton = {
+                Button(onClick = {
+                    showResultDialog = false
+                    resetDashboard()
+                }) {
+                    Text("OK")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -666,12 +764,7 @@ fun DashboardScreen(
 
             Button(
                 onClick = {
-                    cardData = null
-                    apiResponse = null
-                    verificationError = null
-                    currentAmount = "Loading..."
-                    globalAmount = "0.00"
-                    scanStatus = ""
+                    resetDashboard()
                 },
                 modifier = Modifier
                     .fillMaxWidth(0.9f)

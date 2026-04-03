@@ -67,7 +67,7 @@ class DashboardActivity : AppCompatActivity() {
     private val scanTimeoutRunnable = Runnable {
         if (isScanning) {
             stopScanMode()
-            statusSnackbar("No card detected")
+            showResultPopup("Timeout", "No card detected within 60 seconds.")
         }
     }
     private var secondsElapsed = 0
@@ -286,7 +286,7 @@ class DashboardActivity : AppCompatActivity() {
                             startActivity(browserIntent)
                         } catch (e: Exception) {
                             logAction("Failed to open URL: ${e.message}")
-                            statusSnackbar("Failed to open URL")
+                            showResultPopup("Error", "Failed to open URL: ${e.message}")
                         }
                     }
                     return
@@ -310,34 +310,114 @@ class DashboardActivity : AppCompatActivity() {
                     logAction("Card read success: MemberID=${data["memberId"]}, CardType=${data["cardType"]}")
                     showCardDetails(data)
                 } else if (success) {
-                    val reason = if (data == null) "Truly blank" 
+                    val reason = if (data == null) "card is empty" 
                                 else if (data["memberId"].isNullOrBlank()) "Missing MemberID" 
                                 else "Missing Password"
                     logAction("Card read success: Card is empty ($reason)")
-                    scanStatus.text = "card is empty"
-                    scanStatus.visibility = View.VISIBLE
-                    scanStatus.setTextColor(getColor(R.color.error_red))
+                    showResultPopup("Empty Card", "This card has no registered data.")
                 } else {
                     logAction("Card read error: $message")
-                    scanStatus.text = message
-                    scanStatus.visibility = View.VISIBLE
-                    scanStatus.setTextColor(getColor(R.color.error_red))
+                    showResultPopup("Read Error", message)
                 }
             }
         }
     }
 
-    private fun processDelete() {
-        scanInstruction.text = "Deleting data..."
-        logAction("Processing detected card (Delete)")
-        nfcManager.deleteCardData { success: Boolean, message: String ->
-            runOnUiThread {
+    private fun showResultPopup(title: String, message: String, isError: Boolean = true, shouldReset: Boolean = true) {
+        val cleanMessage = message.replace("(found in CardTransaction Log)", "").trim()
+        val builder = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+        builder.setTitle(title)
+        builder.setMessage(cleanMessage)
+        builder.setPositiveButton("OK") { dialog, _ ->
+            dialog.dismiss()
+            if (shouldReset) {
                 stopScanMode()
-                logAction("Card delete $message")
-                scanStatus.text = message
-                scanStatus.visibility = View.VISIBLE
-                scanStatus.setTextColor(getColor(R.color.error_red))
                 resetUI()
+                nfcManager.clearScanData()
+            }
+        }
+        builder.setCancelable(false)
+        builder.show()
+    }
+
+    private fun processDelete() {
+        scanInstruction.text = "Reading card before deletion..."
+        logAction("Processing detected card (Delete - Step 1: Read)")
+        
+        nfcManager.readCard { success, data, message ->
+            if (!success) {
+                runOnUiThread {
+                    logAction("Card read error (Delete): $message")
+                    showResultPopup("Read Error", message)
+                }
+                return@readCard
+            }
+
+            val cardMfid = (data?.get("card_mfid") ?: "").lowercase()
+            val password = data?.get("password") ?: ""
+            logAction("Read Step Successful - MFID: $cardMfid")
+
+            if (cardMfid.isEmpty()) {
+                runOnUiThread {
+                    logAction("Card is already blank - No MFID found")
+                    showResultPopup("Already Blank", "This card is already blank or not registered.")
+                }
+                return@readCard
+            }
+
+            runOnUiThread { scanInstruction.text = "Validating deletion with server..." }
+            
+            scope.launch {
+                logAction("Step 2: Sending API Request for Deletion - MFID='$cardMfid'")
+                val result = withContext(Dispatchers.IO) {
+                    memberApiClient.deleteCard(cardMfid, password)
+                }
+                
+                result.fold(
+                    onSuccess = { response ->
+                        logAction("Step 2 Successful: Server deletion confirmed - ${response.message}")
+                        runOnUiThread { scanInstruction.text = "API Success. Wiping card..." }
+                        
+                        nfcManager.deleteCardData { wipeSuccess: Boolean, wipeMessage: String ->
+                            runOnUiThread {
+                                if (wipeSuccess) {
+                                    logAction("DATABASE_DELETED: Card removed from server record successfully.")
+                                    logAction("CARD_DELETED: Card data physically wiped successfully.")
+                                    showResultPopup("Success", "Data cleared successfully", isError = false)
+                                } else {
+                                    logAction("DELETE_PARTIAL_FAILURE: Server record deleted, but CARD_WIPE_FAILED: $wipeMessage")
+                                    showResultPopup("Partial Success", "API deleted record, but physical wipe failed: $wipeMessage. Please try again.")
+                                }
+                            }
+                        }
+                    },
+                    onFailure = { error ->
+                        val errorMessage = error.message ?: "Deletion failed"
+                        
+                        // Handle 404 (Card not found) specifically to allow physical wipe
+                        if (errorMessage.lowercase().contains("card not found") || errorMessage.lowercase().contains("404")) {
+                            logAction("Step 2 (404): Card not found in DB - Proceeding to wipe orphaned card.")
+                            runOnUiThread { scanInstruction.text = "Card not in registry. Wiping anyway..." }
+                            
+                            nfcManager.deleteCardData { wipeSuccess: Boolean, wipeMessage: String ->
+                                runOnUiThread {
+                                    if (wipeSuccess) {
+                                        logAction("DATABASE_DELETED: Card already missing from server (404 path).")
+                                        logAction("CARD_DELETED: Orphaned card physically wiped successfully.")
+                                        showResultPopup("Success", "Data cleared successfully", isError = false)
+                                    } else {
+                                        showResultPopup("Wipe Failed", "Record not found in database, and physical wipe failed: $wipeMessage.")
+                                    }
+                                }
+                            }
+                        } else {
+                            logAction("Step 2 Failed: Server deletion declined - $errorMessage")
+                            runOnUiThread {
+                                showResultPopup("Deletion Declined", errorMessage)
+                            }
+                        }
+                    }
+                )
             }
         }
     }
@@ -497,7 +577,7 @@ class DashboardActivity : AppCompatActivity() {
             intent.setPackage("com.google.android.apps.maps")
             if (intent.resolveActivity(packageManager) != null) startActivity(intent)
             else startActivity(Intent(Intent.ACTION_VIEW, geoUri))
-        } catch (e: Exception) { statusSnackbar("Could not open maps") }
+        } catch (e: Exception) { showResultPopup("Error", "Could not open maps") }
     }
     
     private fun openDialer(phoneNumber: String) {
@@ -505,7 +585,7 @@ class DashboardActivity : AppCompatActivity() {
             val intent = Intent(Intent.ACTION_DIAL)
             intent.data = Uri.parse("tel:$phoneNumber")
             startActivity(intent)
-        } catch (e: Exception) { statusSnackbar("Could not open dialer") }
+        } catch (e: Exception) { showResultPopup("Error", "Could not open dialer") }
     }
     
     private fun openEmailApp(email: String) {
@@ -513,7 +593,7 @@ class DashboardActivity : AppCompatActivity() {
             val intent = Intent(Intent.ACTION_SENDTO)
             intent.data = Uri.parse("mailto:$email")
             startActivity(intent)
-        } catch (e: Exception) { statusSnackbar("Could not open email app") }
+        } catch (e: Exception) { showResultPopup("Error", "Could not open email app") }
     }
     
     private fun logAction(action: String) {
@@ -528,7 +608,11 @@ class DashboardActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (isScanning) nfcManager.startScanning()
+        // FIX: Only restart scanning if we don't already have a detected tag.
+        // This prevents the foreground dispatch reset from wiping state during processDelete.
+        if (isScanning && (nfcManager.detectedTag.value == null)) {
+            nfcManager.startScanning()
+        }
     }
 
     override fun onPause() {

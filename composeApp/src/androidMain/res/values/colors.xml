@@ -13,4 +13,5 @@
     <color name="devisoft_blue">#00509E</color>
     <color name="devisoft_orange">#F58220</color>
     <color name="gray">#9E9E9E</color>
+    <color name="success_green">#4CAF50</color>
 </resources>

@@ -61,7 +61,7 @@ class MemberApiClient {
                         memberId = memberId,
                         companyName = companyName,
                         password = password,
-                        card_mfid = cardMfid,
+                        card_mfid = cardMfid.lowercase(),
                         cardValidity = cardValidity,
                         cardType = cardType
                     )
@@ -119,5 +119,35 @@ class MemberApiClient {
                 newTotal = amount
             )
         )
+    }
+
+    suspend fun deleteCard(cardMfid: String, password: String): Result<DeleteCardResponse> {
+        com.example.sitacardmaster.platformLog("MemberAPI", "API Request: Deleting card with MFID: $cardMfid")
+        return try {
+            val endpoint = "$baseUrl/cards/delete"
+            val response = client.post(endpoint) {
+                contentType(ContentType.Application.Json)
+                setBody(DeleteCardRequest(cardMfid.lowercase(), password))
+            }
+
+            val responseBody = response.bodyAsText()
+            com.example.sitacardmaster.platformLog("MemberAPI", "API Response [${response.status}]: $responseBody")
+            
+            if (response.status == HttpStatusCode.OK) {
+                Result.success(Json { ignoreUnknownKeys = true }.decodeFromString(responseBody))
+            } else {
+                val errorMessage = try {
+                    val json = Json { ignoreUnknownKeys = true }
+                    val errorObj = json.decodeFromString<DeleteCardResponse>(responseBody)
+                    errorObj.message
+                } catch (e: Exception) {
+                    "Deletion failed: ${response.status.value}"
+                }
+                Result.failure(Exception(errorMessage))
+            }
+        } catch (e: Exception) {
+            com.example.sitacardmaster.platformLog("MemberAPI", "API Exception: ${e.message}")
+            Result.failure(e)
+        }
     }
 }
