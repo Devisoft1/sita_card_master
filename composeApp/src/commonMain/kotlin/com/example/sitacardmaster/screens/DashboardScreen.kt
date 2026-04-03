@@ -118,7 +118,7 @@ fun DashboardScreen(
 
             if (isDeleteMode) {
                 platformLog("Dashboard", "Processing card deletion...")
-                scanStatus = "Reading card before deletion..."
+                // scanStatus = "Reading card before deletion..."
 
                 nfcManager.readCard { readSuccess, data, readMessage ->
                     if (!readSuccess) {
@@ -138,13 +138,13 @@ fun DashboardScreen(
                         return@readCard
                     }
 
-                    scanStatus = "Validating deletion..."
+                    // scanStatus = "Validating deletion..."
                     scope.launch {
                         val deleteResult = apiClient.deleteCard(cardMfid, password)
                         deleteResult.fold(
                             onSuccess = { response ->
                                 platformLog("Dashboard", "Server deletion success: ${response.message}")
-                                scanStatus = "Database record cleared. Wiping card..."
+                                // scanStatus = "Database record cleared. Wiping card..."
 
                                 nfcManager.clearCard { clearSuccess, clearMessage ->
                                     if (clearSuccess) {
@@ -165,7 +165,7 @@ fun DashboardScreen(
                                 
                                 if (errorMessage.lowercase().contains("card not found") || errorMessage.lowercase().contains("404")) {
                                     platformLog("Dashboard", "Step 2 (404): Card not found in DB - Proceeding to wipe orphaned card.")
-                                    scanStatus = "Card not in registry. Wiping anyway..."
+                                    // scanStatus = "Card not in registry. Wiping anyway..."
                                     
                                     nfcManager.clearCard { clearSuccess, clearMessage ->
                                         if (clearSuccess) {

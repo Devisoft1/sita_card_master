@@ -131,7 +131,7 @@ class IssueCardActivity : AppCompatActivity() {
             
             // Validate existing card types
             statusMessage.setTextColor(resources.getColor(R.color.brand_blue, theme))
-            statusMessage.text = "Validating member cards..."
+            // statusMessage.text = "Validating member cards..."
             startScanButton.isEnabled = false
             
             coroutineScope.launch {
@@ -439,7 +439,7 @@ class IssueCardActivity : AppCompatActivity() {
         logAction("Starting verification for Card: $tagId")
         runOnUiThread {
              statusMessage.setTextColor(resources.getColor(R.color.brand_blue, theme))
-             statusMessage.text = "Verifying..."
+             // statusMessage.text = "Verifying..."
         }
         
         nfcManager.readCard { readSuccess, cardData, _ ->
@@ -620,7 +620,7 @@ class IssueCardActivity : AppCompatActivity() {
                      logAction("VERIFY_API_SUCCESS: Member Verified!")
                      runOnUiThread {
                          statusMessage.setTextColor(android.graphics.Color.parseColor("#4CAF50"))
-                         statusMessage.text = "Member Verified! Writing to Card..."
+                         // statusMessage.text = "Member Verified! Writing to Card..."
                          writeCard(cardPassword)
                      }
                  } else {
@@ -631,7 +631,7 @@ class IssueCardActivity : AppCompatActivity() {
                          if (error.lowercase().contains("card not found") || error.lowercase().contains("register the card")) {
                              logAction("ORPHANED_CARD_DETECTED: Card not in DB (404) - Proceeding to issue this card.")
                              statusMessage.setTextColor(android.graphics.Color.parseColor("#4CAF50"))
-                             statusMessage.text = "Orphaned Card Detected! Writing to Card..."
+                             // statusMessage.text = "Orphaned Card Detected! Writing to Card..."
                              writeCard(cardPassword)
                          } else {
                              logAction("VERIFY_API_ERROR_DISPLAY: $error")

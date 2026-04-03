@@ -343,7 +343,7 @@ class DashboardActivity : AppCompatActivity() {
     }
 
     private fun processDelete() {
-        scanInstruction.text = "Reading card before deletion..."
+        // scanInstruction.text = "Reading card before deletion..."
         logAction("Processing detected card (Delete - Step 1: Read)")
         
         nfcManager.readCard { success, data, message ->
@@ -367,7 +367,7 @@ class DashboardActivity : AppCompatActivity() {
                 return@readCard
             }
 
-            runOnUiThread { scanInstruction.text = "Validating deletion with server..." }
+            // runOnUiThread { scanInstruction.text = "Validating deletion with server..." }
             
             scope.launch {
                 logAction("Step 2: Sending API Request for Deletion - MFID='$cardMfid'")
@@ -378,7 +378,7 @@ class DashboardActivity : AppCompatActivity() {
                 result.fold(
                     onSuccess = { response ->
                         logAction("Step 2 Successful: Server deletion confirmed - ${response.message}")
-                        runOnUiThread { scanInstruction.text = "API Success. Wiping card..." }
+                        // runOnUiThread { scanInstruction.text = "API Success. Wiping card..." }
                         
                         nfcManager.deleteCardData { wipeSuccess: Boolean, wipeMessage: String ->
                             runOnUiThread {
@@ -399,7 +399,7 @@ class DashboardActivity : AppCompatActivity() {
                         // Handle 404 (Card not found) specifically to allow physical wipe
                         if (errorMessage.lowercase().contains("card not found") || errorMessage.lowercase().contains("404")) {
                             logAction("Step 2 (404): Card not found in DB - Proceeding to wipe orphaned card.")
-                            runOnUiThread { scanInstruction.text = "Card not in registry. Wiping anyway..." }
+                            // runOnUiThread { scanInstruction.text = "Card not in registry. Wiping anyway..." }
                             
                             nfcManager.deleteCardData { wipeSuccess: Boolean, wipeMessage: String ->
                                 runOnUiThread {
