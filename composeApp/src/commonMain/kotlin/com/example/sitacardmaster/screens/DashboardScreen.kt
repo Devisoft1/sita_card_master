@@ -214,8 +214,9 @@ fun DashboardScreen(
                         verificationError = null // Reset error before new request
 
                         val password = data["password"] ?: ""
+                        val cardType = data["cardType"] ?: "Member"
                         scope.launch {
-                            val result = apiClient.verifyMember(memberId, companyName, password)
+                            val result = apiClient.verifyMember(memberId, companyName, password, cardType = cardType)
                             result.fold(
                                 onSuccess = { response ->
                                     apiResponse = response
@@ -507,7 +508,7 @@ fun DashboardScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    "PREMIUM MEMBER",
+                                    (apiResponse?.cardType ?: cardData!!["cardType"] ?: "Member").uppercase(),
                                     color = Color(0xFFFFD700),
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold,

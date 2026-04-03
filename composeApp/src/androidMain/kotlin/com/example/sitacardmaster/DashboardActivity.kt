@@ -455,7 +455,7 @@ class DashboardActivity : AppCompatActivity() {
                 val password = data["password"] ?: ""
 
                 val result = withContext(Dispatchers.IO) {
-                    memberApiClient.verifyMember(memberId, companyName, password, cardMfid, cardValidity)
+                    memberApiClient.verifyMember(memberId, companyName, password, cardMfid, cardValidity, cardType)
                 }
                 result.fold(
                     onSuccess = { response ->
@@ -477,6 +477,10 @@ class DashboardActivity : AppCompatActivity() {
                         // Set Status (Prioritize Card Status over Member Status)
                         val rawStatus = matchingCard?.status ?: response.status ?: "Active"
                         val statusText = if (rawStatus == "1") "Active" else rawStatus
+                        
+                        // Update Label with actual Card Type
+                        val displayCardType = matchingCard?.cardType ?: response.cardType ?: cardType
+                        premiumMemberLabel.text = displayCardType.uppercase()
                         
                         displayStatus.text = statusText
                         if (statusText.equals("Blocked", ignoreCase = true)) {
@@ -522,6 +526,10 @@ class DashboardActivity : AppCompatActivity() {
                                         // Set Status (Prioritize Card Status over Member Status)
                                         val rawStatus = matchingCard?.status ?: response.status ?: "Active"
                                         val statusText = if (rawStatus == "1") "Active" else rawStatus
+                                        
+                                        // Update Label with actual Card Type (Fallback path)
+                                        val displayCardType = matchingCard?.cardType ?: response.cardType ?: cardType
+                                        premiumMemberLabel.text = displayCardType.uppercase()
                                         
                                         displayStatus.text = statusText
                                         if (statusText.equals("Blocked", ignoreCase = true)) {
