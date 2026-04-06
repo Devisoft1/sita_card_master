@@ -273,8 +273,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
 
                     // Powered By
                     PoweredBySection(
-                        modifier = Modifier.padding(top = 16.dp),
-                        textColor = Color(0xFF666666)
+                        modifier = Modifier.padding(top = 16.dp)
                     )
                 }
             }

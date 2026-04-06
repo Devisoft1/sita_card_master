@@ -165,6 +165,7 @@ fun WriteUrlScreen(nfcManager: NfcManager, onBack: () -> Unit) {
         bottomBar = {
             PoweredBySection(
                 modifier = Modifier
+                    .windowInsetsPadding(WindowInsets.navigationBars)
                     .padding(bottom = 16.dp)
             )
         }
