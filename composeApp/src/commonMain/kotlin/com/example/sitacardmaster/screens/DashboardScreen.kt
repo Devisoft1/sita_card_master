@@ -97,11 +97,10 @@ fun DashboardScreen(
     }
 
     // API Integration
+    val uriHandler = LocalUriHandler.current
     val apiClient = remember { MemberApiClient() }
 
     val scope = rememberCoroutineScope()
-
-    val uriHandler = LocalUriHandler.current
 
     // Logic to handle scan results
     val detectedTag by nfcManager.detectedTag
@@ -333,7 +332,7 @@ fun DashboardScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = userName.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }, // Sentence case
+                        text = userName.lowercase().replaceFirstChar { it.uppercase() },
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = brandBlue,
@@ -359,7 +358,8 @@ fun DashboardScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.navigationBars)
-                    .padding(bottom = 16.dp),
+                    .padding(bottom = 16.dp)
+                    .clickable { uriHandler.openUri("https://devisoft.co.in") },
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -395,8 +395,7 @@ fun DashboardScreen(
             // Scan Section
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                    .fillMaxWidth(), // Removed vertical padding
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Logo Fix: Circular container with shadow/elevation
@@ -405,11 +404,10 @@ fun DashboardScreen(
                     painter = painterResource(Res.drawable.sita_logo),
                     contentDescription = "Logo",
                     modifier = Modifier
-                        .size(280.dp) // Enlarged from 200.dp
+                        .size(260.dp) // Slightly reduced to help with spacing and safety
                         .clickable {
                             isScanning = true
                             isDeleteMode = false
-                            scanStatus = "Scanning... Tap card"
                             nfcManager.startScanning()
                         },
                     contentScale = ContentScale.Fit
@@ -424,7 +422,8 @@ fun DashboardScreen(
                     color = brandBlue,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.offset(y = (-30).dp) // Moved even higher
                 )
 
                 if (isScanning) {
@@ -803,7 +802,6 @@ fun DashboardScreen(
                         onClick = {
                             isScanning = true
                             isDeleteMode = true
-                            scanStatus = "Tap card to delete data..."
                             nfcManager.startScanning()
                         },
                         modifier = Modifier
