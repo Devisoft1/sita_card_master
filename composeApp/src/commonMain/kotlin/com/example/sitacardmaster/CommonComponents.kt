@@ -22,36 +22,36 @@ import sitacardmaster.composeapp.generated.resources.*
 
 @Composable
 fun PoweredBySection(
-    modifier: Modifier = Modifier,
-    textColor: Color = Color(0xFF666666) // Default gray_text
+    modifier: Modifier = Modifier
 ) {
     val uriHandler = LocalUriHandler.current
+    val grayText = Color(0xFF757575)
     val devisoftBlue = Color(0xFF00509E)
     val devisoftOrange = Color(0xFFF58220)
 
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { uriHandler.openUri("https://devisoft.co.in") }
-            .padding(vertical = 12.dp),
+            .clickable { uriHandler.openUri("https://devisoft.co.in") },
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Main Text
         Text(
-            text = buildAnnotatedString {
-                withStyle(SpanStyle(color = textColor, fontSize = 13.sp)) {
-                    append("Powered by ")
-                }
-            }
+            text = "Powered by ",
+            color = grayText,
+            fontSize = 13.sp
         )
-        
-        // Logo (Added as per user request for "devisoft logo")
-        Image(
-            painter = painterResource(Res.drawable.devisoft),
-            contentDescription = "DeviSoft Logo",
-            modifier = Modifier.height(34.dp),
-            contentScale = ContentScale.Fit
+        Text(
+            text = "Devi",
+            color = devisoftBlue,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = "Soft",
+            color = devisoftOrange,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold
         )
     }
 }
