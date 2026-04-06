@@ -353,34 +353,11 @@ fun DashboardScreen(
         containerColor = surfaceGray,
 
         bottomBar = {
-            // Footer: Exact match for Android XML 3-text Row
-            Row(
+            PoweredBySection(
                 modifier = Modifier
-                    .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.navigationBars)
                     .padding(bottom = 16.dp)
-                    .clickable { uriHandler.openUri("https://devisoft.co.in") },
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Powered by ",
-                    color = grayText,
-                    fontSize = 11.sp
-                )
-                Text(
-                    text = "Devi",
-                    color = Color(0xFF00509E), // devisoft_blue
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Soft",
-                    color = Color(0xFFF58220), // devisoft_orange
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            )
         }
     ) { padding ->
         Column(

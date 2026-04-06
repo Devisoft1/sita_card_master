@@ -60,6 +60,7 @@ fun MemberVerificationScreen(
             PoweredBySection(
                 modifier = Modifier
                     .background(Color.White)
+                    .windowInsetsPadding(WindowInsets.navigationBars)
                     .padding(bottom = 16.dp)
             )
         }
