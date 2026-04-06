@@ -209,6 +209,7 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                                         selectedCompanyName = ""
                                         memberId = ""
                                         validUpto = ""
+                                        cardType = "Member" // Reset after success
                                     }
                                 }
                             )
@@ -419,6 +420,7 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                                         companySearchQuery = ""
                                         selectedCompanyName = ""
                                         showMemberInfoCard = false
+                                        cardType = "Member" // Reset card type to default
                                     }) {
                                         Icon(Icons.Default.Close, contentDescription = "Clear", tint = grayText)
                                     }
