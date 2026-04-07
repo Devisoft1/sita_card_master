@@ -284,17 +284,6 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                             color = brandBlue,
                             modifier = Modifier.padding(start = 8.dp).weight(1f)
                         )
-
-                        IconButton(onClick = {
-                             onBack()
-                        }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                                contentDescription = "Logout",
-                                tint = errorRed,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
                     }
                 }
             }

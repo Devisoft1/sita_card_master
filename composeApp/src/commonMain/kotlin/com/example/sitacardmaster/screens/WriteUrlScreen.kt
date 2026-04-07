@@ -152,18 +152,6 @@ fun WriteUrlScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                             color = brandBlue,
                             modifier = Modifier.padding(start = 8.dp).weight(1f)
                         )
-
-                        IconButton(onClick = {
-                             // Logout logic - usually it should go back to login
-                             onBack() // Or if we have a separate onLogout callback
-                        }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                                contentDescription = "Logout",
-                                tint = errorRed,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
                     }
                 }
             }
