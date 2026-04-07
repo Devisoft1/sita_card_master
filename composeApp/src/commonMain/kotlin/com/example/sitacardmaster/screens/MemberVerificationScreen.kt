@@ -42,19 +42,30 @@ fun MemberVerificationScreen(
     var showSuccessDialog by remember { mutableStateOf(false) }
     var successDialogMessage by remember { mutableStateOf("") }
 
+    val brandBlue = Color(0xFF2D2F91)
+
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Verify Member") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color.White
+            Column {
+                // Status Bar Fill
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(brandBlue)
+                        .windowInsetsPadding(WindowInsets.statusBars)
                 )
-            )
+                CenterAlignedTopAppBar(
+                    title = { Text("Verify Member", fontWeight = FontWeight.Bold, color = brandBlue) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = brandBlue)
+                        }
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = Color.White
+                    )
+                )
+            }
         },
         bottomBar = {
             PoweredBySection(

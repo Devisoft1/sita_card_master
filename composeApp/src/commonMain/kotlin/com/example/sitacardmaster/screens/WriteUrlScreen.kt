@@ -114,48 +114,56 @@ fun WriteUrlScreen(nfcManager: NfcManager, onBack: () -> Unit) {
 
     Scaffold(
         topBar = {
-            Surface(
-                shadowElevation = 2.dp,
-                color = white
-            ) {
-                Row(
+            Column {
+                // Status Bar Fill
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .background(brandBlue)
                         .windowInsetsPadding(WindowInsets.statusBars)
-                        .height(34.dp)
-                        .padding(horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                )
+                Surface(
+                    shadowElevation = 2.dp,
+                    color = white
                 ) {
-                    IconButton(onClick = {
-                        isScanning = false
-                        nfcManager.stopScanning()
-                        onBack()
-                    }) {
-                        Icon(
-                            painter = painterResource(Res.drawable.ic_back),
-                            contentDescription = "Back",
-                            tint = brandBlue,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                            .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = {
+                            isScanning = false
+                            nfcManager.stopScanning()
+                            onBack()
+                        }) {
+                            Icon(
+                                painter = painterResource(Res.drawable.ic_back),
+                                contentDescription = "Back",
+                                tint = brandBlue,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
 
-                    Text(
-                        text = "Write Logo URL",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = brandBlue,
-                        modifier = Modifier.padding(start = 8.dp).weight(1f)
-                    )
-
-                    IconButton(onClick = {
-                         // Logout logic - usually it should go back to login
-                         onBack() // Or if we have a separate onLogout callback
-                    }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                            contentDescription = "Logout",
-                            tint = errorRed,
-                            modifier = Modifier.size(24.dp)
+                        Text(
+                            text = "Write Logo URL",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = brandBlue,
+                            modifier = Modifier.padding(start = 8.dp).weight(1f)
                         )
+
+                        IconButton(onClick = {
+                             // Logout logic - usually it should go back to login
+                             onBack() // Or if we have a separate onLogout callback
+                        }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                                contentDescription = "Logout",
+                                tint = errorRed,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     }
                 }
             }

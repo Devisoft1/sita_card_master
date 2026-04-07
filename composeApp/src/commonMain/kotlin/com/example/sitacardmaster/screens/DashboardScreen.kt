@@ -319,33 +319,41 @@ fun DashboardScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            Surface(
-                shadowElevation = 2.dp,
-                color = Color.White
-            ) {
-                Row(
+            Column {
+                // Status Bar Fill
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .background(brandBlue)
                         .windowInsetsPadding(WindowInsets.statusBars)
-                        .height(56.dp)
-                        .padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                )
+                Surface(
+                    shadowElevation = 2.dp,
+                    color = Color.White
                 ) {
-                    Text(
-                        text = userName.lowercase().replaceFirstChar { it.uppercase() },
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = brandBlue,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    IconButton(onClick = onLogout) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                            contentDescription = "Logout",
-                            tint = errorRed,
-                            modifier = Modifier.size(28.dp)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                            .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = userName.lowercase().replaceFirstChar { it.uppercase() },
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = brandBlue,
+                            modifier = Modifier.weight(1f)
                         )
+
+                        IconButton(onClick = onLogout) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                                contentDescription = "Logout",
+                                tint = errorRed,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
                     }
                 }
             }
