@@ -13,6 +13,17 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 
 @Serializable
+data class MemberCardType(
+    @SerialName("_id") val id: String,
+    val memberCardTypeId: Int,
+    val typeName: String,
+    val flag: String,
+    val status: Int,
+    val entryDate: String? = null,
+    val updateDate: String? = null
+)
+
+@Serializable
 data class VerifyMemberRequest(
     val memberId: String,
     val companyName: String,

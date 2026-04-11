@@ -38,8 +38,17 @@ class MemberApiClient {
             // The API returns all members, so we filter for status 1 (Approved) or "Active" locally.
             Result.success(response.members.filter { it.status == "1" || it.status?.trim()?.equals("Active", ignoreCase = true) == true })
         } catch (e: Exception) {
-            // Log the error for easier debugging
             println("API Error in getApprovedMembers: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getMemberCardTypes(): Result<List<MemberCardType>> {
+        return try {
+            val response: List<MemberCardType> = client.get("$baseUrl/masters/member-card-types").body()
+            Result.success(response.filter { it.status == 1 })
+        } catch (e: Exception) {
+            println("API Error in getMemberCardTypes: ${e.message}")
             Result.failure(e)
         }
     }

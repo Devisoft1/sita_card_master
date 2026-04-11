@@ -39,6 +39,7 @@ import com.example.sitacardmaster.platformLog
 import com.example.sitacardmaster.platformNow
 import com.example.sitacardmaster.network.MemberApiClient
 import com.example.sitacardmaster.network.models.VerifyMemberResponse
+import com.example.sitacardmaster.network.models.MemberCardType
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.datetime.TimeZone
@@ -76,7 +77,7 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
 
     var cardType by remember { mutableStateOf("Member") }
     var isCardTypeDropdownExpanded by remember { mutableStateOf(false) }
-    val cardTypeOptions = listOf("Member", "Add-on", "Company Executive", "Corporate Member")
+    var cardTypeOptions by remember { mutableStateOf(listOf("Member", "Add-on", "Company Executive", "Corporate Member")) }
 
     var companySearchQuery by remember { mutableStateOf("") }
     var isCompanyDropdownExpanded by remember { mutableStateOf(false) }
@@ -110,6 +111,32 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
     val tagId by nfcManager.detectedTagId
 
     var isCompanyFocused by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        val result = apiClient.getMemberCardTypes()
+        if (result.isSuccess) {
+            val types = result.getOrNull()
+            if (!types.isNullOrEmpty()) {
+                val newOptions = types.map { it.typeName }
+                cardTypeOptions = newOptions
+                platformLog("IssueCard", "Fetched dynamic card types from API: $cardTypeOptions")
+                
+                // Prioritize "Member" as default if it exists in the new list
+                val memberMatch = newOptions.firstOrNull { it.equals("Member", ignoreCase = true) }
+                if (memberMatch != null) {
+                    cardType = memberMatch
+                    platformLog("IssueCard", "Default card type set to: $cardType")
+                } else if (!newOptions.contains(cardType)) {
+                    // Fallback to first item if current type isn't in new list
+                    cardType = newOptions.firstOrNull() ?: ""
+                }
+            } else {
+                platformLog("IssueCard", "API returned empty card types list, using defaults.")
+            }
+        } else {
+            platformLog("IssueCard", "Failed to fetch card types from API: ${result.exceptionOrNull()?.message}, using defaults.")
+        }
+    }
 
     LaunchedEffect(companySearchQuery, isCompanyFocused) {
         if (!isCompanyFocused) return@LaunchedEffect
@@ -482,6 +509,7 @@ fun IssueCardScreen(nfcManager: NfcManager, onBack: () -> Unit) {
                                     text = { Text(selectionOption) },
                                     onClick = {
                                         cardType = selectionOption
+                                        platformLog("IssueCard", "User selected card type: $cardType")
                                         isCardTypeDropdownExpanded = false
                                     }
                                 )

@@ -204,10 +204,55 @@ class IssueCardActivity : AppCompatActivity() {
     }
 
     private fun setupCardTypeDropdown() {
-        val cardTypes = arrayOf("Member", "Add-on", "Company Executive", "Corporate Member")
-        val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, cardTypes)
-        cardTypeInput.setAdapter(adapter)
-        cardTypeInput.setText("Member", false) // Default
+        platformLog("SITACardMaster", "IssueCard: Initializing dynamic card type fetch...")
+        
+        coroutineScope.launch {
+            val result = apiClient.getMemberCardTypes()
+            if (result.isSuccess) {
+                val types = result.getOrNull()
+                if (!types.isNullOrEmpty()) {
+                    val dynamicTypes = types.map { it.typeName }.toTypedArray()
+                    platformLog("SITACardMaster", "IssueCard: Fetched dynamic card types: ${dynamicTypes.joinToString(", ")}")
+                    
+                    val adapter = ArrayAdapter(this@IssueCardActivity, android.R.layout.simple_dropdown_item_1line, dynamicTypes)
+                    cardTypeInput.setAdapter(adapter)
+                    
+                    // Default to "Member" if it exists, otherwise use first item
+                    val defaultSelection = if (dynamicTypes.any { it.equals("Member", ignoreCase = true) }) {
+                        dynamicTypes.first { it.equals("Member", ignoreCase = true) }
+                    } else if (dynamicTypes.isNotEmpty()) {
+                        dynamicTypes[0]
+                    } else {
+                        ""
+                    }
+                    
+                    if (defaultSelection.isNotEmpty()) {
+                        cardTypeInput.setText(defaultSelection, false)
+                        platformLog("SITACardMaster", "IssueCard: Default card type set to: $defaultSelection")
+                    }
+                } else {
+                    platformLog("SITACardMaster", "IssueCard: API returned empty list of card types")
+                    // If API is empty, provide a fallback to avoid a blank dropdown if critical
+                    val fallback = arrayOf("Member", "Add-On", "Corporate")
+                    val adapter = ArrayAdapter(this@IssueCardActivity, android.R.layout.simple_dropdown_item_1line, fallback)
+                    cardTypeInput.setAdapter(adapter)
+                    cardTypeInput.setText(fallback[0], false)
+                }
+            } else {
+                val error = result.exceptionOrNull()?.message
+                platformLog("SITACardMaster", "IssueCard: ERROR fetching card types: $error")
+                // Use fundamental defaults if API fails entirely
+                val defaults = arrayOf("Member", "Add-On", "Corporate")
+                val adapter = ArrayAdapter(this@IssueCardActivity, android.R.layout.simple_dropdown_item_1line, defaults)
+                cardTypeInput.setAdapter(adapter)
+                cardTypeInput.setText("Member", false)
+            }
+        }
+        
+        cardTypeInput.setOnItemClickListener { parent, _, position, _ ->
+            val selection = parent.getItemAtPosition(position) as String
+            platformLog("SITACardMaster", "IssueCard: User selected card type: $selection")
+        }
     }
 
     private var selectedCompanyName: String = ""
