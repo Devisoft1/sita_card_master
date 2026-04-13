@@ -229,6 +229,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                                         logAction("Admin logged in: ${response.username}")
                                         settings.putString("authToken", response.token)
                                         settings.putString("role", response.role)
+                                        settings.putString("loginTimestamp", com.example.sitacardmaster.getCurrentTimeMillis().toString())
                                         if (rememberMe) {
                                             settings.putString("adminId", adminId)
                                             settings.putString("password", password)

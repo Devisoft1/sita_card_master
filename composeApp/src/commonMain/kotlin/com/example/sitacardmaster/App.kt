@@ -19,6 +19,22 @@ enum class Screen {
 fun App(nfcManager: NfcManager = rememberNfcManager()) {
     var currentScreen by remember { mutableStateOf(Screen.Login) }
 
+    // Session Timeout Check (24 hours)
+    val SESSION_TIMEOUT = 24 * 60 * 60 * 1000L
+    LaunchedEffect(Unit) {
+        val settings = SettingsStorage()
+        val loginTimeStr = settings.getString("loginTimestamp", "")
+        if (loginTimeStr.isNotEmpty()) {
+            val loginTime = loginTimeStr.toLongOrNull() ?: 0L
+            val currentTime = getCurrentTimeMillis()
+            if (currentTime - loginTime > SESSION_TIMEOUT) {
+                // Clear session data here if needed, or rely on screens to handle it
+                // For sita_card_master, we just navigate to Login
+                currentScreen = Screen.Login
+            }
+        }
+    }
+
     MaterialTheme {
         Surface(
             modifier = Modifier.fillMaxSize(),
