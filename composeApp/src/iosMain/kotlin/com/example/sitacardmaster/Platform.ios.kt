@@ -15,6 +15,7 @@ actual fun getPlatform(): Platform = IOSPlatform()
 
 actual fun getCurrentTimeMillis(): Long = (NSDate().timeIntervalSince1970 * 1000).toLong()
 
+@OptIn(ExperimentalForeignApi::class)
 actual fun isNetworkAvailable(): Boolean = memScoped {
     val address = alloc<sockaddr_in>()
     address.sin_len = sizeOf<sockaddr_in>().toUByte()
