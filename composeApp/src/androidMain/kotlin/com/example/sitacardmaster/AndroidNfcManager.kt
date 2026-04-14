@@ -182,16 +182,13 @@ class AndroidNfcManager(private val activity: Activity) : NfcManager {
                             resultMessage = "Card issued successfully!"
                             platformLog("SITACardMaster", "WRITE_SUCCESS: All sectors written.")
                         } else {
-                            platformLog("SITACardMaster", "WRITE_ERROR: Sector 5 Authentication Failed")
-                            resultMessage = "Failed to write card type. Sector 5 error."
+                            resultMessage = "Card not detected properly please scan again"
                         }
                     } else {
-                        platformLog("SITACardMaster", "WRITE_ERROR: Sector 4 Authentication Failed")
-                        resultMessage = "Failed to write purchase data. Sector 4 error."
+                        resultMessage = "Card not detected properly please scan again"
                     }
                 } else {
-                    platformLog("SITACardMaster", "WRITE_ERROR: Sector 3 Authentication Failed")
-                    resultMessage = "Failed to write member data. Sector 3 error."
+                    resultMessage = "Card not detected properly please scan again"
                 }
 
             } catch (e: Exception) {
