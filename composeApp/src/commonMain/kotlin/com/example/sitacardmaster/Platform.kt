@@ -6,3 +6,4 @@ interface Platform {
 
 expect fun getPlatform(): Platform
 expect fun getCurrentTimeMillis(): Long
+expect fun isNetworkAvailable(): Boolean

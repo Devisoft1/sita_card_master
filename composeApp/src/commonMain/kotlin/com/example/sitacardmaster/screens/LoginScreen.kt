@@ -29,6 +29,7 @@ import org.jetbrains.compose.resources.painterResource
 import sitacardmaster.composeapp.generated.resources.*
 import sitacardmaster.composeapp.generated.resources.Res
 import sitacardmaster.composeapp.generated.resources.logo
+import com.example.sitacardmaster.isNetworkAvailable
 import com.example.sitacardmaster.SettingsStorage
 import com.example.sitacardmaster.logAction
 import com.example.sitacardmaster.PoweredBySection
@@ -42,6 +43,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
     var passwordVisible by remember { mutableStateOf(false) }
     var rememberMe by remember { mutableStateOf(settings.getBoolean("rememberMe", false)) }
     var errorText by remember { mutableStateOf("") }
+    var showNoInternetDialog by remember { mutableStateOf(false) }
 
     val brandBlue = Color(0xFF2D2F91)
     val brandBlueDark = Color(0xFF1A1B4B)
@@ -58,6 +60,19 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                 )
             )
     ) {
+        if (showNoInternetDialog) {
+            AlertDialog(
+                onDismissRequest = { showNoInternetDialog = false },
+                title = { Text("No Internet") },
+                text = { Text("No Internet Connection. Please connect to the internet to proceed.") },
+                confirmButton = {
+                    TextButton(onClick = { showNoInternetDialog = false }) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
+        
         // Geometric Shapes
         GeometricBackground()
 
@@ -216,6 +231,10 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
 
                     Button(
                         onClick = {
+                            if (!isNetworkAvailable()) {
+                                showNoInternetDialog = true
+                                return@Button
+                            }
                             if (adminId.isBlank() || password.isBlank()) {
                                 errorText = "Please enter ID and Password"
                                 return@Button

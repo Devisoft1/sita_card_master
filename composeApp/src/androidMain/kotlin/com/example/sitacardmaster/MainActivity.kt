@@ -15,6 +15,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        PlatformContext.context = this
 
         setContent {
             val manager = rememberNfcManager() as AndroidNfcManager

@@ -27,15 +27,10 @@ class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val sharedPref = getSharedPreferences("login_prefs", Context.MODE_PRIVATE)
-        val isLoggedIn = sharedPref.getBoolean("isLoggedIn", false)
-
-        if (isLoggedIn) {
-            goToDashboard()
-            return
-        }
-
+        // Always show Login screen on app start as requested
         setContentView(R.layout.activity_login)
+        PlatformContext.context = this
+        val sharedPref = getSharedPreferences("login_prefs", Context.MODE_PRIVATE)
 
         val adminIdInput = findViewById<EditText>(R.id.Username)
         val passwordInput = findViewById<EditText>(R.id.password)
@@ -59,6 +54,14 @@ class LoginActivity : AppCompatActivity() {
         rememberMe.isChecked = wasRemembered
 
         loginButton.setOnClickListener {
+            if (!isNetworkAvailable()) {
+                com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                    .setTitle("No Internet")
+                    .setMessage("No Internet Connection. Please connect to the internet to proceed.")
+                    .setPositiveButton("OK", null)
+                    .show()
+                return@setOnClickListener
+            }
             val adminId = adminIdInput.text.toString().trim()
             val password = passwordInput.text.toString().trim()
 

@@ -684,22 +684,7 @@ enum class ScanMode {
     None, Writing, Clearing
 }
 
-fun formatDate(dateStr: String?): String {
-    if (dateStr.isNullOrBlank()) return ""
-    try {
-        val datePart = dateStr.substringBefore("T").substringBefore(" ")
-        val components = datePart.split("-")
-        if (components.size == 3) {
-            val year = components[0]
-            val month = components[1]
-            val day = components[2]
-            return "$day/$month/$year"
-        }
-    } catch (e: Exception) {
-        // Fallback to returning original string
-    }
-    return dateStr
-}
+// formatDate is now provided by DateUtils.kt in the same package
 
 @Serializable
 data class IssuedCard(
