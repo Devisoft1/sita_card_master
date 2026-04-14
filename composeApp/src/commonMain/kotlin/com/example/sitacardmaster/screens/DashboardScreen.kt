@@ -253,6 +253,10 @@ fun DashboardScreen(
                                             "No matching card. Fallback to global totals."
                                         )
                                     }
+                                    
+                                    val formattedVal = formatDate(response.validity)
+                                    val isExp = isValidityExpired(formattedVal)
+                                    platformLog("Dashboard", "Backend Response: Validity=$formattedVal, IsExpired=$isExp")
                                 },
                                 onFailure = { error ->
                                     apiResponse = null
@@ -590,9 +594,12 @@ fun DashboardScreen(
                                                 color = Color.White.copy(alpha = 0.7f),
                                                 style = MaterialTheme.typography.bodySmall
                                             )
+                                            val validityText = apiResponse?.validity?.let { formatDate(it) } ?: "Verifying..."
+                                            val isExpired = apiResponse?.validity?.let { isValidityExpired(formatDate(it)) } ?: false
+                                            
                                             Text(
-                                                cardData!!["validUpto"] ?: "N/A",
-                                                color = Color.White,
+                                                validityText,
+                                                color = if (isExpired) errorRed else Color.White,
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 fontWeight = FontWeight.SemiBold
                                             )
@@ -717,6 +724,18 @@ fun DashboardScreen(
                     },
                     modifier = Modifier.padding(bottom = 16.dp),
                     textAlign = TextAlign.Center
+                )
+            }
+
+            // Expiry Warning Message
+            val isExpired = apiResponse?.validity?.let { isValidityExpired(formatDate(it)) } ?: false
+            if (isExpired) {
+                Text(
+                    text = "MEMBER VALIDITY IS EXPIRED",
+                    color = errorRed,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 12.dp)
                 )
             }
 

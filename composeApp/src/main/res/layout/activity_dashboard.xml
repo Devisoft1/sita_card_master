@@ -416,6 +416,20 @@
 
                 </LinearLayout>
 
+                <!-- Expiry Warning -->
+                <TextView
+                    android:id="@+id/expiryWarningText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/_8sdp"
+                    android:layout_marginBottom="@dimen/_4sdp"
+                    android:text="MEMBER VALIDITY IS EXPIRED"
+                    android:textColor="@color/error_red"
+                    android:textSize="@dimen/_12ssp"
+                    android:textStyle="bold"
+                    android:gravity="center"
+                    android:visibility="gone" />
+
                 <!-- Actions -->
                 <LinearLayout
                     android:layout_width="match_parent"

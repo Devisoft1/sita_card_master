@@ -22,6 +22,7 @@ import com.example.sitacardmaster.network.MemberApiClient
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.EditText
+import com.example.sitacardmaster.screens.isValidityExpired
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -60,6 +61,7 @@ class DashboardActivity : AppCompatActivity() {
     private lateinit var scanStatus: TextView 
     private lateinit var dashboardScroll: ScrollView
     private lateinit var timerText: TextView
+    private lateinit var expiryWarningText: TextView
     
     private lateinit var errorContainer: LinearLayout
     private lateinit var errorText: TextView
@@ -112,8 +114,9 @@ class DashboardActivity : AppCompatActivity() {
         writeLogoUrlButton = findViewById(R.id.writeLogoUrlButton)
         stopScanButton = findViewById(R.id.stopScanButton)
         timerText = findViewById(R.id.timerText)
+        expiryWarningText = findViewById(R.id.expiryWarningText)
         scanStatus = findViewById(R.id.scanStatus) 
-        dashboardScroll = findViewById(R.id.dashboardScroll)
+        dashboardScroll = findViewById<ScrollView>(R.id.dashboardScroll)
         
         errorContainer = findViewById(R.id.errorContainer)
         errorText = findViewById(R.id.errorText)
@@ -431,7 +434,9 @@ class DashboardActivity : AppCompatActivity() {
         
         displayMemberId.text = data["memberId"] ?: "N/A"
         displayCompany.text = data["companyName"] ?: "N/A"
-        displayValidUpto.text = formatDate(data["validUpto"])
+        displayValidUpto.text = "Verifying..."
+        displayValidUpto.setTextColor(resources.getColor(R.color.brand_blue, theme))
+        expiryWarningText.visibility = View.GONE
         val amountFormatter = java.text.DecimalFormat("#,###.00")
         displayTotalBuy.text = "₹${amountFormatter.format((data["totalBuy"] ?: "0.00").toDoubleOrNull() ?: 0.0)}"
         displayAmount.text = "Loading..." 
@@ -470,7 +475,20 @@ class DashboardActivity : AppCompatActivity() {
                             displayTotalBuy.text = "₹${amountFormatter.format(response.currentTotal)}" 
                             displayAmount.text = "₹${amountFormatter.format(response.globalTotal)}" 
                         }
-                        displayValidUpto.text = formatDate(response.validity)
+                        val formattedValidity = formatDate(response.validity)
+                        displayValidUpto.text = formattedValidity
+                        
+                        val isExpired = isValidityExpired(formattedValidity)
+                        logAction("Backend Response: Validity=$formattedValidity, IsExpired=$isExpired")
+
+                        // Expiry Check
+                        if (isExpired) {
+                            displayValidUpto.setTextColor(resources.getColor(R.color.error_red, theme))
+                            expiryWarningText.visibility = View.VISIBLE
+                        } else {
+                            displayValidUpto.setTextColor(resources.getColor(R.color.brand_blue, theme))
+                            expiryWarningText.visibility = View.GONE
+                        }
                         if (!response.companyName.isNullOrBlank()) displayCompany.text = response.companyName
                         if (!response.memberId.isNullOrBlank()) displayMemberId.text = response.memberId
                         
@@ -519,7 +537,20 @@ class DashboardActivity : AppCompatActivity() {
                                             displayTotalBuy.text = "₹${amountFormatter.format(response.currentTotal)}"
                                             displayAmount.text = "₹${amountFormatter.format(response.globalTotal)}"
                                         }
-                                        displayValidUpto.text = formatDate(response.validity)
+                                        val formattedValidity = formatDate(response.validity)
+                                        displayValidUpto.text = formattedValidity
+                                        
+                                        val isExpiredFallback = isValidityExpired(formattedValidity)
+                                        logAction("Fallback Backend Response: Validity=$formattedValidity, IsExpired=$isExpiredFallback")
+
+                                        // Expiry Check (Fallback)
+                                        if (isExpiredFallback) {
+                                            displayValidUpto.setTextColor(resources.getColor(R.color.error_red, theme))
+                                            expiryWarningText.visibility = View.VISIBLE
+                                        } else {
+                                            displayValidUpto.setTextColor(resources.getColor(R.color.brand_blue, theme))
+                                            expiryWarningText.visibility = View.GONE
+                                        }
                                         if (!response.companyName.isNullOrBlank()) displayCompany.text = response.companyName
                                         if (!response.memberId.isNullOrBlank()) displayMemberId.text = response.memberId
                                         
@@ -570,6 +601,7 @@ class DashboardActivity : AppCompatActivity() {
     private fun resetUI() {
         detailsContainer.visibility = View.GONE
         errorContainer.visibility = View.GONE
+        expiryWarningText.visibility = View.GONE
         scanInstruction.text = "Tap logo to scan card"
     }
 
