@@ -2,7 +2,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/login_bg_geometric_modern"
+    android:background="@drawable/background1"
     android:fitsSystemWindows="true">
 
     <ScrollView
@@ -22,12 +22,12 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/_60sdp"
-                android:layout_marginStart="@dimen/_24sdp"
                 android:text="Welcome Back!"
-                android:textColor="@color/white"
+                android:textColor="@color/brand_blue"
                 android:textSize="@dimen/_24ssp"
                 android:textStyle="bold"
                 app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
             <TextView
@@ -36,172 +36,169 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/_4sdp"
                 android:text="Sign in to continue"
-                android:textColor="@color/white"
+                android:textColor="@color/brand_blue"
                 android:alpha="0.8"
                 android:textSize="@dimen/_14ssp"
-                app:layout_constraintStart_toStartOf="@id/welcomeTitle"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/welcomeTitle" />
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/loginCard"
+            <LinearLayout
+                android:id="@+id/loginContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="@dimen/_16sdp"
-                android:layout_marginTop="@dimen/_32sdp"
-                app:cardBackgroundColor="@color/white"
-                app:cardCornerRadius="@dimen/_24sdp"
-                app:cardElevation="@dimen/_16sdp"
+                android:layout_marginTop="12dp"
+                android:orientation="vertical"
+                android:paddingHorizontal="@dimen/_8sdp"
+                android:paddingVertical="@dimen/_24sdp"
                 app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.609"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/welcomeSubtitle">
 
-                <LinearLayout
+                <ImageView
+                    android:id="@+id/logo"
+                    android:layout_width="@dimen/_140sdp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginBottom="@dimen/_24sdp"
+                    android:adjustViewBounds="true"
+                    android:contentDescription="SITA Logo"
+                    android:src="@drawable/logo" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/adminIdLayout"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingHorizontal="@dimen/_20sdp"
-                    android:paddingVertical="@dimen/_24sdp">
+                    android:layout_marginBottom="@dimen/_12sdp"
+                    android:hint="Username"
+                    app:boxCornerRadiusBottomEnd="@dimen/_12sdp"
+                    app:boxCornerRadiusBottomStart="@dimen/_12sdp"
+                    app:boxCornerRadiusTopEnd="@dimen/_12sdp"
+                    app:boxCornerRadiusTopStart="@dimen/_12sdp"
+                    app:boxStrokeColor="@color/brand_orange"
+                    app:hintTextColor="@color/brand_orange"
+                    app:startIconDrawable="@drawable/ic_person"
+                    app:startIconTint="@color/brand_orange">
 
-                    <ImageView
-                        android:id="@+id/logo"
-                        android:layout_width="@dimen/_140sdp"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center_horizontal"
-                        android:layout_marginBottom="@dimen/_24sdp"
-                        android:adjustViewBounds="true"
-                        android:contentDescription="SITA Logo"
-                        android:src="@drawable/logo" />
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/adminIdLayout"
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/Username"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="@dimen/_12sdp"
-                        android:hint="Username"
-                        app:boxCornerRadiusBottomEnd="@dimen/_12sdp"
-                        app:boxCornerRadiusBottomStart="@dimen/_12sdp"
-                        app:boxCornerRadiusTopEnd="@dimen/_12sdp"
-                        app:boxCornerRadiusTopStart="@dimen/_12sdp"
-                        app:boxStrokeColor="@color/brand_orange"
-                        app:hintTextColor="@color/brand_orange"
-                        app:startIconDrawable="@drawable/ic_person"
-                        app:startIconTint="@color/brand_orange">
+                        android:inputType="text"
+                        android:paddingVertical="@dimen/_12sdp"
+                        android:singleLine="true"
+                        android:textColor="@color/brand_blue"
+                        android:textSize="@dimen/_14ssp" />
+                </com.google.android.material.textfield.TextInputLayout>
 
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/Username"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="text"
-                            android:paddingVertical="@dimen/_12sdp"
-                            android:singleLine="true"
-                            android:textSize="@dimen/_14ssp" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/passwordLayout"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/_8sdp"
+                    android:hint="Password"
+                    app:boxCornerRadiusBottomEnd="@dimen/_12sdp"
+                    app:boxCornerRadiusBottomStart="@dimen/_12sdp"
+                    app:boxCornerRadiusTopEnd="@dimen/_12sdp"
+                    app:boxCornerRadiusTopStart="@dimen/_12sdp"
+                    app:boxStrokeColor="@color/brand_orange"
+                    app:hintTextColor="@color/brand_orange"
+                    app:passwordToggleEnabled="true"
+                    app:startIconDrawable="@drawable/ic_lock"
+                    app:startIconTint="@color/brand_orange">
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/passwordLayout"
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/password"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="@dimen/_8sdp"
-                        android:hint="Password"
-                        app:boxCornerRadiusBottomEnd="@dimen/_12sdp"
-                        app:boxCornerRadiusBottomStart="@dimen/_12sdp"
-                        app:boxCornerRadiusTopEnd="@dimen/_12sdp"
-                        app:boxCornerRadiusTopStart="@dimen/_12sdp"
-                        app:boxStrokeColor="@color/brand_orange"
-                        app:hintTextColor="@color/brand_orange"
-                        app:passwordToggleEnabled="true"
-                        app:startIconDrawable="@drawable/ic_lock"
-                        app:startIconTint="@color/brand_orange">
+                        android:inputType="textPassword"
+                        android:paddingVertical="@dimen/_12sdp"
+                        android:singleLine="true"
+                        android:textColor="@color/brand_blue"
+                        android:textSize="@dimen/_14ssp" />
+                </com.google.android.material.textfield.TextInputLayout>
 
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/password"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="textPassword"
-                            android:paddingVertical="@dimen/_12sdp"
-                            android:singleLine="true"
-                            android:textSize="@dimen/_14ssp" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                <TextView
+                    android:id="@+id/forgotPassword"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end"
+                    android:layout_marginBottom="@dimen/_16sdp"
+                    android:text="Forgot Password?"
+                    android:textColor="@color/brand_blue"
+                    android:textSize="@dimen/_12ssp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/errorText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/_12sdp"
+                    android:textColor="@color/error_red"
+                    android:textSize="@dimen/_12ssp"
+                    android:visibility="gone" />
+
+                <CheckBox
+                    android:id="@+id/rememberMe"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/_20sdp"
+                    android:buttonTint="@color/brand_orange"
+                    android:text="Keep me logged in"
+                    android:textColor="@color/gray_text"
+                    android:textSize="@dimen/_12ssp" />
+
+                <Button
+                    android:id="@+id/loginButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/_48sdp"
+                    android:text="LOGIN"
+                    android:textSize="@dimen/_14ssp"
+                    android:textStyle="bold"
+                    app:backgroundTint="@color/brand_blue"
+                    app:cornerRadius="@dimen/_12sdp"
+                    app:elevation="@dimen/_4sdp" />
+
+                <!-- Powered by DeviSoft -->
+                <LinearLayout
+                    android:id="@+id/llPoweredBy"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="50dp"
+                    android:gravity="center"
+                    android:orientation="horizontal">
 
                     <TextView
-                        android:id="@+id/forgotPassword"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_gravity="end"
-                        android:layout_marginBottom="@dimen/_16sdp"
-                        android:text="Forgot Password?"
-                        android:textColor="@color/brand_blue"
-                        android:textSize="@dimen/_12ssp"
+                        android:alpha="0.7"
+                        android:text="Powered by "
+                        android:textColor="@color/gray_text"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Devi"
+                        android:textColor="@color/devisoft_blue"
+                        android:textSize="11sp"
                         android:textStyle="bold" />
 
                     <TextView
-                        android:id="@+id/errorText"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="@dimen/_12sdp"
-                        android:textColor="@color/error_red"
-                        android:textSize="@dimen/_12ssp"
-                        android:visibility="gone" />
-
-                    <CheckBox
-                        android:id="@+id/rememberMe"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="@dimen/_20sdp"
-                        android:buttonTint="@color/brand_orange"
-                        android:text="Keep me logged in"
-                        android:textColor="@color/gray_text"
-                        android:textSize="@dimen/_12ssp" />
-
-                    <Button
-                        android:id="@+id/loginButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="@dimen/_48sdp"
-                        android:text="LOGIN"
-                        android:textSize="@dimen/_14ssp"
-                        android:textStyle="bold"
-                        app:backgroundTint="@color/brand_blue"
-                        app:cornerRadius="@dimen/_12sdp"
-                        app:elevation="@dimen/_4sdp" />
-
-                    <!-- Powered by DeviSoft -->
-                    <LinearLayout
-                        android:id="@+id/llPoweredBy"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center"
-                        android:layout_marginTop="16dp"
-                        android:orientation="horizontal"
-                        android:gravity="center">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Powered by "
-                            android:textColor="@color/gray_text"
-                            android:textSize="11sp" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Devi"
-                            android:textColor="@color/devisoft_blue"
-                            android:textSize="11sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Soft"
-                            android:textColor="@color/devisoft_orange"
-                            android:textSize="11sp"
-                            android:textStyle="bold" />
-                    </LinearLayout>
-
+                        android:text="Soft"
+                        android:textColor="@color/devisoft_orange"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </ScrollView>

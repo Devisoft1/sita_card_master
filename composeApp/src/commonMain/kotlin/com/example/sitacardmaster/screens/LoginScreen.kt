@@ -50,16 +50,16 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
     val brandOrange = Color(0xFFF57C00)
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(brandBlue, brandBlueDark),
-                    start = androidx.compose.ui.geometry.Offset(0f, 0f),
-                    end = androidx.compose.ui.geometry.Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
-                )
-            )
+        modifier = Modifier.fillMaxSize()
     ) {
+        // Shared Background Image (matches Android background1)
+        Image(
+            painter = painterResource(Res.drawable.background1),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = androidx.compose.ui.layout.ContentScale.FillBounds
+        )
+
         if (showNoInternetDialog) {
             AlertDialog(
                 onDismissRequest = { showNoInternetDialog = false },
@@ -73,8 +73,8 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             )
         }
         
-        // Geometric Shapes
-        GeometricBackground()
+        // Removed Geometric Shapes as they are part of background1 image or it is replaced by background1
+
 
         Column(
             modifier = Modifier
@@ -87,17 +87,20 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             // Header Section
             Spacer(modifier = Modifier.height(60.dp))
             Column(
-                modifier = Modifier.padding(horizontal = 24.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     text = "Welcome Back!",
-                    color = Color.White,
+                    color = brandBlue,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = "Sign in to continue",
-                    color = Color.White.copy(alpha = 0.8f),
+                    color = Color.Gray,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(top = 4.dp)
                 )
@@ -105,18 +108,16 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Login Card
-            Card(
+            // Login Section (Replacing Card)
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(24.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Column(
                     modifier = Modifier
-                        .padding(horizontal = 20.dp, vertical = 24.dp),
+                        .padding(horizontal = 8.dp, vertical = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Logo
@@ -148,7 +149,10 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = brandOrange,
                             focusedLabelColor = brandOrange,
-                            cursorColor = brandOrange
+                            cursorColor = brandOrange,
+                            unfocusedLabelColor = Color.Gray,
+                            focusedLeadingIconColor = brandOrange,
+                            unfocusedLeadingIconColor = Color.Gray
                         )
                     )
 
@@ -168,7 +172,8 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(
                                     imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = "Toggle Password"
+                                    contentDescription = "Toggle Password",
+                                    tint = Color.Gray
                                 )
                             }
                         },
@@ -181,7 +186,10 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = brandOrange,
                             focusedLabelColor = brandOrange,
-                            cursorColor = brandOrange
+                            cursorColor = brandOrange,
+                            unfocusedLabelColor = Color.Gray,
+                            focusedLeadingIconColor = brandOrange,
+                            unfocusedLeadingIconColor = Color.Gray
                         )
                     )
 
@@ -194,6 +202,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                         modifier = Modifier
                             .align(Alignment.End)
                             .padding(bottom = 16.dp)
+                            .clickable { /* Handle forgot password */ }
                     )
 
                     if (errorText.isNotEmpty()) {
@@ -215,11 +224,14 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                         Checkbox(
                             checked = rememberMe,
                             onCheckedChange = { rememberMe = it },
-                            colors = CheckboxDefaults.colors(checkedColor = brandOrange)
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = brandOrange,
+                                uncheckedColor = Color.Gray
+                            )
                         )
                         Text(
                             text = "Keep me logged in",
-                            color = Color(0xFF666666), // gray_text
+                            color = Color(0xFF666666),
                             fontSize = 12.sp
                         )
                     }
@@ -286,6 +298,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                             Text(
                                 text = "LOGIN",
                                 fontWeight = FontWeight.Bold,
+                                color = Color.White,
                                 fontSize = 14.sp
                             )
                         }
@@ -303,46 +316,5 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
     }
 }
 
-@Composable
-fun GeometricBackground() {
-    Box(modifier = Modifier.fillMaxSize()) {
-        // Top Right Diamond
-        Box(
-            modifier = Modifier
-                .offset(x = 250.dp, y = (-80).dp)
-                .rotate(45f)
-                .size(200.dp)
-                .background(Color.White.copy(alpha = 0.1f))
-        )
 
-        // Bottom Left Square
-        Box(
-            modifier = Modifier
-                .offset(x = (-50).dp, y = 500.dp)
-                .rotate(30f)
-                .size(300.dp)
-                .background(Color.White.copy(alpha = 0.05f))
-        )
-
-        // Middle Right Accent
-        Box(
-            modifier = Modifier
-                .offset(x = 300.dp, y = 250.dp)
-                .rotate(60f)
-                .size(150.dp)
-                .background(Color.White.copy(alpha = 0.04f))
-        )
-
-        // Top Left circle
-        Box(
-            modifier = Modifier
-                .offset(x = 20.dp, y = 50.dp)
-                .size(20.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(Color.White.copy(alpha = 0.1f))
-        )
-    }
-}
-
-
-
+// GeometricBackground removed as it's replaced by the background1 image.
